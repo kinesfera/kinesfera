@@ -1,0 +1,6 @@
+{
+  "name": "NeuroNexo Adventures",
+  "description": "Plataforma clínica y educativa de telerrehabilitación neurodiversa y videojuegos terapéuticos con detección de movimiento con IA para niños, familias y especialistas de la salud.",
+  "requestFramePermissions": ["camera", "microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
