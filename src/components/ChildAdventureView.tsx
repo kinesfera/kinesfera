@@ -123,7 +123,7 @@ export const ChildAdventureView: React.FC<ChildAdventureViewProps> = ({
                   Misión Recetada por Kinesiología
                 </span>
                 <span className="text-xs text-slate-400">
-                  Indicación: Dra. Elena Ramírez
+                  Indicación: Klgo/a. Profesional Tratante
                 </span>
               </div>
               <h2 className="text-xl sm:text-2xl font-extrabold text-white">

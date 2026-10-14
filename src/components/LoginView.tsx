@@ -371,12 +371,12 @@ export const LoginView: React.FC<LoginViewProps> = ({
                       onChange={e => setEmailInput(e.target.value)}
                       placeholder={
                         selectedArea === 'child'
-                          ? 'ej. familia.beltran@gmail.com o 26.840.119-3'
+                          ? 'correo@familia.cl o RUT del paciente'
                           : selectedArea === 'clinical'
-                          ? 'ej. elena.ramirez@neuronexo.cl'
+                          ? 'correo@profesional.cl o RUT profesional'
                           : selectedArea === 'educator'
-                          ? 'ej. marcela.soto@educacion.cl'
-                          : 'ej. admin@neuronexo.cl'
+                          ? 'correo@escuela.cl o RUT educador'
+                          : 'admin@kinesfera.cl o RUT'
                       }
                       className="w-full pl-9 pr-3 py-2.5 bg-slate-50/80 border border-slate-300 rounded-xl focus:ring-2 focus:ring-sky-500 focus:bg-white outline-hidden text-xs"
                     />
@@ -534,7 +534,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
                   <input
                     type="text"
                     required
-                    placeholder="Ej. Juan"
+                    placeholder="Nombre"
                     value={regFirstName}
                     onChange={e => setRegFirstName(e.target.value)}
                     className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-sky-500 outline-hidden"
@@ -544,7 +544,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
                   <label className="font-bold text-slate-700 block mb-1">Apellido</label>
                   <input
                     type="text"
-                    placeholder="Ej. Beltrán"
+                    placeholder="Apellido"
                     value={regLastName}
                     onChange={e => setRegLastName(e.target.value)}
                     className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-sky-500 outline-hidden"
@@ -558,7 +558,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
                   <label className="font-bold text-slate-700 block mb-1">RUT</label>
                   <input
                     type="text"
-                    placeholder="26.840.119-3"
+                    placeholder="RUT"
                     value={regRut}
                     onChange={e => setRegRut(e.target.value)}
                     className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-sky-500 font-mono outline-hidden"
@@ -581,15 +581,15 @@ export const LoginView: React.FC<LoginViewProps> = ({
               <div>
                 <label className="font-bold text-slate-700 block mb-1">
                   {regRole === 'Padre/Niño' 
-                    ? 'Diagnóstico / Condición (ej. TEA, Síndrome de Down, Hipotonía)' 
-                    : 'Especialidad / Centro o Escuela (ej. Kinesiología Teletón)'}
+                    ? 'Diagnóstico o Motivo de Consulta' 
+                    : 'Especialidad / Centro o Escuela'}
                 </label>
                 <input
                   type="text"
                   placeholder={
                     regRole === 'Padre/Niño'
-                      ? 'Ej. Retraso del Desarrollo Psicomotor · Hipotonía'
-                      : 'Ej. Kinesióloga Pediátrica · Teletón'
+                      ? 'Motivo de consulta o diagnóstico inicial'
+                      : 'Especialidad profesional o institución'
                   }
                   value={regDetail}
                   onChange={e => setRegDetail(e.target.value)}

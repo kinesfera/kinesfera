@@ -11,7 +11,11 @@ import {
   Report, 
   SessionResult, 
   AvatarConfig,
-  ProgressNote
+  ProgressNote,
+  PatientAnamnesis,
+  ClinicalEvaluations,
+  ComprehensiveReport,
+  LeadProspect
 } from './types';
 import { 
   INITIAL_EXERCISES, 
@@ -20,7 +24,11 @@ import {
   INITIAL_CHATS, 
   INITIAL_CHAT_MESSAGES, 
   INITIAL_SESSION_HISTORY,
-  INITIAL_PROGRESS_NOTES
+  INITIAL_PROGRESS_NOTES,
+  INITIAL_ANAMNESIS,
+  INITIAL_CLINICAL_EVALUATIONS,
+  INITIAL_COMPREHENSIVE_REPORTS,
+  INITIAL_LEADS
 } from './data/mockData';
 import { Navbar } from './components/Navbar';
 import { LoginView } from './components/LoginView';
@@ -40,6 +48,10 @@ export default function App() {
   const [chats, setChats] = useState(INITIAL_CHATS);
   const [messages, setMessages] = useState(INITIAL_CHAT_MESSAGES);
   const [progressNotes, setProgressNotes] = useState<ProgressNote[]>(INITIAL_PROGRESS_NOTES);
+  const [anamnesisData, setAnamnesisData] = useState<Record<string, PatientAnamnesis>>(INITIAL_ANAMNESIS);
+  const [evaluationsData, setEvaluationsData] = useState<Record<string, ClinicalEvaluations>>(INITIAL_CLINICAL_EVALUATIONS);
+  const [comprehensiveReports, setComprehensiveReports] = useState<ComprehensiveReport[]>(INITIAL_COMPREHENSIVE_REPORTS);
+  const [leads, setLeads] = useState<LeadProspect[]>(INITIAL_LEADS);
 
   // Authentication & session state
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -208,6 +220,37 @@ export default function App() {
     setUsers(prev => [...prev, newPatient]);
   };
 
+  const handleSaveAnamnesis = (patientId: string, data: PatientAnamnesis) => {
+    setAnamnesisData(prev => ({ ...prev, [patientId]: data }));
+  };
+
+  const handleSaveEvaluations = (patientId: string, data: ClinicalEvaluations) => {
+    setEvaluationsData(prev => ({ ...prev, [patientId]: data }));
+  };
+
+  const handleGenerateComprehensiveReport = (newReport: ComprehensiveReport) => {
+    setComprehensiveReports(prev => [newReport, ...prev.filter(r => r.patientId !== newReport.patientId)]);
+  };
+
+  const handleClearAllPatients = () => {
+    // Completely wipe all previous patients, evaluations, anamnesis, progress notes and reports
+    setUsers(prev => prev.filter(u => u.role !== 'Padre/Niño'));
+    setProgressNotes([]);
+    setAnamnesisData({});
+    setEvaluationsData({});
+    setComprehensiveReports([]);
+    setReports([]);
+    setSessionHistory([]);
+    try {
+      localStorage.removeItem('kinesfera_saved_patients');
+      localStorage.removeItem('kinesfera_saved_anamnesis');
+      localStorage.removeItem('kinesfera_saved_evaluations');
+      localStorage.removeItem('kinesfera_progress_notes');
+    } catch {
+      // ignore
+    }
+  };
+
   // If not logged in, render the harmonious pastel login view
   if (!isLoggedIn) {
     return (
@@ -237,17 +280,7 @@ export default function App() {
 
       {/* Main View Portals */}
       <main className="flex-1">
-        {activeTab === 'child' && (
-          <ChildAdventureView
-            currentUser={currentUser.role === 'Padre/Niño' ? currentUser : childUser}
-            exercises={exercises}
-            sessionHistory={sessionHistory}
-            onStartExercise={handleStartExercise}
-            onUpdateAvatar={handleUpdateAvatar}
-          />
-        )}
-
-        {activeTab === 'clinical' && (
+        {currentRole === 'Profesionales Clínicos' ? (
           <ClinicalPortalView
             clinician={currentUser.role === 'Profesionales Clínicos' ? currentUser : clinicianUser}
             patients={users.filter(u => u.role === 'Padre/Niño')}
@@ -255,32 +288,79 @@ export default function App() {
             reports={reports}
             sessionHistory={sessionHistory}
             progressNotes={progressNotes}
+            anamnesisData={anamnesisData}
+            evaluationsData={evaluationsData}
+            comprehensiveReports={comprehensiveReports}
             onAssignExercise={handleAssignExercise}
             onCreateReport={handleCreateReport}
             onAddProgressNote={handleAddProgressNote}
             onUpdateProgressNote={handleUpdateProgressNote}
             onDeleteProgressNote={handleDeleteProgressNote}
             onAddNewPatient={handleAddNewPatient}
+            onSaveAnamnesis={handleSaveAnamnesis}
+            onSaveEvaluations={handleSaveEvaluations}
+            onGenerateComprehensiveReport={handleGenerateComprehensiveReport}
+            onClearAllPatients={handleClearAllPatients}
           />
-        )}
+        ) : (
+          <>
+            {activeTab === 'child' && (
+              <ChildAdventureView
+                currentUser={currentUser.role === 'Padre/Niño' ? currentUser : childUser}
+                exercises={exercises}
+                sessionHistory={sessionHistory}
+                onStartExercise={handleStartExercise}
+                onUpdateAvatar={handleUpdateAvatar}
+              />
+            )}
 
-        {activeTab === 'educator' && (
-          <EducatorPortalView
-            educator={currentUser.role === 'Educadores' ? currentUser : educatorUser}
-            students={users.filter(u => u.role === 'Padre/Niño')}
-            exercises={exercises}
-            onStartActiveBreak={(ex) => handleStartExercise(ex, 'TEA')}
-          />
-        )}
+            {activeTab === 'clinical' && (
+              <ClinicalPortalView
+                clinician={currentUser.role === 'Profesionales Clínicos' ? currentUser : clinicianUser}
+                patients={users.filter(u => u.role === 'Padre/Niño')}
+                exercises={exercises}
+                reports={reports}
+                sessionHistory={sessionHistory}
+                progressNotes={progressNotes}
+                anamnesisData={anamnesisData}
+                evaluationsData={evaluationsData}
+                comprehensiveReports={comprehensiveReports}
+                onAssignExercise={handleAssignExercise}
+                onCreateReport={handleCreateReport}
+                onAddProgressNote={handleAddProgressNote}
+                onUpdateProgressNote={handleUpdateProgressNote}
+                onDeleteProgressNote={handleDeleteProgressNote}
+                onAddNewPatient={handleAddNewPatient}
+                onSaveAnamnesis={handleSaveAnamnesis}
+                onSaveEvaluations={handleSaveEvaluations}
+                onGenerateComprehensiveReport={handleGenerateComprehensiveReport}
+                onClearAllPatients={handleClearAllPatients}
+              />
+            )}
 
-        {activeTab === 'admin' && (
-          <AdminPortalView
-            adminUser={currentUser.role === 'Administrador (Neuronexin)' ? currentUser : adminUser}
-            allUsers={users}
-            exercises={exercises}
-            onAddCredits={handleAddCredits}
-            onTogglePlan={handleTogglePlan}
-          />
+            {activeTab === 'educator' && (
+              <EducatorPortalView
+                educator={currentUser.role === 'Educadores' ? currentUser : educatorUser}
+                students={users.filter(u => u.role === 'Padre/Niño')}
+                exercises={exercises}
+                onStartActiveBreak={(ex) => handleStartExercise(ex, 'TEA')}
+              />
+            )}
+
+            {activeTab === 'admin' && (
+              <AdminPortalView
+                adminUser={currentUser.role === 'Administrador (Neuronexin)' ? currentUser : adminUser}
+                allUsers={users}
+                exercises={exercises}
+                leads={leads}
+                onAddCredits={handleAddCredits}
+                onTogglePlan={handleTogglePlan}
+                onUpdateLeadStatus={(leadId, status) => {
+                  setLeads(prev => prev.map(l => l.id === leadId ? { ...l, status } : l));
+                }}
+              />
+            )}
+          </>
         )}
       </main>
 

@@ -1,19 +1,34 @@
-import React, { useState } from 'react';
-import { User, Exercise, Report, SessionResult, ProgressNote } from '../types';
-import { PatientProgressSheet } from './PatientProgressSheet';
+import React, { useState, useEffect } from 'react';
 import { 
-  Users, 
+  User, 
+  Exercise, 
+  Report, 
+  SessionResult, 
+  ProgressNote, 
+  PatientAnamnesis, 
+  ClinicalEvaluations, 
+  ComprehensiveReport 
+} from '../types';
+import { PatientProgressSheet } from './PatientProgressSheet';
+import { PatientEvaluationForm } from './PatientEvaluationForm';
+import { ComprehensiveReportViewer } from './ComprehensiveReportViewer';
+import { MarketingBusinessHub } from './MarketingBusinessHub';
+import { 
   FileText, 
-  Activity, 
-  Plus, 
-  Printer, 
-  MapPin, 
+  UserPlus, 
+  ClipboardList, 
+  Stethoscope, 
+  Edit3, 
   Check, 
+  MapPin, 
+  Building2, 
+  X,
+  UserCheck, 
+  TrendingUp,
+  RotateCcw,
   Sparkles,
-  ClipboardList,
-  FolderOpen,
-  UserPlus,
-  X
+  Trash2,
+  AlertTriangle
 } from 'lucide-react';
 
 interface ClinicalPortalViewProps {
@@ -23,12 +38,19 @@ interface ClinicalPortalViewProps {
   reports: Report[];
   sessionHistory: SessionResult[];
   progressNotes: ProgressNote[];
+  anamnesisData: Record<string, PatientAnamnesis>;
+  evaluationsData: Record<string, ClinicalEvaluations>;
+  comprehensiveReports: ComprehensiveReport[];
   onAssignExercise: (patientId: string, exerciseId: 'squats' | 'kneeTouch' | 'armsUp') => void;
   onCreateReport: (newReport: Report) => void;
   onAddProgressNote: (note: Omit<ProgressNote, 'id'>) => void;
   onUpdateProgressNote: (note: ProgressNote) => void;
   onDeleteProgressNote: (noteId: string) => void;
-  onAddNewPatient?: (newPatient: User) => void;
+  onAddNewPatient: (newPatient: User) => void;
+  onSaveAnamnesis: (patientId: string, data: PatientAnamnesis) => void;
+  onSaveEvaluations: (patientId: string, data: ClinicalEvaluations) => void;
+  onGenerateComprehensiveReport: (report: ComprehensiveReport) => void;
+  onClearAllPatients?: () => void;
 }
 
 export const ClinicalPortalView: React.FC<ClinicalPortalViewProps> = ({
@@ -38,622 +60,581 @@ export const ClinicalPortalView: React.FC<ClinicalPortalViewProps> = ({
   reports,
   sessionHistory,
   progressNotes,
+  anamnesisData,
+  evaluationsData,
+  comprehensiveReports,
   onAssignExercise,
   onCreateReport,
   onAddProgressNote,
   onUpdateProgressNote,
   onDeleteProgressNote,
-  onAddNewPatient
+  onAddNewPatient,
+  onSaveAnamnesis,
+  onSaveEvaluations,
+  onGenerateComprehensiveReport,
+  onClearAllPatients
 }) => {
-  // Default to the requested 'progress_sheet' tab!
-  const [activeSubTab, setActiveSubTab] = useState<'progress_sheet' | 'directory_prescriptions' | 'reports'>('progress_sheet');
-  const [selectedPatientId, setSelectedPatientId] = useState<string>(
-    patients.find(p => p.firstName === 'Juan')?.id || patients[0]?.id || ''
-  );
-  const [searchQuery, setSearchQuery] = useState('');
-  const [showNewReportModal, setShowNewReportModal] = useState(false);
-  const [activeReportToView, setActiveReportToView] = useState<Report | null>(null);
+  // 4 Primary Tabs as requested:
+  // 1) add_patient_eval: Ingreso de paciente, anamnesis y pruebas aplicadas
+  // 2) comprehensive_report: Informe consolidado con descarga en PDF y Word
+  // 3) progress_sheet: Plantilla de progreso (seguimiento diario)
+  // 4) marketing_growth: Marketing, ventas éticas, metas mes 1, derivadores Copiapó y CRM
+  const [activeSubTab, setActiveSubTab] = useState<'add_patient_eval' | 'comprehensive_report' | 'progress_sheet' | 'marketing_growth'>('add_patient_eval');
   
-  // Exercise Assignment Modal state
-  const [showAssignModal, setShowAssignModal] = useState(false);
-  const [assigningPatient, setAssigningPatient] = useState<User | null>(null);
+  // Clinician customizable profile in localStorage (Starts blank or customized by the clinician)
+  const [profName, setProfName] = useState(() => {
+    return localStorage.getItem('kinesfera_clinician_name') || '';
+  });
+  const [profRut, setProfRut] = useState(() => {
+    return localStorage.getItem('kinesfera_clinician_rut') || '';
+  });
+  const [profSpecialty, setProfSpecialty] = useState(() => {
+    return localStorage.getItem('kinesfera_clinician_specialty') || 'Kinesiología Pediátrica · Neurorehabilitación';
+  });
+  const [profInstitution, setProfInstitution] = useState(() => {
+    return localStorage.getItem('kinesfera_clinician_institution') || 'Centro Clínico Kinesfera';
+  });
+  const [profRegistry, setProfRegistry] = useState(() => {
+    return localStorage.getItem('kinesfera_clinician_registry') || 'Registro SIS';
+  });
 
-  // New Patient Modal state
-  const [showNewPatientModal, setShowNewPatientModal] = useState(false);
-  const [newPatientName, setNewPatientName] = useState('');
-  const [newPatientRut, setNewPatientRut] = useState('');
-  const [newPatientBirthDate, setNewPatientBirthDate] = useState('');
-  const [newPatientDiagnosis, setNewPatientDiagnosis] = useState('');
-  const [newPatientTutor, setNewPatientTutor] = useState('');
-  const [newPatientPhone, setNewPatientPhone] = useState('');
+  const [showEditProfileModal, setShowEditProfileModal] = useState(false);
+  const [tempName, setTempName] = useState(profName);
+  const [tempRut, setTempRut] = useState(profRut);
+  const [tempSpecialty, setTempSpecialty] = useState(profSpecialty);
+  const [tempInstitution, setTempInstitution] = useState(profInstitution);
+  const [tempRegistry, setTempRegistry] = useState(profRegistry);
 
-  // New report form state
-  const [reportSummary, setReportSummary] = useState('');
-  const [reportProgress, setReportProgress] = useState('');
-  const [reportAchievements, setReportAchievements] = useState('');
-  const [reportFocusAreas, setReportFocusAreas] = useState('');
-  const [reportNextSteps, setReportNextSteps] = useState('');
+  const [selectedPatientId, setSelectedPatientId] = useState<string>(
+    patients[0]?.id || ''
+  );
 
   const selectedPatient = patients.find(p => p.id === selectedPatientId) || patients[0];
 
-  const filteredPatients = patients.filter(p => 
-    `${p.firstName} ${p.lastName}`.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    p.rut.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (p.diagnosis && p.diagnosis.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
-
-  const handleOpenAssignModal = (patient: User) => {
-    setAssigningPatient(patient);
-    setShowAssignModal(true);
-  };
-
-  const handleSelectAssignedExercise = (exerciseId: 'squats' | 'kneeTouch' | 'armsUp') => {
-    if (assigningPatient) {
-      onAssignExercise(assigningPatient.id, exerciseId);
-      setShowAssignModal(false);
-    }
-  };
-
-  const handleCreateReportSubmit = (e: React.FormEvent) => {
+  const handleSaveClinicianProfile = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedPatient) return;
+    setProfName(tempName);
+    setProfRut(tempRut);
+    setProfSpecialty(tempSpecialty);
+    setProfInstitution(tempInstitution);
+    setProfRegistry(tempRegistry);
 
-    const newReport: Report = {
-      id: `rep_${Date.now()}`,
+    localStorage.setItem('kinesfera_clinician_name', tempName);
+    localStorage.setItem('kinesfera_clinician_rut', tempRut);
+    localStorage.setItem('kinesfera_clinician_specialty', tempSpecialty);
+    localStorage.setItem('kinesfera_clinician_institution', tempInstitution);
+    localStorage.setItem('kinesfera_clinician_registry', tempRegistry);
+
+    setShowEditProfileModal(false);
+  };
+
+  const [showConfirmClearModal, setShowConfirmClearModal] = useState(false);
+  const [clearSuccessNotice, setClearSuccessNotice] = useState<string | null>(null);
+
+  const handleConfirmClearAll = () => {
+    if (onClearAllPatients) {
+      onClearAllPatients();
+    }
+    setSelectedPatientId('');
+    setShowConfirmClearModal(false);
+    setClearSuccessNotice('Todos los datos anteriores han sido eliminados con éxito. Base de datos limpia para comenzar desde 0.');
+    setTimeout(() => setClearSuccessNotice(null), 5000);
+    setActiveSubTab('add_patient_eval');
+  };
+
+  // Find or create on-the-fly comprehensive report for selected patient
+  const selectedComprehensiveReport = comprehensiveReports.find(r => r.patientId === selectedPatientId) || (
+    selectedPatient ? {
+      id: `comprep_${selectedPatient.id}`,
       patientId: selectedPatient.id,
       patientName: `${selectedPatient.firstName} ${selectedPatient.lastName}`,
       patientRut: selectedPatient.rut,
-      professionalId: clinician.id,
-      professionalName: `${clinician.firstName} ${clinician.lastName}`,
-      professionalSpecialty: clinician.specialty,
-      creatorRole: 'Profesionales Clínicos',
-      generatedAt: new Date().toISOString(),
-      content: {
-        summary: reportSummary || 'Seguimiento de telerehabilitación pediátrica completado.',
-        progressObserved: reportProgress || 'Evolución favorable del control postural.',
-        achievements: reportAchievements || 'Cumplimiento adecuado de metas asignadas.',
-        areasToFocus: reportFocusAreas || 'Optimización del equilibrio monopodal.',
-        nextSteps: reportNextSteps || 'Continuar pauta en el hogar y coordinación con equipo PIE.',
-        romAverage: 91,
-        adherencePercentage: 85,
-        compensationCount: 2
-      }
-    };
-
-    onCreateReport(newReport);
-    setShowNewReportModal(false);
-    setActiveReportToView(newReport);
-
-    // Reset form
-    setReportSummary('');
-    setReportProgress('');
-    setReportAchievements('');
-    setReportFocusAreas('');
-    setReportNextSteps('');
-  };
-
-  const handleCreateNewPatientSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newPatientName.trim() || !onAddNewPatient) return;
-
-    const parts = newPatientName.trim().split(' ');
-    const firstName = parts[0];
-    const lastName = parts.slice(1).join(' ') || '';
-
-    const newPatient: User = {
-      id: `user_patient_${Date.now()}`,
-      email: `paciente.${firstName.toLowerCase()}@neuronexo.cl`,
-      role: 'Padre/Niño',
-      firstName,
-      lastName,
-      rut: newPatientRut.trim() || `${Math.floor(20 + Math.random() * 8)}.${Math.floor(100 + Math.random() * 900)}.${Math.floor(100 + Math.random() * 900)}-${Math.floor(Math.random() * 9)}`,
-      birthDate: newPatientBirthDate.trim() || '2023-05-10',
-      gender: 'Hombre',
-      plan: 'Premium',
-      credits: 50,
-      assignedExercise: 'squats',
-      diagnosis: newPatientDiagnosis.trim() || 'Evaluación neurokinesiológica en curso',
-      medicalRecordNumber: `NN-2026-${Math.floor(100 + Math.random() * 900)}`,
-      emergencyContact: {
-        name: newPatientTutor.trim() || 'Tutor legal',
-        relationship: 'Tutor',
-        phone: newPatientPhone.trim() || '+56 9 8000 0000'
+      patientBirthDate: selectedPatient.birthDate || 'No registrada',
+      medicalRecordNumber: selectedPatient.medicalRecordNumber || 'NN-01',
+      professionalName: profName || 'Klgo. Profesional Tratante',
+      professionalSpecialty: profSpecialty,
+      professionalRegistry: profRegistry,
+      institution: profInstitution,
+      dateGenerated: new Date().toISOString().slice(0, 10),
+      anamnesis: anamnesisData[selectedPatient.id] || {
+        id: `anam_${selectedPatient.id}`,
+        patientId: selectedPatient.id,
+        evaluatorName: profName || 'Klgo. Profesional Tratante',
+        evaluationDate: new Date().toISOString().slice(0, 10),
+        caregiverName: selectedPatient.emergencyContact?.name || 'Tutor legal',
+        caregiverPhone: selectedPatient.emergencyContact?.phone || '',
+        schoolOrCenter: '',
+        educationalLevel: '',
+        pieSupport: false,
+        consultationReason: selectedPatient.diagnosis || 'Evaluación inicial',
+        familyExpectations: '',
+        gestationalAgeWeeks: '39 semanas',
+        birthWeightGrams: '',
+        birthType: 'Parto normal',
+        apgarScore: '9/10',
+        neonatalComplications: 'Sin complicaciones',
+        headControlMonths: '',
+        independentSittingMonths: '',
+        crawlingMonths: '',
+        standingMonths: '',
+        walkingMonths: '',
+        currentMotorStatus: '',
+        medicalDiagnoses: selectedPatient.diagnosis || '',
+        surgeries: 'Ninguna',
+        pharmacology: '',
+        assistiveDevices: 'Ninguna',
+        allergicConditions: 'Sin alergias'
       },
-      professionals: [clinician.id]
-    };
+      evaluations: evaluationsData[selectedPatient.id] || {
+        id: `eval_${selectedPatient.id}`,
+        patientId: selectedPatient.id,
+        evaluationDate: new Date().toISOString().slice(0, 10),
+        evaluatorName: profName || 'Klgo. Profesional Tratante',
+        gmfcsLevel: 'Nivel I',
+        macsLevel: 'Nivel I',
+        eedpOrTepsiScore: 'En evaluación',
+        ashworthScore: '0',
+        tonePattern: 'Normotonía',
+        deepTendonReflexes: 'Normales ++/++++',
+        hipFlexionExt: '120° / 0°',
+        kneeFlexionExt: '130° / 0°',
+        ankleDorsiflexion: '15° bilateral',
+        shoulderMobility: '> 165° bilateral',
+        headAndTrunkControl: 'Conservado',
+        rightingReactions: 'Presentes',
+        protectiveResponses: 'Conservadas',
+        balanceSittingAndStanding: 'Funcional',
+        transferAbility: 'Autónomo',
+        gaitObservation: 'Marcha activa',
+        sensoryProfile: 'Evaluado mediante SPM-2',
+        functionalDiagnosisCIF: 'Evaluación funcional kinésica completada.',
+        therapeuticGoalsShortTerm: '',
+        therapeuticGoalsLongTerm: '',
+        treatmentPlan: 'Kinesioterapia motora personalizada.',
+        homeAndSchoolRecommendations: 'Pauta de estimulación en el hogar.'
+      },
+      clinicalSummary: `Evaluación neurokinesiológica integral de ${selectedPatient.firstName} ${selectedPatient.lastName}.`,
+      planAndFollowUp: 'Continuar plan kinésico personalizado.'
+    } : null
+  );
 
-    onAddNewPatient(newPatient);
-    setSelectedPatientId(newPatient.id);
-    setShowNewPatientModal(false);
-    
-    // Reset form
-    setNewPatientName('');
-    setNewPatientRut('');
-    setNewPatientBirthDate('');
-    setNewPatientDiagnosis('');
-    setNewPatientTutor('');
-    setNewPatientPhone('');
-  };
-
-  const handlePrint = () => {
-    window.print();
+  const handleReportGenerated = (report: ComprehensiveReport) => {
+    onGenerateComprehensiveReport(report);
+    setSelectedPatientId(report.patientId);
+    setActiveSubTab('comprehensive_report');
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-8 space-y-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
       
-      {/* Clinician Profile Strip */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-        <div className="flex items-center gap-5">
-          <div className="w-16 h-16 rounded-xl overflow-hidden border border-slate-200 shrink-0 shadow-xs">
-            <img
-              src="/src/assets/images/avatar_therapist_cl_1791671195799.jpg"
-              alt="Dra. Elena Ramírez"
-              referrerPolicy="no-referrer"
-              className="w-full h-full object-cover"
-            />
+      {/* Clinician Profile Strip (Customizable & Starts Blank for the Clinician) */}
+      <div className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-5">
+        <div className="flex items-center gap-4 sm:gap-5">
+          <div className="w-13 h-13 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center font-bold text-xl shadow-xs shrink-0">
+            <Stethoscope className="w-7 h-7" />
           </div>
           <div>
-            <div className="flex items-center gap-2 text-xs font-semibold text-indigo-600">
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>{clinician.specialty || 'Kinesiología Pediátrica · Neurorehabilitación'}</span>
+            <div className="flex items-center gap-2 text-xs font-semibold text-blue-600">
+              <span>{profSpecialty}</span>
+              <span className="text-slate-300">·</span>
+              <span className="text-slate-500 font-mono text-[11px]">{profRegistry}</span>
             </div>
-            <h1 className="text-xl font-bold text-slate-900 mt-0.5">
-              {clinician.firstName} {clinician.lastName}
-            </h1>
+            
+            <div className="flex items-center gap-2.5 mt-0.5">
+              <h1 className="text-lg sm:text-xl font-black text-slate-900">
+                {profName ? profName : 'Perfil Profesional Clínico (Sin Configurar)'}
+              </h1>
+              
+              <button
+                onClick={() => {
+                  setTempName(profName);
+                  setTempRut(profRut);
+                  setTempSpecialty(profSpecialty);
+                  setTempInstitution(profInstitution);
+                  setTempRegistry(profRegistry);
+                  setShowEditProfileModal(true);
+                }}
+                className="p-1 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+                title="Editar mis datos profesionales (Nombre, RUT, Especialidad, Institución)"
+              >
+                <Edit3 className="w-4 h-4" />
+              </button>
+            </div>
+
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500 mt-1">
-              <span>RUT: <strong className="font-mono text-slate-700">{clinician.rut}</strong></span>
+              <span>RUT: <strong className="font-mono text-slate-700">{profRut || 'Sin RUT registrado'}</strong></span>
               <span>·</span>
-              <span>{clinician.institution}</span>
-              <span>·</span>
-              <span className="flex items-center gap-1">
-                <MapPin className="w-3.5 h-3.5 text-slate-400" />
-                <span>{clinician.consultationAddress?.commune}, {clinician.consultationAddress?.region}</span>
-              </span>
+              <span>{profInstitution}</span>
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-2.5 shrink-0">
+        {/* Action Shortcuts */}
+        <div className="flex flex-wrap items-center gap-2.5 shrink-0 w-full md:w-auto justify-end">
           <button
-            onClick={() => setShowNewPatientModal(true)}
-            className="flex items-center gap-1.5 px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-colors cursor-pointer"
+            onClick={() => setShowConfirmClearModal(true)}
+            className="flex items-center gap-1.5 px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold rounded-xl transition-colors cursor-pointer"
+            title="Eliminar todos los datos de pacientes anteriores para comenzar desde 0"
+          >
+            <RotateCcw className="w-3.5 h-3.5 text-rose-600" />
+            <span>Comenzar desde 0</span>
+          </button>
+
+          <button
+            onClick={() => {
+              setTempName(profName);
+              setTempRut(profRut);
+              setShowEditProfileModal(true);
+            }}
+            className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-colors cursor-pointer"
+          >
+            <Edit3 className="w-3.5 h-3.5" />
+            <span>Editar Mi Perfil</span>
+          </button>
+
+          <button
+            onClick={() => setActiveSubTab('marketing_growth')}
+            className={`flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+              activeSubTab === 'marketing_growth'
+                ? 'bg-amber-400 text-slate-950 shadow-xs'
+                : 'bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200'
+            }`}
+          >
+            <TrendingUp className="w-3.5 h-3.5" />
+            <span>Marketing & Crecimiento</span>
+          </button>
+
+          <button
+            onClick={() => setActiveSubTab('add_patient_eval')}
+            className={`flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+              activeSubTab === 'add_patient_eval'
+                ? 'bg-blue-600 text-white shadow-xs'
+                : 'bg-blue-50 text-blue-700 hover:bg-blue-100'
+            }`}
           >
             <UserPlus className="w-3.5 h-3.5" />
-            <span>+ Nuevo Paciente</span>
-          </button>
-          <button
-            onClick={() => setShowNewReportModal(true)}
-            className="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl shadow-xs transition-colors cursor-pointer"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Generar Informe Clínico</span>
+            <span>+ Ingresar Paciente / Anamnesis</span>
           </button>
         </div>
       </div>
 
-      {/* Clinical Sub-Navigation Tabs */}
-      <div className="flex items-center justify-between border-b border-slate-200 pb-2">
-        <div className="flex items-center gap-2">
-          
-          {/* TAB 1: Plantilla de Progreso (Requested Spreadsheet View) */}
+      {/* Clean Database / Starting from 0 Banner */}
+      {patients.length === 0 && (
+        <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs animate-in fade-in">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-2xs">
+              <Sparkles className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="font-bold text-slate-900 text-sm">
+                Base de datos limpia: 0 pacientes anteriores
+              </h4>
+              <p className="text-xs text-slate-600">
+                Todo listo para comenzar desde 0. Registra a tu primer paciente para iniciar su Ficha Clínica, Anamnesis y Evaluación Neuropsicomotriz.
+              </p>
+            </div>
+          </div>
           <button
-            onClick={() => setActiveSubTab('progress_sheet')}
-            className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
-              activeSubTab === 'progress_sheet'
-                ? 'bg-slate-900 text-white shadow-xs'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-            }`}
+            onClick={() => setActiveSubTab('add_patient_eval')}
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shrink-0 shadow-xs cursor-pointer"
           >
-            <ClipboardList className="w-4 h-4 text-emerald-400" />
-            <span>Plantilla de Progreso (Seguimiento Diario)</span>
-            <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-md bg-white/20 text-white">
-              {progressNotes.length}
-            </span>
+            <UserPlus className="w-3.5 h-3.5" />
+            <span>+ Ingresar Primer Paciente</span>
           </button>
+        </div>
+      )}
 
-          {/* TAB 2: Expediente & Prescripciones con IA */}
+      {/* Success Notification Alert */}
+      {clearSuccessNotice && (
+        <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-xs font-bold flex items-center justify-between animate-in fade-in">
+          <span className="flex items-center gap-2">
+            <Check className="w-4 h-4 text-emerald-600" />
+            <span>{clearSuccessNotice}</span>
+          </span>
+          <button onClick={() => setClearSuccessNotice(null)} className="text-emerald-700 hover:text-emerald-950 font-bold cursor-pointer">✕</button>
+        </div>
+      )}
+
+      {/* Clinical Primary Sub-Navigation Tabs */}
+      <div className="border-b border-slate-200 pb-2">
+        <div className="flex flex-wrap items-center gap-2">
+          
+          {/* TAB 1: Ingreso de Paciente & Evaluación (Anamnesis y Pruebas Clínicas) */}
           <button
-            onClick={() => setActiveSubTab('directory_prescriptions')}
-            className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
-              activeSubTab === 'directory_prescriptions'
-                ? 'bg-slate-900 text-white shadow-xs'
+            onClick={() => setActiveSubTab('add_patient_eval')}
+            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+              activeSubTab === 'add_patient_eval'
+                ? 'bg-blue-600 text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
-            <Users className="w-4 h-4 text-indigo-400" />
-            <span>Ficha & Prescripción Biomecánica</span>
-            <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-md bg-white/20 text-white">
+            <UserPlus className="w-4 h-4 text-blue-200" />
+            <span>1. Ingreso de Paciente & Evaluación (Anamnesis y Pruebas)</span>
+            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-md bg-white/20 text-white">
               {patients.length}
             </span>
           </button>
 
-          {/* TAB 3: Informes Oficiales Emitidos */}
+          {/* TAB 2: Informe Clínico Consolidado (Descarga en PDF y Word) */}
           <button
-            onClick={() => setActiveSubTab('reports')}
-            className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
-              activeSubTab === 'reports'
-                ? 'bg-slate-900 text-white shadow-xs'
+            onClick={() => setActiveSubTab('comprehensive_report')}
+            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+              activeSubTab === 'comprehensive_report'
+                ? 'bg-blue-600 text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
-            <FileText className="w-4 h-4 text-blue-400" />
-            <span>Informes Clínicos Oficiales</span>
-            <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-md bg-white/20 text-white">
-              {reports.length}
+            <FileText className="w-4 h-4 text-blue-200" />
+            <span>2. Informe Clínico Consolidado (PDF / Word)</span>
+            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-md bg-white/20 text-white">
+              {comprehensiveReports.length}
+            </span>
+          </button>
+
+          {/* TAB 3: Plantilla de Progreso (Seguimiento Diario) */}
+          <button
+            onClick={() => setActiveSubTab('progress_sheet')}
+            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+              activeSubTab === 'progress_sheet'
+                ? 'bg-blue-600 text-white shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            }`}
+          >
+            <ClipboardList className="w-4 h-4 text-emerald-300" />
+            <span>3. Plantilla de Progreso (Seguimiento Diario)</span>
+            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-md bg-white/20 text-white">
+              {progressNotes.length}
+            </span>
+          </button>
+
+          {/* TAB 4: Marketing, Ventas & Crecimiento del Negocio */}
+          <button
+            onClick={() => setActiveSubTab('marketing_growth')}
+            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+              activeSubTab === 'marketing_growth'
+                ? 'bg-gradient-to-r from-blue-700 to-indigo-700 text-white shadow-xs ring-2 ring-blue-400/50'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            }`}
+          >
+            <TrendingUp className="w-4 h-4 text-amber-300" />
+            <span>4. Marketing, Ventas & Crecimiento</span>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-400 text-slate-950 font-mono shadow-2xs">
+              Plan Mes 1
             </span>
           </button>
 
         </div>
       </div>
 
-      {/* VIEW 1: Plantilla de Progreso (Faithful Implementation of User's Spreadsheet) */}
+      {/* ========================================================================= */}
+      {/* VISTA 1: Ingreso de Pacientes, Anamnesis y Pruebas Clínicas                */}
+      {/* ========================================================================= */}
+      {activeSubTab === 'add_patient_eval' && (
+        <PatientEvaluationForm
+          patients={patients}
+          selectedPatientId={selectedPatientId}
+          onSelectPatient={setSelectedPatientId}
+          anamnesisData={anamnesisData}
+          evaluationsData={evaluationsData}
+          onSaveAnamnesis={onSaveAnamnesis}
+          onSaveEvaluations={onSaveEvaluations}
+          onAddNewPatient={onAddNewPatient}
+          onGenerateReport={handleReportGenerated}
+          clinicianName={profName || 'Klgo. Profesional Tratante'}
+          clinicianSpecialty={profSpecialty}
+          clinicianInstitution={profInstitution}
+          clinicianRegistry={profRegistry}
+        />
+      )}
+
+      {/* ========================================================================= */}
+      {/* VISTA 2: Informe Clínico Consolidado (Descarga en Word .doc y PDF)        */}
+      {/* ========================================================================= */}
+      {activeSubTab === 'comprehensive_report' && (
+        <div className="space-y-6">
+          
+          {/* Patient Selector Bar for Report */}
+          <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <label className="text-xs font-bold text-slate-700">Ver Informe del Paciente:</label>
+              <select
+                value={selectedPatientId}
+                onChange={(e) => setSelectedPatientId(e.target.value)}
+                className="text-xs font-bold text-slate-800 bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 focus:ring-2 focus:ring-blue-500 cursor-pointer"
+              >
+                {patients.length === 0 ? (
+                  <option value="">(Sin pacientes registrados)</option>
+                ) : (
+                  patients.map(p => (
+                    <option key={p.id} value={p.id}>
+                      {p.firstName} {p.lastName} — RUT: {p.rut}
+                    </option>
+                  ))
+                )}
+              </select>
+            </div>
+
+            <div className="text-xs text-slate-500">
+              Documento clínico oficial descargable en Word (.doc) y PDF con logotipo institucional.
+            </div>
+          </div>
+
+          {selectedComprehensiveReport ? (
+            <ComprehensiveReportViewer
+              report={{
+                ...selectedComprehensiveReport,
+                professionalName: profName || selectedComprehensiveReport.professionalName,
+                professionalSpecialty: profSpecialty || selectedComprehensiveReport.professionalSpecialty,
+                professionalRegistry: profRegistry || selectedComprehensiveReport.professionalRegistry,
+                institution: profInstitution || selectedComprehensiveReport.institution
+              }}
+              onEditReport={() => setActiveSubTab('add_patient_eval')}
+              onSelectAnotherPatient={() => setActiveSubTab('add_patient_eval')}
+            />
+          ) : (
+            <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center text-slate-500 space-y-3">
+              <FileText className="w-12 h-12 text-slate-300 mx-auto" />
+              <p className="text-sm font-semibold">
+                {patients.length === 0 
+                  ? 'Base de datos limpia: aún no has registrado ningún paciente.' 
+                  : 'No se ha generado un informe para este paciente.'}
+              </p>
+              <button
+                onClick={() => setActiveSubTab('add_patient_eval')}
+                className="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold shadow-xs hover:bg-blue-500 cursor-pointer"
+              >
+                {patients.length === 0 ? '+ Registrar Primer Paciente' : 'Ir a Evaluación para Generar Informe'}
+              </button>
+            </div>
+          )}
+
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* VISTA 3: Plantilla de Progreso (Seguimiento Diario en Planilla)            */}
+      {/* ========================================================================= */}
       {activeSubTab === 'progress_sheet' && (
         <PatientProgressSheet
           patients={patients}
           selectedPatientId={selectedPatientId}
           onSelectPatient={setSelectedPatientId}
           progressNotes={progressNotes}
-          onAddProgressNote={onAddProgressNote}
+          onAddProgressNote={(note) => onAddProgressNote({
+            ...note,
+            professionalName: profName || 'Klgo. Profesional Tratante'
+          })}
           onUpdateProgressNote={onUpdateProgressNote}
           onDeleteProgressNote={onDeleteProgressNote}
-          onAddNewPatient={() => setShowNewPatientModal(true)}
+          onAddNewPatient={() => setActiveSubTab('add_patient_eval')}
+          anamnesisData={anamnesisData}
+          evaluationsData={evaluationsData}
+          clinicianName={profName}
+          clinicianSpecialty={profSpecialty}
+          clinicianInstitution={profInstitution}
         />
       )}
 
-      {/* VIEW 2: Expediente y Prescripción de Ejercicios */}
-      {activeSubTab === 'directory_prescriptions' && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          
-          {/* Patient Directory (8 cols) */}
-          <div className="lg:col-span-8 bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
-            <div className="p-6 border-b border-slate-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <div>
-                <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                  <Users className="w-4 h-4 text-indigo-600" />
-                  <span>Expediente de Pacientes Asignados</span>
-                </h2>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Seguimiento de telerrehabilitación psicomotriz y neurodesarrollo
-                </p>
-              </div>
-
-              <div className="flex items-center gap-2 w-full sm:w-auto">
-                <input
-                  type="text"
-                  placeholder="Buscar por nombre, RUT o diagnóstico..."
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                  className="w-full sm:w-64 text-xs px-3 py-2 border border-slate-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
-                />
-              </div>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                    <th className="py-3 px-4">Paciente</th>
-                    <th className="py-3 px-4">RUT</th>
-                    <th className="py-3 px-4">Diagnóstico</th>
-                    <th className="py-3 px-4">Ejercicio Asignado</th>
-                    <th className="py-3 px-4 text-right">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 text-xs">
-                  {filteredPatients.map(patient => {
-                    const isSelected = patient.id === selectedPatientId;
-                    const assignedEx = exercises.find(e => e.id === patient.assignedExercise);
-                    return (
-                      <tr
-                        key={patient.id}
-                        onClick={() => setSelectedPatientId(patient.id)}
-                        className={`hover:bg-slate-50/80 cursor-pointer transition-colors ${
-                          isSelected ? 'bg-indigo-50/40' : ''
-                        }`}
-                      >
-                        <td className="py-3.5 px-4 font-semibold text-slate-900">
-                          {patient.firstName} {patient.lastName}
-                          <span className="block text-[11px] font-normal text-slate-400">
-                            Ficha: {patient.medicalRecordNumber || 'NN-01'}
-                          </span>
-                        </td>
-                        <td className="py-3.5 px-4 font-mono tabular-nums text-slate-600">
-                          {patient.rut}
-                        </td>
-                        <td className="py-3.5 px-4 text-slate-600 max-w-xs truncate">
-                          {patient.diagnosis || 'Evaluación inicial'}
-                        </td>
-                        <td className="py-3.5 px-4">
-                          <span className="font-medium text-indigo-700">
-                            {assignedEx?.friendlyName || patient.assignedExercise || 'Sentadillas'}
-                          </span>
-                        </td>
-                        <td className="py-3.5 px-4 text-right">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleOpenAssignModal(patient);
-                            }}
-                            className="px-2.5 py-1 text-xs font-semibold text-indigo-700 hover:text-indigo-900 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors cursor-pointer"
-                          >
-                            Modificar Prescripción
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* Selected Patient Biomechanical Details (4 cols) */}
-          <div className="lg:col-span-4 space-y-6">
-            <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs space-y-5">
-              <div className="border-b border-slate-100 pb-4">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-600">
-                  Ficha Seleccionada
-                </span>
-                <h3 className="text-lg font-bold text-slate-900 mt-1">
-                  {selectedPatient?.firstName} {selectedPatient?.lastName}
-                </h3>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  RUT: <strong className="font-mono text-slate-700">{selectedPatient?.rut}</strong>
-                </p>
-              </div>
-
-              {/* Quick Metrics */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/60">
-                  <span className="text-[10px] font-semibold text-slate-500 uppercase block">Adherencia</span>
-                  <span className="text-xl font-black text-emerald-600 font-mono tabular-nums">88%</span>
-                  <span className="text-[10px] text-slate-400 block mt-0.5">4 de 5 sesiones</span>
-                </div>
-                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/60">
-                  <span className="text-[10px] font-semibold text-slate-500 uppercase block">Rango ROM</span>
-                  <span className="text-xl font-black text-indigo-600 font-mono tabular-nums">92°</span>
-                  <span className="text-[10px] text-slate-400 block mt-0.5">Flexión rodilla</span>
-                </div>
-              </div>
-
-              {/* Compensations & Attention flags */}
-              <div className="space-y-2">
-                <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                  <Activity className="w-3.5 h-3.5 text-indigo-600" />
-                  <span>Alertas Biomecánicas Registradas:</span>
-                </span>
-                <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 space-y-1">
-                  <div className="font-semibold flex items-center gap-1 text-amber-800">
-                    <span>· Valgo Dinámico en Fatiga</span>
-                  </div>
-                  <p className="text-[11px] text-amber-700 leading-relaxed">
-                    Detectado en repeticiones 7 y 8. Se sugiere mantener el apoyo podal ancho y activar glúteo medio.
-                  </p>
-                </div>
-              </div>
-
-              {/* Contact details for emergency */}
-              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/60 text-xs text-slate-600 space-y-1">
-                <span className="font-bold text-slate-800 block text-[11px]">Contacto de Tutor / Apoderado:</span>
-                <p>{selectedPatient?.emergencyContact?.name}</p>
-                <p className="font-mono text-[11px] text-indigo-600">{selectedPatient?.emergencyContact?.phone}</p>
-              </div>
-
-              <button
-                onClick={() => setActiveSubTab('progress_sheet')}
-                className="w-full py-2 px-3 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-2 cursor-pointer"
-              >
-                <ClipboardList className="w-4 h-4 text-indigo-600" />
-                <span>Ver Plantilla de Progreso de {selectedPatient?.firstName}</span>
-              </button>
-            </div>
-          </div>
-
-        </div>
+      {/* ========================================================================= */}
+      {/* VISTA 4: Marketing, Derivadores, CRM y Crecimiento del Negocio (Kinesfera) */}
+      {/* ========================================================================= */}
+      {activeSubTab === 'marketing_growth' && (
+        <MarketingBusinessHub />
       )}
 
-      {/* VIEW 3: Informes Clínicos Oficiales Emitidos */}
-      {activeSubTab === 'reports' && (
-        <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs space-y-6">
-          <div className="flex items-center justify-between border-b border-slate-200 pb-4">
-            <div>
-              <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                <FileText className="w-4 h-4 text-indigo-600" />
-                <span>Archivo de Informes de Evolución Emitidos</span>
-              </h2>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Documentos clínicos con firma kinésica, listos para descargar o imprimir
-              </p>
-            </div>
-            <button
-              onClick={() => setShowNewReportModal(true)}
-              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl shadow-xs"
-            >
-              + Nuevo Informe
-            </button>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {reports.map(r => (
-              <div
-                key={r.id}
-                onClick={() => setActiveReportToView(r)}
-                className="p-5 border border-slate-200 hover:border-indigo-400 rounded-xl shadow-2xs transition-all cursor-pointer bg-slate-50/30 hover:bg-indigo-50/20"
-              >
-                <div className="flex items-center justify-between text-xs text-slate-500 mb-1.5">
-                  <span className="font-mono">{new Date(r.generatedAt).toLocaleDateString('es-CL')}</span>
-                  <span className="text-indigo-600 font-bold text-[11px]">Ver Documento</span>
+      {/* Edit Clinician Profile Modal */}
+      {showEditProfileModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 space-y-5 animate-in zoom-in-95">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
+                  <UserCheck className="w-5 h-5" />
                 </div>
-                <h3 className="text-sm font-bold text-slate-900">{r.patientName}</h3>
-                <p className="text-xs text-slate-500 font-mono mb-2">RUT: {r.patientRut}</p>
-                <p className="text-xs text-slate-700 line-clamp-2 leading-relaxed bg-white p-2.5 rounded-lg border border-slate-200/80">
-                  {r.content.summary}
-                </p>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">Configurar Perfil Profesional</h3>
+                  <p className="text-xs text-slate-500">Tus datos aparecerán en los informes clínicos y firmas</p>
+                </div>
               </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Exercise Assignment Modal */}
-      {showAssignModal && assigningPatient && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs">
-          <div className="bg-white border border-slate-200 rounded-2xl shadow-xl max-w-lg w-full p-6 space-y-5 animate-in zoom-in-95 duration-150">
-            <div className="border-b border-slate-100 pb-3">
-              <h3 className="text-base font-bold text-slate-900">
-                Prescribir Ejercicio Terapéutico
-              </h3>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Para el paciente: <strong>{assigningPatient.firstName} {assigningPatient.lastName}</strong> ({assigningPatient.rut})
-              </p>
-            </div>
-
-            <div className="space-y-3">
-              {exercises.map(ex => {
-                const isCurrent = assigningPatient.assignedExercise === ex.id;
-                return (
-                  <div
-                    key={ex.id}
-                    onClick={() => handleSelectAssignedExercise(ex.id as 'squats' | 'kneeTouch' | 'armsUp')}
-                    className={`p-4 border rounded-xl cursor-pointer transition-all flex items-center justify-between ${
-                      isCurrent
-                        ? 'border-indigo-500 bg-indigo-50/50 ring-2 ring-indigo-200'
-                        : 'border-slate-200 hover:border-slate-300 bg-white'
-                    }`}
-                  >
-                    <div>
-                      <h4 className="text-xs font-bold text-slate-900">{ex.friendlyName}</h4>
-                      <p className="text-[11px] text-slate-500 capitalize mt-0.5">
-                        {ex.category.replace('_', ' ')} · Objetivo: {ex.gamification.objective} reps
-                      </p>
-                    </div>
-                    {isCurrent ? (
-                      <span className="text-xs font-semibold text-indigo-600 flex items-center gap-1">
-                        <Check className="w-4 h-4" /> Asignado
-                      </span>
-                    ) : (
-                      <button className="text-xs font-semibold text-slate-600 hover:text-indigo-600">
-                        Seleccionar
-                      </button>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="flex justify-end pt-2">
-              <button
-                onClick={() => setShowAssignModal(false)}
-                className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800"
+              <button 
+                onClick={() => setShowEditProfileModal(false)}
+                className="text-slate-400 hover:text-slate-600 p-1"
               >
-                Cancelar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* New Patient Registration Modal (Adds new tab to sheet!) */}
-      {showNewPatientModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs">
-          <div className="bg-white border border-slate-200 rounded-2xl shadow-xl max-w-lg w-full p-6 space-y-4 animate-in zoom-in-95 duration-150">
-            <div className="border-b border-slate-100 pb-3 flex items-center justify-between">
-              <div>
-                <h3 className="text-base font-bold text-slate-900">
-                  Registrar Nuevo Paciente Pediátrico
-                </h3>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Se creará su hoja correspondiente en la Plantilla de Progreso
-                </p>
-              </div>
-              <button onClick={() => setShowNewPatientModal(false)} className="text-slate-400 hover:text-slate-700">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleCreateNewPatientSubmit} className="space-y-3.5 text-xs">
+            <form onSubmit={handleSaveClinicianProfile} className="space-y-4 text-xs">
               <div>
-                <label className="font-bold text-slate-700 block mb-1">Nombre Completo del Niño(a) *</label>
+                <label className="font-bold text-slate-700 block mb-1">Nombre Completo y Título</label>
                 <input
                   type="text"
                   required
-                  placeholder="Ej. Juan Beltrán"
-                  value={newPatientName}
-                  onChange={e => setNewPatientName(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-hidden"
+                  placeholder="Tu Nombre Completo y Título Profesional"
+                  value={tempName}
+                  onChange={e => setTempName(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-hidden text-xs"
                 />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">RUT Paciente</label>
-                  <input
-                    type="text"
-                    placeholder="26.840.119-3"
-                    value={newPatientRut}
-                    onChange={e => setNewPatientRut(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 font-mono outline-hidden"
-                  />
-                </div>
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Fecha de Nacimiento</label>
-                  <input
-                    type="date"
-                    value={newPatientBirthDate}
-                    onChange={e => setNewPatientBirthDate(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-hidden"
-                  />
-                </div>
               </div>
 
               <div>
-                <label className="font-bold text-slate-700 block mb-1">Diagnóstico / Motivo de Consulta</label>
+                <label className="font-bold text-slate-700 block mb-1">R.U.T. Profesional</label>
                 <input
                   type="text"
-                  placeholder="Ej. Retraso del Desarrollo Psicomotor · Hipotonía y Control de Sedente"
-                  value={newPatientDiagnosis}
-                  onChange={e => setNewPatientDiagnosis(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-hidden"
+                  placeholder="RUT Profesional"
+                  value={tempRut}
+                  onChange={e => setTempRut(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-hidden text-xs"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Nombre Tutor / Acompañante</label>
-                  <input
-                    type="text"
-                    placeholder="Ej. María José Beltrán (Madre)"
-                    value={newPatientTutor}
-                    onChange={e => setNewPatientTutor(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-hidden"
-                  />
-                </div>
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Teléfono de Contacto</label>
-                  <input
-                    type="tel"
-                    placeholder="+56 9 8123 9988"
-                    value={newPatientPhone}
-                    onChange={e => setNewPatientPhone(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 font-mono outline-hidden"
-                  />
-                </div>
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">Especialidad</label>
+                <input
+                  type="text"
+                  placeholder="Kinesiología Pediátrica · Neurorehabilitación"
+                  value={tempSpecialty}
+                  onChange={e => setTempSpecialty(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-hidden text-xs"
+                />
               </div>
 
-              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">Institución / Centro Clínico</label>
+                <input
+                  type="text"
+                  placeholder="Centro Clínico Kinesfera"
+                  value={tempInstitution}
+                  onChange={e => setTempInstitution(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-hidden text-xs"
+                />
+              </div>
+
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">Registro de Prestadores de Salud / SIS</label>
+                <input
+                  type="text"
+                  placeholder="Registro SIS N° xxxxxx"
+                  value={tempRegistry}
+                  onChange={e => setTempRegistry(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-hidden text-xs"
+                />
+              </div>
+
+              <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
                 <button
                   type="button"
-                  onClick={() => setShowNewPatientModal(false)}
+                  onClick={() => setShowEditProfileModal(false)}
                   className="px-4 py-2 font-semibold text-slate-600 hover:text-slate-800"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl"
+                  className="flex items-center gap-1.5 px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl shadow-xs transition-colors cursor-pointer"
                 >
-                  Crear Ficha y Hoja de Progreso
+                  <Check className="w-4 h-4" />
+                  <span>Guardar Mi Perfil</span>
                 </button>
               </div>
             </form>
@@ -661,225 +642,45 @@ export const ClinicalPortalView: React.FC<ClinicalPortalViewProps> = ({
         </div>
       )}
 
-      {/* New Report Creation Modal */}
-      {showNewReportModal && selectedPatient && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs">
-          <div className="bg-white border border-slate-200 rounded-2xl shadow-xl max-w-2xl w-full p-6 space-y-5 max-h-[90vh] overflow-y-auto">
-            <div className="border-b border-slate-100 pb-3 flex items-center justify-between">
+      {/* Confirmation Modal to Clear All Patients to start from 0 */}
+      {showConfirmClearModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-in zoom-in-95">
+            <div className="flex items-center gap-3 text-rose-600">
+              <div className="w-11 h-11 rounded-xl bg-rose-100 flex items-center justify-center shrink-0">
+                <AlertTriangle className="w-6 h-6 text-rose-600" />
+              </div>
               <div>
-                <h3 className="text-base font-bold text-slate-900">
-                  Emitir Informe de Evolución Kinésica Pediátrica
+                <h3 className="font-bold text-slate-900 text-base">
+                  ¿Comenzar desde 0 y eliminar pacientes?
                 </h3>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Paciente: <strong>{selectedPatient.firstName} {selectedPatient.lastName}</strong> · RUT: {selectedPatient.rut}
+                <p className="text-xs text-slate-500">
+                  Esta acción reiniciará la base de datos eliminando todos los pacientes anteriores.
                 </p>
               </div>
+            </div>
+
+            <p className="text-xs text-slate-600 leading-relaxed bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+              Se eliminarán las fichas de pacientes, notas de progreso y evaluaciones anteriores para que puedas ingresar tus pacientes y casos clínicos desde cero de forma completamente limpia.
+            </p>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2">
               <button
-                onClick={() => setShowNewReportModal(false)}
-                className="text-xs text-slate-400 hover:text-slate-700"
+                type="button"
+                onClick={() => setShowConfirmClearModal(false)}
+                className="px-4 py-2 border border-slate-300 text-slate-700 font-bold rounded-xl text-xs hover:bg-slate-50 cursor-pointer"
               >
-                Cerrar
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmClearAll}
+                className="flex items-center gap-1.5 px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-xl text-xs shadow-xs cursor-pointer"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Sí, Comenzar desde 0</span>
               </button>
             </div>
-
-            <form onSubmit={handleCreateReportSubmit} className="space-y-4 text-xs">
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">Resumen Clínico Ejecutivo</label>
-                <textarea
-                  required
-                  rows={2}
-                  value={reportSummary}
-                  onChange={e => setReportSummary(e.target.value)}
-                  placeholder="Ej. Paciente evaluado tras 4 semanas de intervención psicomotriz..."
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-hidden"
-                />
-              </div>
-
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">Progresos Motores y Conductuales Observados</label>
-                <textarea
-                  required
-                  rows={2}
-                  value={reportProgress}
-                  onChange={e => setReportProgress(e.target.value)}
-                  placeholder="Ej. Rango de flexión de rodilla optimizado a 92°. Menor fatiga bipedestada..."
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-hidden"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Logros Alcanzados</label>
-                  <textarea
-                    required
-                    rows={2}
-                    value={reportAchievements}
-                    onChange={e => setReportAchievements(e.target.value)}
-                    placeholder="Ej. Adherencia del 88%, estabilidad cefálica..."
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-hidden"
-                  />
-                </div>
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Áreas de Foco y Alerta</label>
-                  <textarea
-                    required
-                    rows={2}
-                    value={reportFocusAreas}
-                    onChange={e => setReportFocusAreas(e.target.value)}
-                    placeholder="Ej. Prevenir compensaciones en plano sagital..."
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-hidden"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">Próximos Pasos e Indicaciones al Hogar / Escuela</label>
-                <textarea
-                  required
-                  rows={2}
-                  value={reportNextSteps}
-                  onChange={e => setReportNextSteps(e.target.value)}
-                  placeholder="Ej. Continuar 3 veces por semana con pauta en el hogar..."
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-hidden"
-                />
-              </div>
-
-              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => setShowNewReportModal(false)}
-                  className="px-4 py-2 font-semibold text-slate-600 hover:text-slate-800"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-xs"
-                >
-                  Generar y Firmar Informe
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Report Document Viewer & Print Modal */}
-      {activeReportToView && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs">
-          <div className="bg-white border border-slate-200 rounded-2xl shadow-2xl max-w-3xl w-full p-8 max-h-[92vh] overflow-y-auto space-y-6 animate-in zoom-in-95 duration-150">
-            
-            {/* Printable Clinical Sheet Header */}
-            <div className="flex items-start justify-between border-b-2 border-slate-900 pb-5">
-              <div>
-                <span className="text-[11px] font-extrabold uppercase tracking-widest text-indigo-600">
-                  Documento Clínico Oficial · TeleRehabilitación Pediátrica
-                </span>
-                <h2 className="text-xl font-black text-slate-900 mt-1">
-                  INFORME DE EVOLUCIÓN NEUROPSICOMOTRIZ
-                </h2>
-                <p className="text-xs text-slate-500">
-                  NeuroNexo Adventures Health Platform · República de Chile
-                </p>
-              </div>
-
-              <div className="text-right text-xs">
-                <span className="text-slate-400 block text-[10px]">FECHA DE EMISIÓN</span>
-                <span className="font-mono font-bold text-slate-800">
-                  {new Date(activeReportToView.generatedAt).toLocaleDateString('es-CL')}
-                </span>
-                <span className="text-slate-500 block text-[11px] mt-1">ID: {activeReportToView.id}</span>
-              </div>
-            </div>
-
-            {/* Patient & Professional Metadata Box */}
-            <div className="grid grid-cols-2 gap-4 p-4 bg-slate-50 border border-slate-200 rounded-xl text-xs">
-              <div className="space-y-1">
-                <span className="text-[10px] uppercase font-bold text-slate-400">Datos del Paciente</span>
-                <p className="font-bold text-slate-900">{activeReportToView.patientName}</p>
-                <p className="font-mono text-slate-700">RUT: {activeReportToView.patientRut}</p>
-              </div>
-              <div className="space-y-1">
-                <span className="text-[10px] uppercase font-bold text-slate-400">Profesional Responsable</span>
-                <p className="font-bold text-slate-900">{activeReportToView.professionalName}</p>
-                <p className="text-slate-600">{activeReportToView.professionalSpecialty || 'Kinesiología Pediátrica'}</p>
-              </div>
-            </div>
-
-            {/* Report Content Blocks */}
-            <div className="space-y-4 text-xs text-slate-800 leading-relaxed">
-              <div>
-                <h4 className="font-bold text-slate-900 uppercase tracking-wide text-[11px] mb-1">
-                  1. Resumen Ejecutivo
-                </h4>
-                <p className="p-3 bg-white border border-slate-200 rounded-lg">
-                  {activeReportToView.content.summary}
-                </p>
-              </div>
-
-              <div>
-                <h4 className="font-bold text-slate-900 uppercase tracking-wide text-[11px] mb-1">
-                  2. Progresos y Métricas de Rango Articular (ROM)
-                </h4>
-                <p className="p-3 bg-white border border-slate-200 rounded-lg">
-                  {activeReportToView.content.progressObserved}
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <h4 className="font-bold text-slate-900 uppercase tracking-wide text-[11px] mb-1">
-                    3. Logros Clínicos
-                  </h4>
-                  <p className="p-3 bg-white border border-slate-200 rounded-lg">
-                    {activeReportToView.content.achievements}
-                  </p>
-                </div>
-                <div>
-                  <h4 className="font-bold text-slate-900 uppercase tracking-wide text-[11px] mb-1">
-                    4. Áreas de Foco Postural
-                  </h4>
-                  <p className="p-3 bg-white border border-slate-200 rounded-lg">
-                    {activeReportToView.content.areasToFocus}
-                  </p>
-                </div>
-              </div>
-
-              <div>
-                <h4 className="font-bold text-slate-900 uppercase tracking-wide text-[11px] mb-1">
-                  5. Plan de Continuidad y Coordinación Interdisciplinaria
-                </h4>
-                <p className="p-3 bg-white border border-slate-200 rounded-lg">
-                  {activeReportToView.content.nextSteps}
-                </p>
-              </div>
-            </div>
-
-            {/* Signature Block */}
-            <div className="pt-8 border-t border-slate-200 flex items-center justify-between">
-              <div className="text-center w-64 border-t border-dashed border-slate-400 pt-2">
-                <p className="font-bold text-xs text-slate-900">{activeReportToView.professionalName}</p>
-                <p className="text-[10px] text-slate-500">Kinesiología Neurorehabilitación Pediátrica</p>
-                <p className="text-[9px] font-mono text-slate-400">Registro SIS Nº 48291</p>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={handlePrint}
-                  className="flex items-center gap-2 px-4 py-2 border border-slate-300 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
-                >
-                  <Printer className="w-4 h-4" />
-                  <span>Imprimir Ficha</span>
-                </button>
-                <button
-                  onClick={() => setActiveReportToView(null)}
-                  className="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer"
-                >
-                  Cerrar
-                </button>
-              </div>
-            </div>
-
           </div>
         </div>
       )}

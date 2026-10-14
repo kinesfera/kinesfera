@@ -29,84 +29,110 @@ export const Navbar: React.FC<NavbarProps> = ({
         
         {/* Zone 1: Single Brand Wordmark */}
         <div className="flex items-center gap-3 shrink-0">
-          <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-gradient-to-tr from-sky-500 to-blue-600 text-white shadow-xs">
-            <Sparkles className="w-5 h-5" />
+          <div className={`flex items-center justify-center w-9 h-9 rounded-xl text-white shadow-xs ${
+            currentRole === 'Profesionales Clínicos'
+              ? 'bg-gradient-to-tr from-blue-600 to-indigo-600'
+              : 'bg-gradient-to-tr from-sky-500 to-blue-600'
+          }`}>
+            {currentRole === 'Profesionales Clínicos' ? (
+              <Stethoscope className="w-5 h-5" />
+            ) : (
+              <Sparkles className="w-5 h-5" />
+            )}
           </div>
-          <button 
-            onClick={() => onChangeTab('child')}
-            className="text-left cursor-pointer focus:outline-hidden"
-          >
-            <span className="text-lg font-extrabold tracking-tight text-slate-900 whitespace-nowrap block">
-              NeuroNexo Adventures
-            </span>
-          </button>
+          {currentRole === 'Profesionales Clínicos' ? (
+            <div className="text-left select-none">
+              <span className="text-lg font-extrabold tracking-tight text-slate-900 whitespace-nowrap block">
+                Kinesfera Clínico
+              </span>
+              <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wider block -mt-1">
+                Neurorehabilitación Pediátrica
+              </span>
+            </div>
+          ) : (
+            <button 
+              onClick={() => onChangeTab('child')}
+              className="text-left cursor-pointer focus:outline-hidden"
+            >
+              <span className="text-lg font-extrabold tracking-tight text-slate-900 whitespace-nowrap block">
+                NeuroNexo Adventures
+              </span>
+            </button>
+          )}
         </div>
 
-        {/* Zone 2: Navigation Links (Single-line, concise) */}
-        <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-slate-600">
-          <button
-            onClick={() => onChangeTab('child')}
-            className={`flex items-center gap-2 py-1 transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
-              activeTab === 'child'
-                ? 'text-sky-600 font-semibold border-b-2 border-sky-600'
-                : 'hover:text-slate-900'
-            }`}
-          >
-            <Compass className="w-4 h-4" />
-            <span>Aventura Niño</span>
-          </button>
+        {/* Zone 2: Navigation Links (Only shown for non-clinical roles) */}
+        {currentRole === 'Profesionales Clínicos' ? (
+          <div className="hidden lg:flex items-center gap-2 px-3.5 py-1.5 bg-blue-50/80 border border-blue-200/70 rounded-xl text-xs text-blue-900">
+            <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+            <span className="font-bold">Sesión Clínica Activa</span>
+            <span className="text-slate-300">|</span>
+            <span className="text-slate-600">Evaluaciones · Informes · Planilla · Marketing & Derivadores Copiapó</span>
+          </div>
+        ) : (
+          <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-slate-600">
+            <button
+              onClick={() => onChangeTab('child')}
+              className={`flex items-center gap-2 py-1 transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
+                activeTab === 'child'
+                  ? 'text-sky-600 font-semibold border-b-2 border-sky-600'
+                  : 'hover:text-slate-900'
+              }`}
+            >
+              <Compass className="w-4 h-4" />
+              <span>Aventura Niño</span>
+            </button>
 
-          <button
-            onClick={() => {
-              onChangeTab('clinical');
-              if (currentRole !== 'Profesionales Clínicos') {
+            <button
+              onClick={() => {
+                onChangeTab('clinical');
                 onSelectRole('Profesionales Clínicos');
-              }
-            }}
-            className={`flex items-center gap-2 py-1 transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
-              activeTab === 'clinical'
-                ? 'text-blue-600 font-semibold border-b-2 border-blue-600'
-                : 'hover:text-slate-900'
-            }`}
-          >
-            <Stethoscope className="w-4 h-4" />
-            <span>Portal Clínico</span>
-          </button>
+              }}
+              className={`flex items-center gap-2 py-1 transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
+                activeTab === 'clinical'
+                  ? 'text-blue-600 font-semibold border-b-2 border-blue-600'
+                  : 'hover:text-slate-900'
+              }`}
+            >
+              <Stethoscope className="w-4 h-4" />
+              <span>Portal Clínico</span>
+            </button>
 
-          <button
-            onClick={() => {
-              onChangeTab('educator');
-              if (currentRole !== 'Educadores') {
-                onSelectRole('Educadores');
-              }
-            }}
-            className={`flex items-center gap-2 py-1 transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
-              activeTab === 'educator'
-                ? 'text-cyan-600 font-semibold border-b-2 border-cyan-600'
-                : 'hover:text-slate-900'
-            }`}
-          >
-            <Users className="w-4 h-4" />
-            <span>Portal PIE</span>
-          </button>
+            <button
+              onClick={() => {
+                onChangeTab('educator');
+                if (currentRole !== 'Educadores') {
+                  onSelectRole('Educadores');
+                }
+              }}
+              className={`flex items-center gap-2 py-1 transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
+                activeTab === 'educator'
+                  ? 'text-cyan-600 font-semibold border-b-2 border-cyan-600'
+                  : 'hover:text-slate-900'
+              }`}
+            >
+              <Users className="w-4 h-4" />
+              <span>Portal PIE</span>
+            </button>
 
-          <button
-            onClick={() => {
-              onChangeTab('admin');
-              if (currentRole !== 'Administrador (Neuronexin)') {
-                onSelectRole('Administrador (Neuronexin)');
-              }
-            }}
-            className={`flex items-center gap-2 py-1 transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
-              activeTab === 'admin'
-                ? 'text-slate-900 font-semibold border-b-2 border-slate-900'
-                : 'hover:text-slate-900'
-            }`}
-          >
-            <Shield className="w-4 h-4" />
-            <span>Institución</span>
-          </button>
-        </nav>
+            <button
+              onClick={() => {
+                onChangeTab('admin');
+                if (currentRole !== 'Administrador (Neuronexin)') {
+                  onSelectRole('Administrador (Neuronexin)');
+                }
+              }}
+              className={`flex items-center gap-2 py-1 transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
+                activeTab === 'admin'
+                  ? 'text-slate-900 font-semibold border-b-2 border-slate-900'
+                  : 'hover:text-slate-900'
+              }`}
+            >
+              <Shield className="w-4 h-4" />
+              <span>Institución</span>
+            </button>
+          </nav>
+        )}
 
         {/* Zone 3: Primary Action & Quick Switcher */}
         <div className="flex items-center gap-3 shrink-0">
@@ -115,7 +141,9 @@ export const Navbar: React.FC<NavbarProps> = ({
           {currentUser && (
             <div className="hidden lg:flex items-center gap-2 px-2.5 py-1 bg-sky-50/80 border border-sky-100 rounded-lg text-xs text-sky-900">
               <span className="w-2 h-2 rounded-full bg-emerald-500" />
-              <span className="font-semibold truncate max-w-[130px]">{currentUser.firstName} {currentUser.lastName}</span>
+              <span className="font-semibold truncate max-w-[130px]">
+                {currentUser.firstName ? `${currentUser.firstName} ${currentUser.lastName}`.trim() : (currentRole === 'Profesionales Clínicos' ? 'Profesional Clínico' : 'Usuario')}
+              </span>
             </div>
           )}
 
@@ -123,7 +151,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           <button
             onClick={onOpenChat}
             className="relative p-2 text-slate-600 hover:text-slate-900 hover:bg-sky-50 rounded-lg transition-colors cursor-pointer"
-            title="Abrir Chat Interdisciplinario"
+            title="Abrir Chat con Familias y Pacientes"
           >
             <MessageSquare className="w-4 h-4" />
             {unreadCount > 0 && (
@@ -133,36 +161,38 @@ export const Navbar: React.FC<NavbarProps> = ({
             )}
           </button>
 
-          {/* Role Quick Switcher */}
-          <div className="flex items-center gap-1.5 pl-2 border-l border-slate-200">
-            <select
-              value={currentRole}
-              onChange={(e) => {
-                const role = e.target.value as UserRole;
-                onSelectRole(role);
-                if (role === 'Padre/Niño') onChangeTab('child');
-                else if (role === 'Profesionales Clínicos') onChangeTab('clinical');
-                else if (role === 'Educadores') onChangeTab('educator');
-                else if (role === 'Administrador (Neuronexin)') onChangeTab('admin');
-              }}
-              className="text-xs font-semibold text-slate-800 bg-slate-100 border border-slate-200 rounded-lg px-2 py-1.5 focus:outline-hidden focus:ring-2 focus:ring-sky-500 cursor-pointer"
-            >
-              <option value="Padre/Niño">Niño / Familia</option>
-              <option value="Profesionales Clínicos">Clínico</option>
-              <option value="Educadores">Educativo PIE</option>
-              <option value="Administrador (Neuronexin)">Admin</option>
-            </select>
-          </div>
+          {/* Role Quick Switcher (Hidden for clinicians to keep their view pure) */}
+          {currentRole !== 'Profesionales Clínicos' && (
+            <div className="flex items-center gap-1.5 pl-2 border-l border-slate-200">
+              <select
+                value={currentRole}
+                onChange={(e) => {
+                  const role = e.target.value as UserRole;
+                  onSelectRole(role);
+                  if (role === 'Padre/Niño') onChangeTab('child');
+                  else if (role === 'Profesionales Clínicos') onChangeTab('clinical');
+                  else if (role === 'Educadores') onChangeTab('educator');
+                  else if (role === 'Administrador (Neuronexin)') onChangeTab('admin');
+                }}
+                className="text-xs font-semibold text-slate-800 bg-slate-100 border border-slate-200 rounded-lg px-2 py-1.5 focus:outline-hidden focus:ring-2 focus:ring-sky-500 cursor-pointer"
+              >
+                <option value="Padre/Niño">Niño / Familia</option>
+                <option value="Profesionales Clínicos">Clínico</option>
+                <option value="Educadores">Educativo PIE</option>
+                <option value="Administrador (Neuronexin)">Admin</option>
+              </select>
+            </div>
+          )}
 
-          {/* Change Account / Logout Button returning to harmonious login view */}
+          {/* Change Account / Logout Button returning to login view */}
           {onLogout && (
             <button
               onClick={onLogout}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-sky-50 hover:bg-sky-100 text-sky-700 text-xs font-bold rounded-lg border border-sky-200/80 transition-colors cursor-pointer"
-              title="Cambiar de cuenta o volver a la pantalla de inicio de sesión"
+              title="Cerrar Sesión o Cambiar de Perfil"
             >
               <LogOut className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Cerrar Sesión</span>
+              <span>Cerrar Sesión</span>
             </button>
           )}
 

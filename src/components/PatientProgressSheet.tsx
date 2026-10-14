@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { User, ProgressNote, PaymentMethod } from '../types';
+import { User, ProgressNote, PaymentMethod, PatientAnamnesis, ClinicalEvaluations } from '../types';
+import { WeeklyHomePracticeModal } from './WeeklyHomePracticeModal';
+import { CompanyDocumentHeader } from './CompanyDocumentHeader';
 import { 
   Calendar, 
   CreditCard, 
@@ -11,11 +13,14 @@ import {
   Printer, 
   Download, 
   User as UserIcon,
-  Check,
-  X,
-  Sparkles,
-  ClipboardList,
-  FileSpreadsheet
+  Check, 
+  X, 
+  Sparkles, 
+  ClipboardList, 
+  FileSpreadsheet,
+  Phone,
+  Send,
+  Smartphone
 } from 'lucide-react';
 
 interface PatientProgressSheetProps {
@@ -27,6 +32,11 @@ interface PatientProgressSheetProps {
   onUpdateProgressNote: (note: ProgressNote) => void;
   onDeleteProgressNote: (noteId: string) => void;
   onAddNewPatient?: () => void;
+  anamnesisData?: Record<string, PatientAnamnesis>;
+  evaluationsData?: Record<string, ClinicalEvaluations>;
+  clinicianName?: string;
+  clinicianSpecialty?: string;
+  clinicianInstitution?: string;
 }
 
 export const PatientProgressSheet: React.FC<PatientProgressSheetProps> = ({
@@ -37,11 +47,23 @@ export const PatientProgressSheet: React.FC<PatientProgressSheetProps> = ({
   onAddProgressNote,
   onUpdateProgressNote,
   onDeleteProgressNote,
-  onAddNewPatient
+  onAddNewPatient,
+  anamnesisData,
+  evaluationsData,
+  clinicianName,
+  clinicianSpecialty,
+  clinicianInstitution
 }) => {
   const [searchFilter, setSearchFilter] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingNote, setEditingNote] = useState<ProgressNote | null>(null);
+  const [showWeeklyPracticeModal, setShowWeeklyPracticeModal] = useState(false);
+  const [selectedNoteIdForPractice, setSelectedNoteIdForPractice] = useState<string | undefined>(undefined);
+
+  const handleOpenWeeklyPracticeModal = (noteId?: string) => {
+    setSelectedNoteIdForPractice(noteId);
+    setShowWeeklyPracticeModal(true);
+  };
 
   // Form states for new / edit note
   const [formDate, setFormDate] = useState(() => {
@@ -102,7 +124,7 @@ export const PatientProgressSheet: React.FC<PatientProgressSheetProps> = ({
         date: formDate,
         paymentMethod: formPayment,
         notes: formNotes.trim(),
-        professionalName: 'Dra. Elena Ramírez Soto'
+        professionalName: 'Klgo/a. Profesional Tratante'
       });
     }
 
@@ -139,7 +161,7 @@ export const PatientProgressSheet: React.FC<PatientProgressSheetProps> = ({
       `"${n.date}"`,
       `"${n.paymentMethod}"`,
       `"${n.notes.replace(/"/g, '""')}"`,
-      `"${n.professionalName || 'Dra. Elena Ramírez Soto'}"`
+      `"${n.professionalName || 'Klgo/a. Profesional Tratante'}"`
     ]);
 
     const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(e => e.join(','))].join('\r\n');
@@ -186,7 +208,7 @@ export const PatientProgressSheet: React.FC<PatientProgressSheetProps> = ({
             n.date,
             n.paymentMethod,
             n.notes,
-            n.professionalName || 'Dra. Elena Ramírez Soto'
+            n.professionalName || 'Klgo/a. Profesional Tratante'
           ]);
         });
       } else {
@@ -200,7 +222,7 @@ export const PatientProgressSheet: React.FC<PatientProgressSheetProps> = ({
           'Sin sesiones registradas',
           '-',
           'Sin notas de progreso registradas a la fecha',
-          'Dra. Elena Ramírez Soto'
+          'Klgo/a. Profesional Tratante'
         ]);
       }
     });
@@ -232,6 +254,16 @@ export const PatientProgressSheet: React.FC<PatientProgressSheetProps> = ({
   return (
     <div className="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden flex flex-col space-y-0">
       
+      {/* Official Company Document Header with Logo Option */}
+      <div className="p-6 pb-2">
+        <CompanyDocumentHeader
+          documentTitle="Plantilla de Progreso y Seguimiento Clínico Diario"
+          documentSubtitle="Ficha y Registro Clínico de Sesiones · Kinesiología Pediátrica"
+          emissionDate={new Date().toLocaleDateString('es-CL')}
+          recordNumber={currentPatient?.medicalRecordNumber || 'NN-01'}
+        />
+      </div>
+
       {/* Top Banner exactly matching the spreadsheet aesthetic: PLANTILLA DE PROGRESO */}
       <div className="bg-slate-100/90 border-b border-slate-200 px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -276,6 +308,16 @@ export const PatientProgressSheet: React.FC<PatientProgressSheetProps> = ({
             <span>Imprimir</span>
           </button>
 
+          {/* Button: Enviar Pauta Semanal vía WhatsApp / PDF */}
+          <button
+            onClick={() => handleOpenWeeklyPracticeModal()}
+            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black rounded-lg shadow-xs transition-colors cursor-pointer ring-2 ring-emerald-300/50"
+            title="Generar y Enviar Pauta Semanal para el Hogar vía WhatsApp / PDF"
+          >
+            <Phone className="w-4 h-4 text-emerald-100" />
+            <span>📲 Pauta Semanal (WhatsApp / PDF)</span>
+          </button>
+
           <button
             onClick={handleOpenAddModal}
             className="flex items-center gap-1.5 px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-lg shadow-xs transition-colors cursor-pointer"
@@ -312,10 +354,10 @@ export const PatientProgressSheet: React.FC<PatientProgressSheetProps> = ({
               NOMBRE DEL PACIENTE
             </span>
             <span className="text-base font-extrabold text-slate-900 mt-0.5 block truncate">
-              {currentPatient ? `${currentPatient.firstName} ${currentPatient.lastName}` : 'Seleccione paciente'}
+              {currentPatient ? `${currentPatient.firstName} ${currentPatient.lastName}` : 'Sin pacientes registrados'}
             </span>
             <span className="text-[11px] text-slate-500 font-mono">
-              RUT: {currentPatient?.rut} {currentPatient?.medicalRecordNumber && `· Ficha: ${currentPatient.medicalRecordNumber}`}
+              {currentPatient ? `RUT: ${currentPatient.rut} ${currentPatient.medicalRecordNumber ? `· Ficha: ${currentPatient.medicalRecordNumber}` : ''}` : 'Crea tu primer paciente para registrar sesiones'}
             </span>
           </div>
 
@@ -428,7 +470,15 @@ export const PatientProgressSheet: React.FC<PatientProgressSheetProps> = ({
 
                   {/* ACCIONES Column */}
                   <td className="py-4 px-4 text-right align-top whitespace-nowrap">
-                    <div className="flex items-center justify-end gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
+                    <div className="flex items-center justify-end gap-1.5 opacity-90 group-hover:opacity-100 transition-opacity">
+                      <button
+                        onClick={() => handleOpenWeeklyPracticeModal(note.id)}
+                        className="flex items-center gap-1 px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-md transition-colors text-[11px] font-bold cursor-pointer shadow-2xs"
+                        title="Generar y Enviar Pauta Semanal de esta sesión a la familia por WhatsApp / PDF"
+                      >
+                        <Phone className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>Pauta Semanal</span>
+                      </button>
                       <button
                         onClick={() => handleOpenEditModal(note)}
                         className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors cursor-pointer"
@@ -463,24 +513,30 @@ export const PatientProgressSheet: React.FC<PatientProgressSheetProps> = ({
           Hojas:
         </span>
 
-        {patients.map((patient) => {
-          const isActive = patient.id === selectedPatientId;
-          const patientName = `${patient.firstName} ${patient.lastName || ''}`.trim();
-          return (
-            <button
-              key={patient.id}
-              onClick={() => onSelectPatient(patient.id)}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-t-lg transition-all shrink-0 cursor-pointer flex items-center gap-1.5 border-t border-l border-r ${
-                isActive
-                  ? 'bg-white text-indigo-700 border-indigo-400 shadow-xs font-bold border-b-2 border-b-indigo-600'
-                  : 'bg-slate-200/80 hover:bg-slate-200 text-slate-700 border-slate-300'
-              }`}
-            >
-              <UserIcon className="w-3 h-3 text-slate-400" />
-              <span>{patientName}</span>
-            </button>
-          );
-        })}
+        {patients.length === 0 ? (
+          <span className="text-slate-500 text-xs italic px-2 py-1">
+            (Sin pacientes en la planilla de progreso)
+          </span>
+        ) : (
+          patients.map((patient) => {
+            const isActive = patient.id === selectedPatientId;
+            const patientName = `${patient.firstName} ${patient.lastName || ''}`.trim();
+            return (
+              <button
+                key={patient.id}
+                onClick={() => onSelectPatient(patient.id)}
+                className={`px-3 py-1.5 text-xs font-semibold rounded-t-lg transition-all shrink-0 cursor-pointer flex items-center gap-1.5 border-t border-l border-r ${
+                  isActive
+                    ? 'bg-white text-indigo-700 border-indigo-400 shadow-xs font-bold border-b-2 border-b-indigo-600'
+                    : 'bg-slate-200/80 hover:bg-slate-200 text-slate-700 border-slate-300'
+                }`}
+              >
+                <UserIcon className="w-3 h-3 text-slate-400" />
+                <span>{patientName}</span>
+              </button>
+            );
+          })
+        )}
 
         {onAddNewPatient && (
           <button
@@ -630,6 +686,25 @@ export const PatientProgressSheet: React.FC<PatientProgressSheetProps> = ({
 
           </div>
         </div>
+      )}
+
+      {/* Weekly Home Practice Modal */}
+      {currentPatient && (
+        <WeeklyHomePracticeModal
+          patient={currentPatient}
+          anamnesis={anamnesisData ? anamnesisData[currentPatient.id] : undefined}
+          evaluations={evaluationsData ? evaluationsData[currentPatient.id] : undefined}
+          progressNotes={progressNotes}
+          selectedNoteId={selectedNoteIdForPractice}
+          clinicianName={clinicianName}
+          clinicianSpecialty={clinicianSpecialty}
+          clinicianInstitution={clinicianInstitution}
+          isOpen={showWeeklyPracticeModal}
+          onClose={() => {
+            setShowWeeklyPracticeModal(false);
+            setSelectedNoteIdForPractice(undefined);
+          }}
+        />
       )}
 
     </div>
