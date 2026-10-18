@@ -13,6 +13,7 @@ import { PatientProgressSheet } from './PatientProgressSheet';
 import { PatientEvaluationForm } from './PatientEvaluationForm';
 import { ComprehensiveReportViewer } from './ComprehensiveReportViewer';
 import { MarketingBusinessHub } from './MarketingBusinessHub';
+import { NicheTrendsAndIntelligenceHub } from './NicheTrendsAndIntelligenceHub';
 import { 
   FileText, 
   UserPlus, 
@@ -28,7 +29,8 @@ import {
   RotateCcw,
   Sparkles,
   Trash2,
-  AlertTriangle
+  AlertTriangle,
+  Brain
 } from 'lucide-react';
 
 interface ClinicalPortalViewProps {
@@ -47,6 +49,7 @@ interface ClinicalPortalViewProps {
   onUpdateProgressNote: (note: ProgressNote) => void;
   onDeleteProgressNote: (noteId: string) => void;
   onAddNewPatient: (newPatient: User) => void;
+  onUpdatePatient?: (updatedPatient: User) => void;
   onSaveAnamnesis: (patientId: string, data: PatientAnamnesis) => void;
   onSaveEvaluations: (patientId: string, data: ClinicalEvaluations) => void;
   onGenerateComprehensiveReport: (report: ComprehensiveReport) => void;
@@ -69,17 +72,19 @@ export const ClinicalPortalView: React.FC<ClinicalPortalViewProps> = ({
   onUpdateProgressNote,
   onDeleteProgressNote,
   onAddNewPatient,
+  onUpdatePatient,
   onSaveAnamnesis,
   onSaveEvaluations,
   onGenerateComprehensiveReport,
   onClearAllPatients
 }) => {
-  // 4 Primary Tabs as requested:
+  // 5 Primary Tabs:
   // 1) add_patient_eval: Ingreso de paciente, anamnesis y pruebas aplicadas
   // 2) comprehensive_report: Informe consolidado con descarga en PDF y Word
   // 3) progress_sheet: Plantilla de progreso (seguimiento diario)
-  // 4) marketing_growth: Marketing, ventas éticas, metas mes 1, derivadores Copiapó y CRM
-  const [activeSubTab, setActiveSubTab] = useState<'add_patient_eval' | 'comprehensive_report' | 'progress_sheet' | 'marketing_growth'>('add_patient_eval');
+  // 4) niche_trends: Nutrición de datos de la cohorte & Tendencias del nicho en kinesiología y psicomotricidad infantil
+  // 5) marketing_growth: Marketing, ventas éticas, metas mes 1, derivadores Copiapó y CRM
+  const [activeSubTab, setActiveSubTab] = useState<'add_patient_eval' | 'comprehensive_report' | 'progress_sheet' | 'niche_trends' | 'marketing_growth'>('add_patient_eval');
   
   // Clinician customizable profile in localStorage (Starts blank or customized by the clinician)
   const [profName, setProfName] = useState(() => {
@@ -407,7 +412,23 @@ export const ClinicalPortalView: React.FC<ClinicalPortalViewProps> = ({
             </span>
           </button>
 
-          {/* TAB 4: Marketing, Ventas & Crecimiento del Negocio */}
+          {/* TAB 4: Tendencias e Inteligencia del Nicho (Nutrición de Datos) */}
+          <button
+            onClick={() => setActiveSubTab('niche_trends')}
+            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+              activeSubTab === 'niche_trends'
+                ? 'bg-teal-700 text-white shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            }`}
+          >
+            <Brain className="w-4 h-4 text-teal-300" />
+            <span>4. Tendencias & Inteligencia del Nicho</span>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-teal-400 text-teal-950 font-mono shadow-2xs">
+              Nutrición Cohorte
+            </span>
+          </button>
+
+          {/* TAB 5: Marketing, Ventas & Crecimiento del Negocio */}
           <button
             onClick={() => setActiveSubTab('marketing_growth')}
             className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold rounded-xl transition-all cursor-pointer ${
@@ -417,7 +438,7 @@ export const ClinicalPortalView: React.FC<ClinicalPortalViewProps> = ({
             }`}
           >
             <TrendingUp className="w-4 h-4 text-amber-300" />
-            <span>4. Marketing, Ventas & Crecimiento</span>
+            <span>5. Marketing, Ventas & Crecimiento</span>
             <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-400 text-slate-950 font-mono shadow-2xs">
               Plan Mes 1
             </span>
@@ -439,6 +460,7 @@ export const ClinicalPortalView: React.FC<ClinicalPortalViewProps> = ({
           onSaveAnamnesis={onSaveAnamnesis}
           onSaveEvaluations={onSaveEvaluations}
           onAddNewPatient={onAddNewPatient}
+          onUpdatePatient={onUpdatePatient}
           onGenerateReport={handleReportGenerated}
           clinicianName={profName || 'Klgo. Profesional Tratante'}
           clinicianSpecialty={profSpecialty}
@@ -536,7 +558,21 @@ export const ClinicalPortalView: React.FC<ClinicalPortalViewProps> = ({
       )}
 
       {/* ========================================================================= */}
-      {/* VISTA 4: Marketing, Derivadores, CRM y Crecimiento del Negocio (Kinesfera) */}
+      {/* VISTA 4: Inteligencia Clínica, Nutrición de Datos & Tendencias del Nicho   */}
+      {/* ========================================================================= */}
+      {activeSubTab === 'niche_trends' && (
+        <NicheTrendsAndIntelligenceHub
+          patients={patients}
+          anamnesisData={anamnesisData}
+          evaluationsData={evaluationsData}
+          progressNotes={progressNotes}
+          comprehensiveReports={comprehensiveReports}
+          sessionHistory={sessionHistory}
+        />
+      )}
+
+      {/* ========================================================================= */}
+      {/* VISTA 5: Marketing, Derivadores, CRM y Crecimiento del Negocio (Kinesfera) */}
       {/* ========================================================================= */}
       {activeSubTab === 'marketing_growth' && (
         <MarketingBusinessHub />

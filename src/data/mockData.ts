@@ -368,6 +368,31 @@ export const INITIAL_USERS: User[] = [
       hairColor: '#1F2937',
       shirtColor: '#0F172A'
     }
+  },
+  {
+    id: 'patient_blaz_01',
+    email: 'blaz@kinesfera.cl',
+    role: 'Padre/Niño',
+    firstName: 'Blaz',
+    lastName: '',
+    rut: '26.840.119-K',
+    birthDate: '2022-04-12',
+    gender: 'Hombre',
+    plan: 'Premium',
+    credits: 60,
+    assignedExercise: 'squats',
+    diagnosis: 'Kinesiología Pediátrica · Evaluación del Neurodesarrollo y Psicomotricidad',
+    medicalRecordNumber: 'NN-104',
+    emergencyContact: {
+      name: 'Tutor / Familia de Blaz',
+      relationship: 'Madre / Padre',
+      phone: '+56 9 8456 1234'
+    },
+    avatarConfig: {
+      skinTone: '#E0AC69',
+      hairColor: '#3B2F2F',
+      shirtColor: '#00A8B5'
+    }
   }
 ];
 
@@ -379,7 +404,16 @@ export const INITIAL_CHAT_MESSAGES: Record<string, ChatMessage[]> = {};
 
 export const INITIAL_SESSION_HISTORY: SessionResult[] = [];
 
-export const INITIAL_PROGRESS_NOTES: ProgressNote[] = [];
+export const INITIAL_PROGRESS_NOTES: ProgressNote[] = [
+  {
+    id: 'note_blaz_01',
+    patientId: 'patient_blaz_01',
+    date: new Date().toISOString().slice(0, 10),
+    paymentMethod: 'Particular',
+    notes: 'Sesión psicomotriz inicial. Blaz participa activamente en circuitos de gateo, trepa en rampa de gomaespuma y lanzamientos dirigidos. Excelente conexión vincular. Indicaciones al hogar: juegos de carga en suelo y saltos rítmicos.',
+    professionalName: 'Klgo. Aldo Olivares Araya'
+  }
+];
 
 export const INITIAL_LEADS: LeadProspect[] = [
   {
@@ -464,9 +498,143 @@ export const INITIAL_LEADS: LeadProspect[] = [
   }
 ];
 
-export const INITIAL_ANAMNESIS: Record<string, PatientAnamnesis> = {};
+export const INITIAL_ANAMNESIS: Record<string, PatientAnamnesis> = {
+  patient_blaz_01: {
+    id: 'anam_patient_blaz_01',
+    patientId: 'patient_blaz_01',
+    evaluatorName: 'Klgo. Aldo Olivares Araya',
+    evaluationDate: new Date().toISOString().slice(0, 10),
+    ageCategory: 'mayor_2_anos',
+    caregiverName: 'Familia de Blaz',
+    caregiverPhone: '+56 9 8456 1234',
+    schoolOrCenter: 'Jardín Infantil Copiapó',
+    educationalLevel: 'Nivel Medio Mayor',
+    pieSupport: false,
+    householdMembers: 'Madre, Padre, Blaz',
+    consultationReason: 'Evaluación de psicomotricidad y patrones motores del desarrollo infantil',
+    problemNoticedWhen: 'Familia consulta para optimizar coordinación, equilibrio y juego motor adaptado',
+    specialistsVisited: 'Pediatra de cabecera',
+    previousTreatments: 'Control de niño sano',
+    familyExpectations: 'Favorecer autonomía, integración sensorio-motriz y juego activo con sentido',
+    pregnancyHistory: 'Embarazo controlado sin complicaciones',
+    gestationalAgeWeeks: '39 semanas',
+    birthWeightGrams: '3350 g',
+    birthLengthCm: '50 cm',
+    birthType: 'Parto vaginal eutócico',
+    birthPresentation: 'Cefálica',
+    apgarScore: '9/10',
+    neonatalComplications: 'Sin complicaciones reportadas',
+    surgeries: 'Sin cirugías',
+    assistiveDevices: 'Ninguna',
+    feedingType: 'Lactancia mixta inicial, alimentación complementaria normal',
+    colic: 'Ocasionales en primeros 3 meses',
+    sleepPattern: 'Sueño nocturno estructurado de 9 a 10 horas',
+    headControlMonths: '3 meses',
+    independentSittingMonths: '6 meses',
+    crawlingMonths: '8 meses',
+    standingMonths: '10 meses',
+    walkingMonths: '12 meses',
+    firstWords: '11 meses',
+    firstPhrases: '20 meses',
+    currentMotorStatus: 'Marcha independiente activa, en proceso de consolidación de salto bipodal y equilibrio monopodal',
+    followsInstructions: 'Sigue instrucciones lúdicas y demostrativas con motivación positiva',
+    isRestless: 'Activo durante el juego libre, busca movimiento y exploración sensorial',
+    playsAloneOrAccompanied: 'Juego interactivo y compartido con mediación del adulto',
+    medicalDiagnoses: 'Evaluación del neurodesarrollo motor y psicomotricidad infantil',
+    pharmacology: 'Sin medicamentos permanentes',
+    allergicConditions: 'Sin alergias conocidas'
+  }
+};
 
-export const INITIAL_CLINICAL_EVALUATIONS: Record<string, ClinicalEvaluations> = {};
+export const INITIAL_CLINICAL_EVALUATIONS: Record<string, ClinicalEvaluations> = {
+  patient_blaz_01: {
+    id: 'eval_patient_blaz_01',
+    patientId: 'patient_blaz_01',
+    evaluationDate: new Date().toISOString().slice(0, 10),
+    evaluatorName: 'Klgo. Aldo Olivares Araya',
+    gmfcsLevel: 'Nivel I',
+    macsLevel: 'Nivel I',
+    ashworthScore: '0',
+    tonePattern: 'Normotonía con adecuada extensibilidad miotendinosa',
+    deepTendonReflexes: 'Normales ++/++++ rotulianos y bicipitales simétricos',
+    headAndTrunkControl: 'Conservado y estable en transiciones posturales',
+    rightingReactions: 'Presentes en todos los planos espaciales',
+    protectiveResponses: 'Presentes en plano anterior, lateral y posterior',
+    balanceSittingAndStanding: 'Funcional, buen ajuste postural anticipatorio',
+    transferAbility: 'Autónomo en suelo a bipedestación',
+    gaitObservation: 'Marcha activa con adecuada cadencia y balanceo de brazos',
+    patientAgeCategory: 'mayor_2_anos',
+    followsCommands: true,
+    daFonsecaBpm: {
+      tonicityExtensibility: 3,
+      tonicityPassivity: 3,
+      tonicityParatonia: 3,
+      tonicityDiadochokinesia: 3,
+      tonicitySynkinesia: 3,
+      tonicityScore: 3,
+      equilibriumImmobility: 3,
+      equilibriumStatic: 3,
+      equilibriumDynamic: 3,
+      equilibriumScore: 3,
+      lateralityOcular: 3,
+      lateralityAuditory: 3,
+      lateralityManual: 3,
+      lateralityPodal: 3,
+      lateralityProfile: 'Diestro Completo',
+      lateralityScore: 3,
+      bodyNotionKinesthetic: 3,
+      bodyNotionRightLeft: 2,
+      bodyNotionAutoimage: 3,
+      bodyNotionGesturesImitation: 3,
+      bodyNotionScore: 3,
+      spatialOrientation: 3,
+      spatialOrganization: 3,
+      spatialRhythmStructure: 3,
+      spatialTemporalScore: 3,
+      globalPraxiaOculomanual: 3,
+      globalPraxiaOculopodal: 2,
+      globalPraxiaDysmetria: 3,
+      globalPraxiaDissociation: 2,
+      globalPraxiaScore: 3,
+      finePraxiaDynamicCoordination: 3,
+      finePraxiaDigitalDrumming: 3,
+      finePraxiaGraphomotorSpeed: 2,
+      finePraxiaScore: 3,
+      totalScore: 21,
+      profileResult: 'Perfil Eupráxico (21-26 puntos)',
+      conclusions: 'Buen desempeño general con área de oportunidad en disociación de cinturas y coordinación óculo-pédica.'
+    },
+    spmSensoryMeasure: {
+      socialParticipationScore: 48,
+      socialParticipationRange: 'Típico (40-59)',
+      visionScore: 50,
+      visionRange: 'Típico (40-59)',
+      hearingScore: 52,
+      hearingRange: 'Típico (40-59)',
+      touchScore: 55,
+      touchRange: 'Típico (40-59)',
+      tasteSmellScore: 46,
+      tasteSmellRange: 'Típico (40-59)',
+      bodyAwarenessScore: 61,
+      bodyAwarenessRange: 'Dificultades Moderadas (60-69)',
+      balanceMotionScore: 58,
+      balanceMotionRange: 'Típico (40-59)',
+      planningIdeasScore: 54,
+      planningIdeasRange: 'Típico (40-59)',
+      totalSensoryScore: 53,
+      totalSensoryRange: 'Típico (40-59)',
+      applicationMethod: 'presencial',
+      respondentName: 'Madre / Padre de Blaz'
+    },
+    functionalDiagnosisCIF: 'Blaz presenta adecuado potencial de desarrollo psicomotor con necesidad de estimulación kinésica orientada al ajuste vestibular-propioceptivo, equilibrio dinámico y coordinación bimanual.',
+    therapeuticObjectivesShortTerm: '1. Consolidar equilibrio dinámico monopodal y salto sobre obstáculos.\n2. Fortalecer control postural del tronco y disociación de cinturas en juegos de suelo.',
+    therapeuticObjectivesLongTerm: '1. Lograr integración sensorio-motriz óptima para actividades lúdicas grupales.\n2. Afianzar praxias globales y finas con autonomía e iniciativa en el entorno escolar.',
+    treatmentPlan: 'Sesiones kinésicas lúdicas y psicomotrices semanales de 45 minutos basadas en el concepto Kinesfera (juego con sentido).',
+    homeRecommendations: 'Promover juego al aire libre, circuitos motores con cojines, gateo y trepa supervisada en casa.',
+    schoolRecommendations: 'Favorecer pausas activas motrices, permitir cambios de postura y felicitar sus logros de interacción motriz.'
+  }
+};
 
 export const INITIAL_COMPREHENSIVE_REPORTS: ComprehensiveReport[] = [];
+
 

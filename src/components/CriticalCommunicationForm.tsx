@@ -71,7 +71,7 @@ export const CriticalCommunicationForm: React.FC<CriticalCommunicationFormProps>
               Protocolo Comunicación Crítica
             </span>
             <span className="text-[10px] font-bold text-amber-900 bg-white px-2 py-0.5 rounded-full border border-amber-300">
-              Pyramid Educational Consultants
+              Comunicación Aumentativa y Funcional (CAA)
             </span>
           </div>
           <h3 className="font-extrabold text-sm sm:text-base text-amber-950 mt-1 flex items-center gap-2">

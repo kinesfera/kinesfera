@@ -303,7 +303,7 @@ export interface EarlyInfantObservation {
 }
 
 // ============================================================================
-// LISTA DE CONTROL DE HABILIDADES DE COMUNICACIÓN CRÍTICAS (Pyramid Educational Consultants)
+// LISTA DE CONTROL DE HABILIDADES DE COMUNICACIÓN CRÍTICAS Y FUNCIONALES (CAA)
 // Para niños que no reciben instrucciones estructuradas / en desarrollo de comunicación
 // ============================================================================
 export interface CriticalCommunicationSkills {

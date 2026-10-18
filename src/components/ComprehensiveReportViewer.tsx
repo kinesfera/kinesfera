@@ -555,13 +555,13 @@ export const ComprehensiveReportViewer: React.FC<ComprehensiveReportViewerProps>
             </div>
           )}
 
-          {/* Lista de Control de Habilidades de Comunicación Críticas (Pyramid) */}
+          {/* Lista de Control de Habilidades de Comunicación Críticas y Funcionales */}
           {criticalComm && (
             <div className="p-4 bg-orange-50/70 rounded-xl border border-orange-200 space-y-3 text-xs">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-orange-200/80 pb-2 gap-2">
                 <div>
                   <span className="text-[10px] font-black uppercase tracking-wider bg-orange-700 text-white px-2 py-0.5 rounded-full">
-                    Pyramid Educational Consultants
+                    Comunicación Funcional y Aumentativa (CAA)
                   </span>
                   <h3 className="font-bold text-orange-950 uppercase text-xs mt-1 flex items-center gap-1.5">
                     <MessageSquare className="w-3.5 h-3.5 text-orange-700" />

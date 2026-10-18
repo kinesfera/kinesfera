@@ -452,7 +452,7 @@ export function downloadReportAsWord(report: ComprehensiveReport) {
       ` : ''}
 
       ${criticalComm ? `
-      <h3>Lista de Control de Habilidades de Comunicación Críticas (Pyramid):</h3>
+      <h3>Lista de Control de Habilidades de Comunicación Críticas y Funcionales:</h3>
       <table>
         <tr>
           <th width="35%">1. Pedir Reforzadores</th>

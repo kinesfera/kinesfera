@@ -457,7 +457,7 @@ export function calculateSPMScores(
   const totRaw = scaleRaw.VIS + scaleRaw.HEA + scaleRaw.TOU + scaleRaw.BOD + scaleRaw.BAL + scaleRaw.TS;
 
   // Conversión aproximada a Puntaje T (Media = 50, DE = 10) según Tablas B1 y B2 del manual
-  // Típico: 40-59 | Algunos Problemas: 60-69 | Disfunción Definida: 70-80
+  // Sin dificultades: 40-59 | Dificultades moderadas: 60-69 | Con dificultades: 70-80
   const convertToT = (raw: number, maxPossible: number, minPossible: number) => {
     if (raw === 0) return 50;
     const ratio = (raw - minPossible) / Math.max(1, maxPossible - minPossible);
@@ -466,16 +466,16 @@ export function calculateSPMScores(
     return Math.min(80, Math.max(40, tScore));
   };
 
-  const getRange = (t: number): 'Típico (40-59)' | 'Dificultades Moderadas (60-69)' | 'Disfunción Severa (70-80)' => {
-    if (t < 60) return 'Típico (40-59)';
-    if (t <= 69) return 'Dificultades Moderadas (60-69)';
-    return 'Disfunción Severa (70-80)';
+  const getRange = (t: number): 'Sin dificultades' | 'Dificultades moderadas' | 'Con dificultades' => {
+    if (t < 60) return 'Sin dificultades';
+    if (t <= 69) return 'Dificultades moderadas';
+    return 'Con dificultades';
   };
 
   const socT = convertToT(scaleRaw.SOC, (scaleCounts.SOC || 10) * 4, (scaleCounts.SOC || 10) * 1);
   const visT = convertToT(scaleRaw.VIS, (scaleCounts.VIS || 11) * 4, (scaleCounts.VIS || 11) * 1);
   const heaT = convertToT(scaleRaw.HEA, (scaleCounts.HEA || 8) * 4, (scaleCounts.HEA || 8) * 1);
-  const touT = convertToT(scaleRaw.TOU, (scaleCounts.TOU || 11) * 4, (scaleCounts.TOU || 11) * 1);
+  const touT = convertToT(scaleRaw.TOU, Math.max(56, (scaleCounts.TOU || 14) * 4), (scaleCounts.TOU || 11) * 1);
   const tsT = convertToT(scaleRaw.TS, (scaleCounts.TS || 5) * 4, (scaleCounts.TS || 5) * 1);
   const bodT = convertToT(scaleRaw.BOD, (scaleCounts.BOD || 10) * 4, (scaleCounts.BOD || 10) * 1);
   const balT = convertToT(scaleRaw.BAL, (scaleCounts.BAL || 11) * 4, (scaleCounts.BAL || 11) * 1);

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   UserRole, 
   User, 
@@ -30,6 +30,7 @@ import {
   INITIAL_COMPREHENSIVE_REPORTS,
   INITIAL_LEADS
 } from './data/mockData';
+import { clinicalStorage } from './utils/clinicalStorage';
 import { Navbar } from './components/Navbar';
 import { LoginView } from './components/LoginView';
 import { ChildAdventureView } from './components/ChildAdventureView';
@@ -40,18 +41,47 @@ import { ExerciseSessionModal } from './components/ExerciseSessionModal';
 import { ChatSystemModal } from './components/ChatSystemModal';
 
 export default function App() {
-  // Global application states
-  const [users, setUsers] = useState<User[]>(INITIAL_USERS);
+  // Global application states with robust persistent storage
+  const [users, setUsers] = useState<User[]>(() => {
+    const savedPatients = clinicalStorage.loadPatients();
+    const baseStaff = INITIAL_USERS.filter(u => u.role !== 'Padre/Niño');
+    return [...baseStaff, ...savedPatients];
+  });
   const [exercises, setExercises] = useState<Exercise[]>(INITIAL_EXERCISES);
   const [reports, setReports] = useState<Report[]>(INITIAL_REPORTS);
-  const [sessionHistory, setSessionHistory] = useState<SessionResult[]>(INITIAL_SESSION_HISTORY);
+  const [sessionHistory, setSessionHistory] = useState<SessionResult[]>(() => clinicalStorage.loadSessionHistory());
   const [chats, setChats] = useState(INITIAL_CHATS);
   const [messages, setMessages] = useState(INITIAL_CHAT_MESSAGES);
-  const [progressNotes, setProgressNotes] = useState<ProgressNote[]>(INITIAL_PROGRESS_NOTES);
-  const [anamnesisData, setAnamnesisData] = useState<Record<string, PatientAnamnesis>>(INITIAL_ANAMNESIS);
-  const [evaluationsData, setEvaluationsData] = useState<Record<string, ClinicalEvaluations>>(INITIAL_CLINICAL_EVALUATIONS);
-  const [comprehensiveReports, setComprehensiveReports] = useState<ComprehensiveReport[]>(INITIAL_COMPREHENSIVE_REPORTS);
+  const [progressNotes, setProgressNotes] = useState<ProgressNote[]>(() => clinicalStorage.loadProgressNotes());
+  const [anamnesisData, setAnamnesisData] = useState<Record<string, PatientAnamnesis>>(() => clinicalStorage.loadAnamnesis());
+  const [evaluationsData, setEvaluationsData] = useState<Record<string, ClinicalEvaluations>>(() => clinicalStorage.loadEvaluations());
+  const [comprehensiveReports, setComprehensiveReports] = useState<ComprehensiveReport[]>(() => clinicalStorage.loadReports());
   const [leads, setLeads] = useState<LeadProspect[]>(INITIAL_LEADS);
+
+  // Automatic synchronized persistence whenever state changes
+  useEffect(() => {
+    clinicalStorage.savePatients(users);
+  }, [users]);
+
+  useEffect(() => {
+    clinicalStorage.saveProgressNotes(progressNotes);
+  }, [progressNotes]);
+
+  useEffect(() => {
+    clinicalStorage.saveAnamnesis(anamnesisData);
+  }, [anamnesisData]);
+
+  useEffect(() => {
+    clinicalStorage.saveEvaluations(evaluationsData);
+  }, [evaluationsData]);
+
+  useEffect(() => {
+    clinicalStorage.saveReports(comprehensiveReports);
+  }, [comprehensiveReports]);
+
+  useEffect(() => {
+    clinicalStorage.saveSessionHistory(sessionHistory);
+  }, [sessionHistory]);
 
   // Authentication & session state
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -205,31 +235,68 @@ export default function App() {
       ...newNoteData,
       id: `pn_${Date.now()}`
     };
-    setProgressNotes(prev => [newNote, ...prev]);
+    setProgressNotes(prev => {
+      const updated = [newNote, ...prev];
+      clinicalStorage.saveProgressNotes(updated);
+      return updated;
+    });
   };
 
   const handleUpdateProgressNote = (updatedNote: ProgressNote) => {
-    setProgressNotes(prev => prev.map(n => n.id === updatedNote.id ? updatedNote : n));
+    setProgressNotes(prev => {
+      const updated = prev.map(n => n.id === updatedNote.id ? updatedNote : n);
+      clinicalStorage.saveProgressNotes(updated);
+      return updated;
+    });
   };
 
   const handleDeleteProgressNote = (noteId: string) => {
-    setProgressNotes(prev => prev.filter(n => n.id !== noteId));
+    setProgressNotes(prev => {
+      const updated = prev.filter(n => n.id !== noteId);
+      clinicalStorage.saveProgressNotes(updated);
+      return updated;
+    });
   };
 
   const handleAddNewPatient = (newPatient: User) => {
-    setUsers(prev => [...prev, newPatient]);
+    setUsers(prev => {
+      const filtered = prev.filter(u => u.id !== newPatient.id);
+      const updated = [...filtered, newPatient];
+      clinicalStorage.savePatients(updated);
+      return updated;
+    });
+  };
+
+  const handleUpdatePatient = (updatedPatient: User) => {
+    setUsers(prev => {
+      const updated = prev.map(u => u.id === updatedPatient.id ? updatedPatient : u);
+      clinicalStorage.savePatients(updated);
+      return updated;
+    });
   };
 
   const handleSaveAnamnesis = (patientId: string, data: PatientAnamnesis) => {
-    setAnamnesisData(prev => ({ ...prev, [patientId]: data }));
+    setAnamnesisData(prev => {
+      const updated = { ...prev, [patientId]: data };
+      clinicalStorage.saveAnamnesis(updated);
+      return updated;
+    });
   };
 
   const handleSaveEvaluations = (patientId: string, data: ClinicalEvaluations) => {
-    setEvaluationsData(prev => ({ ...prev, [patientId]: data }));
+    setEvaluationsData(prev => {
+      const updated = { ...prev, [patientId]: data };
+      clinicalStorage.saveEvaluations(updated);
+      return updated;
+    });
   };
 
   const handleGenerateComprehensiveReport = (newReport: ComprehensiveReport) => {
-    setComprehensiveReports(prev => [newReport, ...prev.filter(r => r.patientId !== newReport.patientId)]);
+    setComprehensiveReports(prev => {
+      const updated = [newReport, ...prev.filter(r => r.patientId !== newReport.patientId)];
+      clinicalStorage.saveReports(updated);
+      return updated;
+    });
   };
 
   const handleClearAllPatients = () => {
@@ -241,14 +308,7 @@ export default function App() {
     setComprehensiveReports([]);
     setReports([]);
     setSessionHistory([]);
-    try {
-      localStorage.removeItem('kinesfera_saved_patients');
-      localStorage.removeItem('kinesfera_saved_anamnesis');
-      localStorage.removeItem('kinesfera_saved_evaluations');
-      localStorage.removeItem('kinesfera_progress_notes');
-    } catch {
-      // ignore
-    }
+    clinicalStorage.clearAllClinicalData();
   };
 
   // If not logged in, render the harmonious pastel login view
@@ -297,6 +357,7 @@ export default function App() {
             onUpdateProgressNote={handleUpdateProgressNote}
             onDeleteProgressNote={handleDeleteProgressNote}
             onAddNewPatient={handleAddNewPatient}
+            onUpdatePatient={handleUpdatePatient}
             onSaveAnamnesis={handleSaveAnamnesis}
             onSaveEvaluations={handleSaveEvaluations}
             onGenerateComprehensiveReport={handleGenerateComprehensiveReport}

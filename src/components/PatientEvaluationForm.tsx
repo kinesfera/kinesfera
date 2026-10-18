@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   User, 
   PatientAnamnesis, 
@@ -52,6 +52,7 @@ interface PatientEvaluationFormProps {
   onSaveAnamnesis: (patientId: string, data: PatientAnamnesis) => void;
   onSaveEvaluations: (patientId: string, data: ClinicalEvaluations) => void;
   onAddNewPatient: (newPatient: User) => void;
+  onUpdatePatient?: (updatedPatient: User) => void;
   onGenerateReport: (report: ComprehensiveReport) => void;
   clinicianName?: string;
   clinicianSpecialty?: string;
@@ -68,6 +69,7 @@ export const PatientEvaluationForm: React.FC<PatientEvaluationFormProps> = ({
   onSaveAnamnesis,
   onSaveEvaluations,
   onAddNewPatient,
+  onUpdatePatient,
   onGenerateReport,
   clinicianName = 'Klgo. Tratante',
   clinicianSpecialty = 'Kinesiología Pediátrica · Neurorehabilitación',
@@ -89,6 +91,12 @@ export const PatientEvaluationForm: React.FC<PatientEvaluationFormProps> = ({
   const [isCreatingNew, setIsCreatingNew] = useState(patients.length === 0);
   const [showSPMLinkModal, setShowSPMLinkModal] = useState(false);
   const [savedSuccessAlert, setSavedSuccessAlert] = useState<string | null>(null);
+  
+  // Unsaved changes state & last saved time
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [lastSavedTime, setLastSavedTime] = useState<string | null>(null);
+  const lastSavedSnapshotRef = useRef<string>('');
+  const isSyncingRef = useRef<boolean>(false);
 
   useEffect(() => {
     if (patients.length === 0) {
@@ -99,7 +107,33 @@ export const PatientEvaluationForm: React.FC<PatientEvaluationFormProps> = ({
   // Current patient
   const currentPatient = patients.find(p => p.id === selectedPatientId) || patients[0];
 
-  // New patient basic data
+  // Editable basic information for currently selected patient
+  const [patientFirstName, setPatientFirstName] = useState('');
+  const [patientLastName, setPatientLastName] = useState('');
+  const [patientRut, setPatientRut] = useState('');
+  const [patientBirthDate, setPatientBirthDate] = useState('');
+  const [patientGender, setPatientGender] = useState<'Hombre' | 'Mujer'>('Hombre');
+  const [patientDiagnosis, setPatientDiagnosis] = useState('');
+  const [patientEmergencyName, setPatientEmergencyName] = useState('');
+  const [patientEmergencyPhone, setPatientEmergencyPhone] = useState('');
+  const [isEditingPatientBasicInfo, setIsEditingPatientBasicInfo] = useState(false);
+  const [showUnsavedConfirmModal, setShowUnsavedConfirmModal] = useState(false);
+  const [pendingPatientIdToSelect, setPendingPatientIdToSelect] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (currentPatient) {
+      setPatientFirstName(currentPatient.firstName || '');
+      setPatientLastName(currentPatient.lastName || '');
+      setPatientRut(currentPatient.rut || '');
+      setPatientBirthDate(currentPatient.birthDate || '');
+      setPatientGender(currentPatient.gender || 'Hombre');
+      setPatientDiagnosis(currentPatient.diagnosis || '');
+      setPatientEmergencyName(currentPatient.emergencyContact?.name || '');
+      setPatientEmergencyPhone(currentPatient.emergencyContact?.phone || '');
+    }
+  }, [currentPatient?.id]);
+
+  // New patient basic data (when creating new from scratch)
   const [newFirstName, setNewFirstName] = useState('');
   const [newLastName, setNewLastName] = useState('');
   const [newRut, setNewRut] = useState('');
@@ -940,19 +974,308 @@ export const PatientEvaluationForm: React.FC<PatientEvaluationFormProps> = ({
     onSaveEvaluations(patientId, data);
   };
 
-  const handleSaveAll = () => {
-    if (!currentPatient) return;
-    saveAnamnesisToState();
-    saveEvaluationsToState();
+  // Compute full form snapshot to detect unsaved modifications
+  const getFormSnapshot = useCallback(() => {
+    return JSON.stringify([
+      // Patient basic info
+      patientFirstName,
+      patientLastName,
+      patientRut,
+      patientBirthDate,
+      patientGender,
+      patientDiagnosis,
+      patientEmergencyName,
+      patientEmergencyPhone,
+      // Decision tree
+      ageDecision,
+      followsCommandsDecision,
+      caregiverName,
+      caregiverPhone,
+      schoolOrCenter,
+      educationalLevel,
+      pieSupport,
+      householdMembers,
+      consultationReason,
+      problemNoticedWhen,
+      specialistsVisited,
+      previousTreatments,
+      familyExpectations,
+      pregnancyHistory,
+      gestationalAgeWeeks,
+      birthWeightGrams,
+      birthLengthCm,
+      birthType,
+      birthPresentation,
+      apgarScore,
+      neonatalComplications,
+      feedingType,
+      colic,
+      sleepPattern,
+      headControlMonths,
+      independentSittingMonths,
+      crawlingMonths,
+      standingMonths,
+      walkingMonths,
+      firstWords,
+      firstPhrases,
+      languageDifficulties,
+      currentMotorStatus,
+      followsInstructionsText,
+      isRestless,
+      playsAloneOrAccompanied,
+      bedtimeRoutine,
+      nightmares,
+      hasFears,
+      strangerReaction,
+      tantrums,
+      appearsSad,
+      familyRelationships,
+      schoolRelationships,
+      leisureActivities,
+      familyDiagnoses,
+      pharmacology,
+      cranialD1Mm,
+      cranialD2Mm,
+      cranialApMm,
+      cranialBpMm,
+      headCircumferenceCm,
+      cranialTreatmentIndication,
+      // HINE
+      hineFacialAnimation,
+      hineEyeMovements,
+      hineVisualFollow,
+      hineAuditoryResponse,
+      hineSuckSwallow,
+      hineHeadPosture,
+      hineTrunkPosture,
+      hineArmPosture,
+      hineHandsPosture,
+      hineLegPosture,
+      hineLegsSupineProne,
+      hineFeetPosture,
+      hineMovementsQuantity,
+      hineMovementsQuality,
+      hineScarfSign,
+      hinePassiveShoulderElevation,
+      hinePronationSupination,
+      hineAdductorsAngle,
+      hinePoplitealAngle,
+      hineAnkleDorsiflexionAngle,
+      hinePullToSit,
+      hineVentralSuspension,
+      hineArmProtectionReaction,
+      hineVerticalSuspension,
+      hineLateralTilting,
+      hineForwardParachute,
+      hineTendonReflexes,
+      hineMotorHeadControl,
+      hineMotorSitting,
+      hineMotorVoluntaryGrasp,
+      hineMotorSupineKicking,
+      hineMotorRolling,
+      hineMotorCrawling,
+      hineMotorStanding,
+      hineMotorWalking,
+      hineBehaviorConscious,
+      hineBehaviorEmotional,
+      hineBehaviorSocial,
+      hineObservations,
+      // Arnaiz
+      arnaizMovementsFrequent,
+      arnaizMovementsQuality,
+      arnaizBodyMobility,
+      arnaizPostures,
+      arnaizToneQuality,
+      arnaizSpaceOccupancy,
+      arnaizSpaceTrajectory,
+      arnaizSpaceLevels,
+      arnaizRhythmQuality,
+      arnaizActivityDuration,
+      arnaizObjectUsage,
+      arnaizObjectRelations,
+      arnaizCompanionsRelation,
+      arnaizAdultRelation,
+      arnaizGlobalSynthesis,
+      // Critical Communication
+      criticalCommData,
+      // Da Fonseca
+      bpmTonicityExtensibility,
+      bpmTonicityPassivity,
+      bpmTonicityParatonia,
+      bpmTonicityDiadochokinesia,
+      bpmTonicitySynkinesia,
+      bpmEquilibriumImmobility,
+      bpmEquilibriumStatic,
+      bpmEquilibriumDynamic,
+      bpmLateralityOcular,
+      bpmLateralityAuditory,
+      bpmLateralityManual,
+      bpmLateralityPodal,
+      bpmLateralityProfile,
+      bpmBodyNotionKinesthetic,
+      bpmBodyNotionRightLeft,
+      bpmBodyNotionAutoimage,
+      bpmBodyNotionGestures,
+      bpmSpatialOrientation,
+      bpmSpatialOrganization,
+      bpmSpatialRhythm,
+      bpmGlobalPraxiaOculomanual,
+      bpmGlobalPraxiaOculopodal,
+      bpmGlobalPraxiaDysmetria,
+      bpmGlobalPraxiaDissociation,
+      bpmFinePraxiaDynamic,
+      bpmFinePraxiaDigital,
+      bpmFinePraxiaGraphomotor,
+      bpmConclusions,
+      // SPM
+      spmSocial,
+      spmVision,
+      spmHearing,
+      spmTouch,
+      spmTasteSmell,
+      spmBodyAwareness,
+      spmBalanceMotion,
+      spmPlanningIdeas,
+      spmApplicationMethod,
+      spmRespondentName,
+      // CIF Plan
+      functionalDiagnosisCIF,
+      therapeuticGoalsShortTerm,
+      therapeuticGoalsLongTerm,
+      treatmentPlan,
+      homeAndSchoolRecommendations,
+      homeRecommendations,
+      schoolRecommendations
+    ]);
+  }, [
+    patientFirstName, patientLastName, patientRut, patientBirthDate, patientGender, patientDiagnosis,
+    patientEmergencyName, patientEmergencyPhone,
+    ageDecision, followsCommandsDecision, caregiverName, caregiverPhone, schoolOrCenter, educationalLevel, pieSupport,
+    householdMembers, consultationReason, problemNoticedWhen, specialistsVisited, previousTreatments, familyExpectations,
+    pregnancyHistory, gestationalAgeWeeks, birthWeightGrams, birthLengthCm, birthType, birthPresentation, apgarScore,
+    neonatalComplications, feedingType, colic, sleepPattern, headControlMonths, independentSittingMonths, crawlingMonths,
+    standingMonths, walkingMonths, firstWords, firstPhrases, languageDifficulties, currentMotorStatus, followsInstructionsText,
+    isRestless, playsAloneOrAccompanied, bedtimeRoutine, nightmares, hasFears, strangerReaction, tantrums, appearsSad,
+    familyRelationships, schoolRelationships, leisureActivities, familyDiagnoses, pharmacology, cranialD1Mm, cranialD2Mm,
+    cranialApMm, cranialBpMm, headCircumferenceCm, cranialTreatmentIndication, hineFacialAnimation, hineEyeMovements,
+    hineVisualFollow, hineAuditoryResponse, hineSuckSwallow, hineHeadPosture, hineTrunkPosture, hineArmPosture, hineHandsPosture,
+    hineLegPosture, hineLegsSupineProne, hineFeetPosture, hineMovementsQuantity, hineMovementsQuality, hineScarfSign,
+    hinePassiveShoulderElevation, hinePronationSupination, hineAdductorsAngle, hinePoplitealAngle, hineAnkleDorsiflexionAngle,
+    hinePullToSit, hineVentralSuspension, hineArmProtectionReaction, hineVerticalSuspension, hineLateralTilting,
+    hineForwardParachute, hineTendonReflexes, hineMotorHeadControl, hineMotorSitting, hineMotorVoluntaryGrasp,
+    hineMotorSupineKicking, hineMotorRolling, hineMotorCrawling, hineMotorStanding, hineMotorWalking, hineBehaviorConscious,
+    hineBehaviorEmotional, hineBehaviorSocial, hineObservations, arnaizMovementsFrequent, arnaizMovementsQuality,
+    arnaizBodyMobility, arnaizPostures, arnaizToneQuality, arnaizSpaceOccupancy, arnaizSpaceTrajectory, arnaizSpaceLevels,
+    arnaizRhythmQuality, arnaizActivityDuration, arnaizObjectUsage, arnaizObjectRelations, arnaizCompanionsRelation,
+    arnaizAdultRelation, arnaizGlobalSynthesis,
+    criticalCommData, bpmTonicityExtensibility, bpmTonicityPassivity, bpmTonicityParatonia, bpmTonicityDiadochokinesia,
+    bpmTonicitySynkinesia, bpmEquilibriumImmobility, bpmEquilibriumStatic, bpmEquilibriumDynamic, bpmLateralityOcular,
+    bpmLateralityAuditory, bpmLateralityManual, bpmLateralityPodal, bpmLateralityProfile, bpmBodyNotionKinesthetic,
+    bpmBodyNotionRightLeft, bpmBodyNotionAutoimage, bpmBodyNotionGestures, bpmSpatialOrientation, bpmSpatialOrganization,
+    bpmSpatialRhythm, bpmGlobalPraxiaOculomanual, bpmGlobalPraxiaOculopodal, bpmGlobalPraxiaDysmetria,
+    bpmGlobalPraxiaDissociation, bpmFinePraxiaDynamic, bpmFinePraxiaDigital, bpmFinePraxiaGraphomotor, bpmConclusions,
+    spmSocial, spmVision, spmHearing, spmTouch, spmTasteSmell, spmBodyAwareness, spmBalanceMotion, spmPlanningIdeas,
+    spmApplicationMethod, spmRespondentName, functionalDiagnosisCIF, therapeuticGoalsShortTerm, therapeuticGoalsLongTerm,
+    treatmentPlan, homeAndSchoolRecommendations, homeRecommendations, schoolRecommendations
+  ]);
 
-    setSavedSuccessAlert(`Evaluación guardada exitosamente.`);
-    setTimeout(() => setSavedSuccessAlert(null), 3500);
-  };
+  // Sync snapshot after patient load
+  useEffect(() => {
+    isSyncingRef.current = true;
+    const t = setTimeout(() => {
+      lastSavedSnapshotRef.current = getFormSnapshot();
+      setHasUnsavedChanges(false);
+      isSyncingRef.current = false;
+    }, 150);
+    return () => clearTimeout(t);
+  }, [selectedPatientId, currentPatient?.id, getFormSnapshot]);
+
+  // Dirty detection effect
+  useEffect(() => {
+    if (isSyncingRef.current) return;
+    if (!lastSavedSnapshotRef.current) return;
+    const currentSnap = getFormSnapshot();
+    if (currentSnap !== lastSavedSnapshotRef.current) {
+      setHasUnsavedChanges(true);
+    } else {
+      setHasUnsavedChanges(false);
+    }
+  }, [getFormSnapshot]);
+
+  const handleSaveAll = useCallback(() => {
+    if (!currentPatient) return;
+
+    // 1. Update patient primary record
+    const updatedPatient: User = {
+      ...currentPatient,
+      firstName: patientFirstName.trim() || currentPatient.firstName,
+      lastName: patientLastName.trim(),
+      rut: patientRut.trim() || currentPatient.rut,
+      birthDate: patientBirthDate || currentPatient.birthDate,
+      gender: patientGender,
+      diagnosis: patientDiagnosis.trim() || consultationReason || currentPatient.diagnosis,
+      emergencyContact: {
+        name: patientEmergencyName.trim() || caregiverName || currentPatient.emergencyContact?.name || 'Tutor legal',
+        relationship: currentPatient.emergencyContact?.relationship || 'Tutor',
+        phone: patientEmergencyPhone.trim() || caregiverPhone || currentPatient.emergencyContact?.phone || ''
+      }
+    };
+
+    if (onUpdatePatient) {
+      onUpdatePatient(updatedPatient);
+    }
+    clinicalStorage.saveSinglePatient(updatedPatient);
+
+    // 2. Save Anamnesis and Evaluations
+    saveAnamnesisToState(currentPatient.id);
+    saveEvaluationsToState(currentPatient.id);
+
+    // 3. Clear dirty state and record timestamp
+    lastSavedSnapshotRef.current = getFormSnapshot();
+    setHasUnsavedChanges(false);
+
+    const now = new Date().toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    setLastSavedTime(now);
+
+    setSavedSuccessAlert(`✓ ¡Información y evaluaciones de ${updatedPatient.firstName} guardadas con éxito en la base de datos permanente (${now})!`);
+    setTimeout(() => setSavedSuccessAlert(null), 4000);
+  }, [
+    currentPatient, 
+    patientFirstName, 
+    patientLastName, 
+    patientRut, 
+    patientBirthDate, 
+    patientGender, 
+    patientDiagnosis, 
+    patientEmergencyName, 
+    patientEmergencyPhone, 
+    consultationReason, 
+    caregiverName, 
+    caregiverPhone, 
+    onUpdatePatient, 
+    saveAnamnesisToState, 
+    saveEvaluationsToState, 
+    getFormSnapshot
+  ]);
+
+  // Keyboard shortcut Ctrl+S / Cmd+S
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        handleSaveAll();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleSaveAll]);
 
   const handleGenerateAndOpenReport = () => {
     if (!currentPatient) return;
     saveAnamnesisToState();
     saveEvaluationsToState();
+    lastSavedSnapshotRef.current = getFormSnapshot();
+    setHasUnsavedChanges(false);
 
     const report: ComprehensiveReport = {
       id: `comprep_${currentPatient.id}_${Date.now()}`,
@@ -1298,8 +1621,22 @@ export const PatientEvaluationForm: React.FC<PatientEvaluationFormProps> = ({
           </button>
         </div>
 
-        {/* Action Buttons: Clean form & Share SPM Link */}
+        {/* Action Buttons: Save form, Clean form & Share SPM Link */}
         <div className="flex flex-wrap items-center gap-2 w-full md:w-auto justify-end">
+          <button
+            type="button"
+            onClick={handleSaveAll}
+            className={`flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer ${
+              hasUnsavedChanges
+                ? 'bg-emerald-600 hover:bg-emerald-500 text-white ring-2 ring-emerald-400 animate-pulse'
+                : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200'
+            }`}
+            title="Guarda inmediatamente todos los cambios en la base de datos permanente (Ctrl + S)"
+          >
+            <Save className="w-3.5 h-3.5" />
+            <span>{hasUnsavedChanges ? '💾 Guardar Cambios (*)' : 'Guardar Ficha'}</span>
+          </button>
+
           <button
             type="button"
             onClick={handleClearForm}
@@ -1548,7 +1885,7 @@ export const PatientEvaluationForm: React.FC<PatientEvaluationFormProps> = ({
               <>Evaluación indicada: <strong>Examen Neurológico Infantil de Hammersmith (HINE)</strong> + Protocolo de Asimetrías Craneales.</>
             )}
             {ageDecision === 'mayor_2_anos' && !followsCommandsDecision && (
-              <>Evaluación indicada: <strong>Pauta de Observación de Parámetros Psicomotores de Pilar Arnaiz</strong> (Sesión lúdica libre) + <strong>Lista de Control de Habilidades de Comunicación Críticas</strong> (Pyramid).</>
+              <>Evaluación indicada: <strong>Pauta de Observación de Parámetros Psicomotores de Pilar Arnaiz</strong> (Sesión lúdica libre) + <strong>Lista de Control de Habilidades de Comunicación Críticas y Funcionales</strong>.</>
             )}
             {ageDecision === 'mayor_2_anos' && followsCommandsDecision && (
               <>Evaluación indicada: <strong>Batería Psicomotora (BPM) de Vítor da Fonseca</strong> (Evaluación motriz estandarizada mediante consignas estructuradas).</>
@@ -3359,7 +3696,7 @@ export const PatientEvaluationForm: React.FC<PatientEvaluationFormProps> = ({
           )}
 
           {/* ========================================================================= */}
-          {/* SUB-SECCIÓN 4.B: HABILIDADES DE COMUNICACIÓN CRÍTICAS (Pyramid)           */}
+          {/* SUB-SECCIÓN 4.B: HABILIDADES DE COMUNICACIÓN CRÍTICAS Y FUNCIONALES        */}
           {/* ========================================================================= */}
           {activeSection === 'critical_communication' && ageDecision === 'mayor_2_anos' && !followsCommandsDecision && (
             <div className="space-y-6 animate-in fade-in">
@@ -4261,6 +4598,39 @@ export const PatientEvaluationForm: React.FC<PatientEvaluationFormProps> = ({
         </div>
 
       </div>
+
+      {/* Floating Sticky Save Bar when there are unsaved changes */}
+      {hasUnsavedChanges && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-11/12 max-w-2xl bg-slate-900/95 text-white backdrop-blur-md rounded-2xl p-4 shadow-2xl border-2 border-emerald-400 flex flex-col sm:flex-row items-center justify-between gap-3 animate-in slide-in-from-bottom-5">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/30">
+              <AlertTriangle className="w-5 h-5 text-amber-400 animate-pulse" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-black uppercase tracking-wider text-amber-400">
+                  Modificaciones sin Guardar
+                </span>
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+              </div>
+              <p className="text-xs text-slate-200">
+                Has modificado la ficha de <strong className="text-white">{currentPatient ? `${currentPatient.firstName} ${currentPatient.lastName}` : 'este paciente'}</strong>.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto justify-end">
+            <button
+              type="button"
+              onClick={handleSaveAll}
+              className="px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs rounded-xl shadow-lg flex items-center gap-1.5 transition-all cursor-pointer hover:scale-105 active:scale-95"
+            >
+              <Save className="w-4 h-4" />
+              <span>Guardar Cambios Ahora (Ctrl + S)</span>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Online SPM Modal */}
       <SPMOnlineFormModal
