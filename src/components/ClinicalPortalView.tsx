@@ -14,6 +14,7 @@ import { PatientEvaluationForm } from './PatientEvaluationForm';
 import { ComprehensiveReportViewer } from './ComprehensiveReportViewer';
 import { MarketingBusinessHub } from './MarketingBusinessHub';
 import { NicheTrendsAndIntelligenceHub } from './NicheTrendsAndIntelligenceHub';
+import { clinicalStorage } from '../utils/clinicalStorage';
 import { 
   FileText, 
   UserPlus, 
@@ -30,7 +31,10 @@ import {
   Sparkles,
   Trash2,
   AlertTriangle,
-  Brain
+  Brain,
+  Download,
+  Upload,
+  Database
 } from 'lucide-react';
 
 interface ClinicalPortalViewProps {
@@ -110,9 +114,35 @@ export const ClinicalPortalView: React.FC<ClinicalPortalViewProps> = ({
   const [tempInstitution, setTempInstitution] = useState(profInstitution);
   const [tempRegistry, setTempRegistry] = useState(profRegistry);
 
-  const [selectedPatientId, setSelectedPatientId] = useState<string>(
-    patients[0]?.id || ''
-  );
+  const [selectedPatientId, setSelectedPatientId] = useState<string>(() => {
+    const saved = clinicalStorage.getSelectedPatientId();
+    if (saved && patients.some(p => p.id === saved)) {
+      return saved;
+    }
+    return patients[0]?.id || '';
+  });
+
+  // Keep selectedPatientId synchronized and never lost
+  useEffect(() => {
+    if (selectedPatientId) {
+      clinicalStorage.saveSelectedPatientId(selectedPatientId);
+    } else if (patients.length > 0) {
+      const saved = clinicalStorage.getSelectedPatientId();
+      if (saved && patients.some(p => p.id === saved)) {
+        setSelectedPatientId(saved);
+      } else {
+        setSelectedPatientId(patients[0].id);
+        clinicalStorage.saveSelectedPatientId(patients[0].id);
+      }
+    }
+  }, [selectedPatientId, patients]);
+
+  const handleSelectPatientId = (newId: string) => {
+    setSelectedPatientId(newId);
+    if (newId) {
+      clinicalStorage.saveSelectedPatientId(newId);
+    }
+  };
 
   const selectedPatient = patients.find(p => p.id === selectedPatientId) || patients[0];
 
@@ -136,11 +166,58 @@ export const ClinicalPortalView: React.FC<ClinicalPortalViewProps> = ({
   const [showConfirmClearModal, setShowConfirmClearModal] = useState(false);
   const [clearSuccessNotice, setClearSuccessNotice] = useState<string | null>(null);
 
+  // Backup modal and state (Regla Permanente 1)
+  const [showBackupModal, setShowBackupModal] = useState(false);
+  const [backupNotice, setBackupNotice] = useState<string | null>(null);
+
+  const handleExportBackup = () => {
+    try {
+      const jsonStr = clinicalStorage.exportFullClinicalBackupJson();
+      const blob = new Blob([jsonStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const today = new Date().toISOString().slice(0, 10);
+      a.href = url;
+      a.download = `respaldo_kinesfera_clinico_${today}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      setBackupNotice('✓ Respaldo completo descargado en formato JSON con éxito.');
+      setTimeout(() => setBackupNotice(null), 5000);
+    } catch (err: any) {
+      setBackupNotice(`Error al exportar respaldo: ${err?.message || 'Error desconocido'}`);
+    }
+  };
+
+  const handleImportBackup = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const content = event.target?.result as string;
+      if (content) {
+        const result = clinicalStorage.importFullClinicalBackupJson(content);
+        if (result.success) {
+          setBackupNotice('✓ ' + result.message + ' Recargando datos...');
+          setTimeout(() => {
+            window.location.reload();
+          }, 1200);
+        } else {
+          setBackupNotice('✗ ' + result.message);
+        }
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
+
   const handleConfirmClearAll = () => {
     if (onClearAllPatients) {
       onClearAllPatients();
     }
     setSelectedPatientId('');
+    clinicalStorage.saveSelectedPatientId('');
     setShowConfirmClearModal(false);
     setClearSuccessNotice('Todos los datos anteriores han sido eliminados con éxito. Base de datos limpia para comenzar desde 0.');
     setTimeout(() => setClearSuccessNotice(null), 5000);
@@ -283,6 +360,15 @@ export const ClinicalPortalView: React.FC<ClinicalPortalViewProps> = ({
           >
             <RotateCcw className="w-3.5 h-3.5 text-rose-600" />
             <span>Comenzar desde 0</span>
+          </button>
+
+          <button
+            onClick={() => setShowBackupModal(true)}
+            className="flex items-center gap-1.5 px-3 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-bold rounded-xl transition-colors cursor-pointer"
+            title="Exportar o importar respaldo completo de datos en JSON (Regla Permanente 1)"
+          >
+            <Database className="w-3.5 h-3.5 text-indigo-600" />
+            <span>Respaldos (JSON)</span>
           </button>
 
           <button
@@ -715,6 +801,98 @@ export const ClinicalPortalView: React.FC<ClinicalPortalViewProps> = ({
               >
                 <Trash2 className="w-3.5 h-3.5" />
                 <span>Sí, Comenzar desde 0</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* JSON Backup & Restore Modal (Regla Permanente 1) */}
+      {showBackupModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-7 shadow-2xl border border-slate-200 space-y-5 animate-in zoom-in-95">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">
+                  <Database className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">Respaldo de Datos Clínicos (JSON)</h3>
+                  <p className="text-xs text-slate-500">Exporta e importa fichas, evaluaciones, notas y pagos</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setShowBackupModal(false)}
+                className="text-slate-400 hover:text-slate-600 p-1"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {backupNotice && (
+              <div className={`p-3 rounded-xl text-xs font-semibold ${
+                backupNotice.startsWith('✓') 
+                  ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' 
+                  : 'bg-rose-50 text-rose-800 border border-rose-200'
+              }`}>
+                {backupNotice}
+              </div>
+            )}
+
+            <div className="space-y-4 text-xs">
+              {/* Option 1: Export JSON */}
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <strong className="text-slate-800 font-bold flex items-center gap-2">
+                    <Download className="w-4 h-4 text-indigo-600" />
+                    <span>1. Exportar Respaldo Completo (.json)</span>
+                  </strong>
+                  <span className="text-[10px] font-semibold text-slate-500 bg-white px-2 py-0.5 rounded-md border border-slate-200">
+                    {patients.length} {patients.length === 1 ? 'paciente' : 'pacientes'}
+                  </span>
+                </div>
+                <p className="text-slate-500 leading-relaxed text-[11px]">
+                  Descarga un archivo JSON cifrado local con todos los pacientes, anamnesis, evaluaciones neuromotoras (HINE, Da Fonseca, Arnaiz, SPM-2), notas de evolución y estados de pago.
+                </p>
+                <button
+                  type="button"
+                  onClick={handleExportBackup}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-xs transition-colors cursor-pointer"
+                >
+                  <Download className="w-4 h-4" />
+                  <span>Descargar Archivo JSON de Respaldo</span>
+                </button>
+              </div>
+
+              {/* Option 2: Import JSON */}
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-2.5">
+                <strong className="text-slate-800 font-bold flex items-center gap-2">
+                  <Upload className="w-4 h-4 text-emerald-600" />
+                  <span>2. Restaurar Respaldo (.json)</span>
+                </strong>
+                <p className="text-slate-500 leading-relaxed text-[11px]">
+                  Carga un archivo de respaldo previamente exportado. Los registros se fusionarán y actualizarán sin descartar datos previos.
+                </p>
+                <label className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-white hover:bg-slate-100 border border-slate-300 text-slate-700 font-bold rounded-xl transition-colors cursor-pointer">
+                  <Upload className="w-4 h-4 text-slate-600" />
+                  <span>Seleccionar Archivo JSON para Restaurar</span>
+                  <input
+                    type="file"
+                    accept=".json,application/json"
+                    onChange={handleImportBackup}
+                    className="hidden"
+                  />
+                </label>
+              </div>
+            </div>
+
+            <div className="pt-2 border-t border-slate-100 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowBackupModal(false)}
+                className="px-4 py-2 border border-slate-300 text-slate-700 font-bold rounded-xl text-xs hover:bg-slate-50 cursor-pointer"
+              >
+                Cerrar
               </button>
             </div>
           </div>

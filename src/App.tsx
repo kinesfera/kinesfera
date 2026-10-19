@@ -265,14 +265,19 @@ export default function App() {
       clinicalStorage.savePatients(updated);
       return updated;
     });
+    clinicalStorage.saveSelectedPatientId(newPatient.id);
   };
 
   const handleUpdatePatient = (updatedPatient: User) => {
     setUsers(prev => {
-      const updated = prev.map(u => u.id === updatedPatient.id ? updatedPatient : u);
+      const exists = prev.some(u => u.id === updatedPatient.id);
+      const updated = exists 
+        ? prev.map(u => u.id === updatedPatient.id ? updatedPatient : u)
+        : [...prev, updatedPatient];
       clinicalStorage.savePatients(updated);
       return updated;
     });
+    clinicalStorage.saveSelectedPatientId(updatedPatient.id);
   };
 
   const handleSaveAnamnesis = (patientId: string, data: PatientAnamnesis) => {
@@ -392,6 +397,7 @@ export default function App() {
                 onUpdateProgressNote={handleUpdateProgressNote}
                 onDeleteProgressNote={handleDeleteProgressNote}
                 onAddNewPatient={handleAddNewPatient}
+                onUpdatePatient={handleUpdatePatient}
                 onSaveAnamnesis={handleSaveAnamnesis}
                 onSaveEvaluations={handleSaveEvaluations}
                 onGenerateComprehensiveReport={handleGenerateComprehensiveReport}

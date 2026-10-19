@@ -1,4 +1,4 @@
-import { User, PatientAnamnesis, ClinicalEvaluations, ProgressNote, ComprehensiveReport, SessionResult } from '../types';
+import { User, PatientAnamnesis, ClinicalEvaluations, ProgressNote, ComprehensiveReport, SessionResult, AnonymizedClinicalCase } from '../types';
 
 const STORAGE_KEYS = {
   PATIENTS: 'kinesfera_patients_data_v2',
@@ -7,7 +7,9 @@ const STORAGE_KEYS = {
   PROGRESS_NOTES: 'kinesfera_progress_notes_data_v2',
   REPORTS: 'kinesfera_comprehensive_reports_data_v2',
   SESSION_HISTORY: 'kinesfera_session_history_data_v2',
-  BACKUP: 'kinesfera_clinical_full_backup_v2'
+  BACKUP: 'kinesfera_clinical_full_backup_v2',
+  ANONYMIZED_CASES: 'kinesfera_anonymized_clinical_cases_v2',
+  SELECTED_PATIENT_ID: 'kinesfera_selected_patient_id'
 };
 
 // Fallback patient (Blaz) to ensure the user's patient is always present and never lost
@@ -224,9 +226,16 @@ export const clinicalStorage = {
       // Filter only patients (role Padre/Niño) so staff accounts remain separate
       const patientUsers = patients.filter(u => u.role === 'Padre/Niño');
       
+      // Deduplicate patient users by id, preserving existing entries
+      const uniqueMap = new Map<string, User>();
+      patientUsers.forEach(p => uniqueMap.set(p.id, p));
+      
       // Ensure Blaz is never accidentally lost from the roster
-      const hasBlaz = patientUsers.some(p => p.id === 'patient_blaz_01' || p.firstName.toLowerCase() === 'blaz');
-      const safePatientUsers = hasBlaz ? patientUsers : [...DEFAULT_FALLBACK_PATIENTS, ...patientUsers];
+      const hasBlaz = Array.from(uniqueMap.values()).some(p => p.id === 'patient_blaz_01' || p.firstName.toLowerCase() === 'blaz');
+      if (!hasBlaz) {
+        DEFAULT_FALLBACK_PATIENTS.forEach(p => uniqueMap.set(p.id, p));
+      }
+      const safePatientUsers = Array.from(uniqueMap.values());
 
       localStorage.setItem(STORAGE_KEYS.PATIENTS, JSON.stringify(safePatientUsers));
       localStorage.setItem('kinesfera_saved_patients', JSON.stringify(safePatientUsers));
@@ -258,6 +267,7 @@ export const clinicalStorage = {
         updated = [...current, patient];
       }
       this.savePatients(updated);
+      this.saveSelectedPatientId(patient.id);
       localStorage.setItem(`kinesfera_patient_backup_${patient.id}`, JSON.stringify(patient));
     } catch (err) {
       console.error('Error saving single patient:', err);
@@ -454,6 +464,136 @@ export const clinicalStorage = {
       this.triggerStorageEvent();
     } catch (err) {
       console.error('Error clearing storage:', err);
+    }
+  },
+
+  getSelectedPatientId(): string {
+    try {
+      return localStorage.getItem(STORAGE_KEYS.SELECTED_PATIENT_ID) || '';
+    } catch {
+      return '';
+    }
+  },
+
+  saveSelectedPatientId(id: string): void {
+    try {
+      if (id) {
+        localStorage.setItem(STORAGE_KEYS.SELECTED_PATIENT_ID, id);
+      }
+    } catch {
+      // ignore
+    }
+  },
+
+  recordAnonymizedClinicalCase(caseData: Omit<AnonymizedClinicalCase, 'id' | 'timestamp'>): void {
+    try {
+      const existing = this.getAnonymizedClinicalCases();
+      const newCase: AnonymizedClinicalCase = {
+        ...caseData,
+        id: `case_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+        timestamp: new Date().toISOString()
+      };
+      const updated = [newCase, ...existing].slice(0, 50); // keep last 50
+      localStorage.setItem(STORAGE_KEYS.ANONYMIZED_CASES, JSON.stringify(updated));
+      this.triggerStorageEvent();
+    } catch (err) {
+      console.error('Error recording anonymized case:', err);
+    }
+  },
+
+  getAnonymizedClinicalCases(): AnonymizedClinicalCase[] {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEYS.ANONYMIZED_CASES);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+      // Initial default cases
+      const defaults: AnonymizedClinicalCase[] = [
+        {
+          id: 'case_default_1',
+          timestamp: new Date(Date.now() - 86400000 * 3).toISOString(),
+          pathologyOrReason: 'Hipotonía axial y retraso en consolidación de marcha',
+          ageCategory: 'mayor_2_anos',
+          observedProgress: 'Consolidación de equilibrio estático monopodal y salto en dos pies tras 4 semanas de estimulación vestibular',
+          treatmentApproach: 'Juego motor con sentido Kinesfera, circuitos de desestabilización en balancín y planos inclinados',
+          clinicalResults: 'Aumento de tono axial, mayor autonomía motriz en suelo y disminución de caídas'
+        },
+        {
+          id: 'case_default_2',
+          timestamp: new Date(Date.now() - 86400000 * 7).toISOString(),
+          pathologyOrReason: 'Asimetría postural craneal posicional (Plagiocefalia) y preferencia cervical',
+          ageCategory: 'bebe_hasta_18_meses',
+          observedProgress: 'Reducción de CVAI de 9.2% a 4.1% con rango cervical simétrico bilateral',
+          treatmentApproach: 'Terapia miofascial cervical suave, reposicionamiento lúdico y Tummy Time activo asistido',
+          clinicalResults: 'Simetría craneal corregida sin necesidad de órtesis craneal'
+        },
+        {
+          id: 'case_default_3',
+          timestamp: new Date(Date.now() - 86400000 * 12).toISOString(),
+          pathologyOrReason: 'Dificultades en integración sensorial (SPM-2: reactividad táctil y búsqueda propioceptiva)',
+          ageCategory: 'mayor_2_anos',
+          observedProgress: 'Mejor tolerancia a texturas y autorregulación en aula escolar PIE',
+          treatmentApproach: 'Dieta sensoriomotriz Kinesfera, juego de arrastre con resistencia y presión profunda',
+          clinicalResults: 'Mayor tiempo de atención focalizada y reducción de conductas de agitación motriz'
+        }
+      ];
+      localStorage.setItem(STORAGE_KEYS.ANONYMIZED_CASES, JSON.stringify(defaults));
+      return defaults;
+    } catch {
+      return [];
+    }
+  },
+
+  exportFullClinicalBackupJson(): string {
+    const backupData = {
+      version: '2.0.0',
+      exportDate: new Date().toISOString(),
+      institution: 'Centro Clínico Kinesfera Copiapó',
+      patients: this.loadPatients(),
+      anamnesis: this.loadAnamnesis(),
+      evaluations: this.loadEvaluations(),
+      progressNotes: this.loadProgressNotes(),
+      reports: this.loadReports(),
+      sessionHistory: this.loadSessionHistory(),
+      anonymizedCases: this.getAnonymizedClinicalCases()
+    };
+    return JSON.stringify(backupData, null, 2);
+  },
+
+  importFullClinicalBackupJson(jsonString: string): { success: boolean; message: string } {
+    try {
+      const data = JSON.parse(jsonString);
+      if (!data || typeof data !== 'object') {
+        return { success: false, message: 'El archivo JSON no tiene un formato válido.' };
+      }
+
+      if (Array.isArray(data.patients) && data.patients.length > 0) {
+        this.savePatients(data.patients);
+      }
+      if (data.anamnesis && typeof data.anamnesis === 'object') {
+        this.saveAnamnesis(data.anamnesis);
+      }
+      if (data.evaluations && typeof data.evaluations === 'object') {
+        this.saveEvaluations(data.evaluations);
+      }
+      if (Array.isArray(data.progressNotes)) {
+        this.saveProgressNotes(data.progressNotes);
+      }
+      if (Array.isArray(data.reports)) {
+        this.saveReports(data.reports);
+      }
+      if (Array.isArray(data.sessionHistory)) {
+        this.saveSessionHistory(data.sessionHistory);
+      }
+      if (Array.isArray(data.anonymizedCases)) {
+        localStorage.setItem(STORAGE_KEYS.ANONYMIZED_CASES, JSON.stringify(data.anonymizedCases));
+      }
+
+      this.triggerStorageEvent();
+      return { success: true, message: 'Respaldo clínico restaurado con éxito. Toda la información ha sido actualizada.' };
+    } catch (err: any) {
+      return { success: false, message: `Error al procesar el archivo: ${err?.message || 'Formato inválido'}` };
     }
   },
 

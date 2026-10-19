@@ -71,6 +71,21 @@ export interface User {
   avatarConfig?: AvatarConfig;
   diagnosis?: string; // e.g., "TEA Grado 1 + Hipotonía axial", "TDAH combinado", "Síndrome de Down"
   medicalRecordNumber?: string;
+  // Gestión de pagos por paciente (Regla Permanente 2)
+  paymentStatus?: 'Pagado' | 'Pendiente';
+  paymentMethodDefault?: PaymentMethod;
+  sessionFee?: number;
+  lastPaymentDate?: string;
+}
+
+export interface AnonymizedClinicalCase {
+  id: string;
+  timestamp: string;
+  pathologyOrReason: string;
+  ageCategory: string;
+  observedProgress: string;
+  treatmentApproach: string;
+  clinicalResults: string;
 }
 
 export interface KeypointValidation {
@@ -235,9 +250,10 @@ export interface SessionResult {
 export type PaymentMethod = 
   | 'Efectivo' 
   | 'Transferencia' 
+  | 'Tarjeta'
+  | 'Otro' 
   | 'Fonasa' 
   | 'Isapre' 
-  | 'Tarjeta' 
   | 'Particular'
   | 'Pendiente'
   | 'Bono Web';
@@ -247,6 +263,8 @@ export interface ProgressNote {
   patientId: string;
   date: string; // e.g. "07/28/2026" or YYYY-MM-DD
   paymentMethod: PaymentMethod;
+  paymentStatus?: 'Pagado' | 'Pendiente';
+  amount?: number;
   notes: string;
   professionalName?: string;
   createdAt?: string;
