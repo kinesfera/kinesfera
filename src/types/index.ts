@@ -712,11 +712,12 @@ export interface ClinicalEvaluations {
   spmSensoryMeasure?: SensoryProcessingMeasureSPM2; // Perfil sensorial (presencial o link padres/escuela)
   
   // Clinical conclusions
+  cifCodes?: string[]; // Códigos específicos CIF OMS (ej. b730, b760, d450, d410, e115, etc.)
   functionalDiagnosisCIF: string;
   therapeuticGoalsShortTerm: string;
   therapeuticGoalsLongTerm: string;
   treatmentPlan: string;
-  homeAndSchoolRecommendations: string;
+  homeAndSchoolRecommendations?: string;
   homeRecommendations?: string; // Recomendaciones específicas para el hogar
   schoolRecommendations?: string; // Recomendaciones específicas para jardín/escuela si > 3 años
 }

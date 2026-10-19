@@ -11,10 +11,13 @@ import {
   SensoryProcessingMeasureSPM2,
   DaFonsecaBPM,
   HammersmithHINE,
-  CriticalCommunicationSkills
+  CriticalCommunicationSkills,
+  PaymentMethod,
+  GenderType
 } from '../types';
 import { SPMOnlineFormModal } from './SPMOnlineFormModal';
 import { CriticalCommunicationForm } from './CriticalCommunicationForm';
+import { clinicalStorage } from '../utils/clinicalStorage';
 import { 
   UserPlus, 
   FileText, 
@@ -39,9 +42,26 @@ import {
   AlertTriangle,
   MessageSquare,
   GraduationCap,
-  Home
+  Home,
+  Tag,
+  CreditCard,
+  PlusCircle,
+  Target,
+  ListChecks
 } from 'lucide-react';
 import { calculatePatientAge } from '../utils/ageHelper';
+import {
+  CIF_CODES_BANK,
+  CIF_QUALIFIERS,
+  generateAutomaticCIFDiagnosis,
+  generateShortTermGoals,
+  generateLongTermGoals,
+  generateTreatmentPlan,
+  HOME_RECOMMENDATIONS_BANK,
+  SCHOOL_RECOMMENDATIONS_BANK,
+  getRecommendedHomeList,
+  getRecommendedSchoolList
+} from '../utils/cifClinicalRecommender';
 
 interface PatientEvaluationFormProps {
   patients: User[];
@@ -112,7 +132,7 @@ export const PatientEvaluationForm: React.FC<PatientEvaluationFormProps> = ({
   const [patientLastName, setPatientLastName] = useState('');
   const [patientRut, setPatientRut] = useState('');
   const [patientBirthDate, setPatientBirthDate] = useState('');
-  const [patientGender, setPatientGender] = useState<'Hombre' | 'Mujer'>('Hombre');
+  const [patientGender, setPatientGender] = useState<GenderType>('Hombre');
   const [patientDiagnosis, setPatientDiagnosis] = useState('');
   const [patientEmergencyName, setPatientEmergencyName] = useState('');
   const [patientEmergencyPhone, setPatientEmergencyPhone] = useState('');
@@ -449,6 +469,10 @@ export const PatientEvaluationForm: React.FC<PatientEvaluationFormProps> = ({
   // ==========================================
   // 7. CONCLUSIONES CLÍNICAS CIF Y PLAN
   // ==========================================
+  const [selectedCifCodes, setSelectedCifCodes] = useState<string[]>([]);
+  const [cifSeverityQualifier, setCifSeverityQualifier] = useState<string>('.2');
+  const [cifActiveDomain, setCifActiveDomain] = useState<'b' | 's' | 'd' | 'e'>('b');
+
   const [functionalDiagnosisCIF, setFunctionalDiagnosisCIF] = useState('');
   const [therapeuticGoalsShortTerm, setTherapeuticGoalsShortTerm] = useState('');
   const [therapeuticGoalsLongTerm, setTherapeuticGoalsLongTerm] = useState('');
@@ -457,175 +481,259 @@ export const PatientEvaluationForm: React.FC<PatientEvaluationFormProps> = ({
   const [homeRecommendations, setHomeRecommendations] = useState('');
   const [schoolRecommendations, setSchoolRecommendations] = useState('');
 
+  // Ref to track which patient ID is currently loaded in form fields
+  // Prevents re-running sync on every render or during save
+  const loadedPatientIdRef = useRef<string | null>(null);
+
   // Sync when patient changes
   useEffect(() => {
-    if (currentPatient) {
-      const a = anamnesisData[currentPatient.id];
-      if (a) {
-        setAgeDecision(a.ageCategory === 'bebe_hasta_18_meses' ? 'menor_2_anos' : 'mayor_2_anos');
-        setCaregiverName(a.caregiverName || '');
-        setCaregiverPhone(a.caregiverPhone || '');
-        setSchoolOrCenter(a.schoolOrCenter || '');
-        setEducationalLevel(a.educationalLevel || '');
-        setPieSupport(a.pieSupport || false);
-        setHouseholdMembers(a.householdMembers || '');
-        setConsultationReason(a.consultationReason || '');
-        setProblemNoticedWhen(a.problemNoticedWhen || '');
-        setSpecialistsVisited(a.specialistsVisited || '');
-        setPreviousTreatments(a.previousTreatments || '');
-        setFamilyExpectations(a.familyExpectations || '');
-        setPregnancyHistory(a.pregnancyHistory || '');
-        setGestationalAgeWeeks(a.gestationalAgeWeeks || '');
-        setBirthWeightGrams(a.birthWeightGrams || '');
-        setBirthLengthCm(a.birthLengthCm || '');
-        setBirthType(a.birthType || 'Parto normal');
-        setBirthPresentation(a.birthPresentation || 'Cefálica');
-        setApgarScore(a.apgarScore || '9/10');
-        setNeonatalComplications(a.neonatalComplications || 'Sin complicaciones');
-        setFeedingType(a.feedingType || '');
-        setColic(a.colic || '');
-        setSleepPattern(a.sleepPattern || '');
-        setHeadControlMonths(a.headControlMonths || '');
-        setIndependentSittingMonths(a.independentSittingMonths || '');
-        setCrawlingMonths(a.crawlingMonths || '');
-        setStandingMonths(a.standingMonths || '');
-        setWalkingMonths(a.walkingMonths || '');
-        setFirstWords(a.firstWords || '');
-        setFirstPhrases(a.firstPhrases || '');
-        setLanguageDifficulties(a.languageDifficulties || '');
-        setCurrentMotorStatus(a.currentMotorStatus || '');
-        setFollowsInstructionsText(a.followsInstructions || '');
-        setIsRestless(a.isRestless || '');
-        setPlaysAloneOrAccompanied(a.playsAloneOrAccompanied || '');
-        setBedtimeRoutine(a.bedtimeRoutine || '');
-        setNightmares(a.nightmares || '');
-        setHasFears(a.hasFears || '');
-        setStrangerReaction(a.strangerReaction || '');
-        setTantrums(a.tantrums || '');
-        setAppearsSad(a.appearsSad || '');
-        setFamilyRelationships(a.familyRelationships || '');
-        setSchoolRelationships(a.schoolRelationships || '');
-        setLeisureActivities(a.leisureActivities || '');
-        setFamilyDiagnoses(a.familyDiagnoses || '');
-        setPharmacology(a.pharmacology || '');
+    if (!currentPatient) return;
 
-        if (a.cranialMeasurements) {
-          setCranialD1Mm(a.cranialMeasurements.d1Mm || 140);
-          setCranialD2Mm(a.cranialMeasurements.d2Mm || 135);
-          setCranialApMm(a.cranialMeasurements.apMm || 142);
-          setCranialBpMm(a.cranialMeasurements.bpMm || 118);
-          setHeadCircumferenceCm(a.cranialMeasurements.headCircumferenceCm || 37);
-          setCranialTreatmentIndication(a.cranialMeasurements.treatmentIndication || '');
-        }
-      }
-
-      const e = evaluationsData[currentPatient.id];
-      if (e) {
-        if (e.patientAgeCategory) setAgeDecision(e.patientAgeCategory);
-        if (typeof e.followsCommands === 'boolean') setFollowsCommandsDecision(e.followsCommands);
-        
-        setFunctionalDiagnosisCIF(e.functionalDiagnosisCIF || '');
-        setTherapeuticGoalsShortTerm(e.therapeuticGoalsShortTerm || '');
-        setTherapeuticGoalsLongTerm(e.therapeuticGoalsLongTerm || '');
-        setTreatmentPlan(e.treatmentPlan || '');
-        setHomeAndSchoolRecommendations(e.homeAndSchoolRecommendations || '');
-        setHomeRecommendations(e.homeRecommendations || '');
-        setSchoolRecommendations(e.schoolRecommendations || '');
-
-        if (e.hineExam) {
-          setHineFacialAnimation(e.hineExam.facialAnimation ?? 3);
-          setHineEyeMovements(e.hineExam.eyeMovements ?? 3);
-          setHineVisualFollow(e.hineExam.visualFollow ?? 3);
-          setHineAuditoryResponse(e.hineExam.auditoryResponse ?? 3);
-          setHineSuckSwallow(e.hineExam.suckSwallow ?? 3);
-
-          setHineHeadPosture(e.hineExam.headPosture ?? 3);
-          setHineTrunkPosture(e.hineExam.trunkPosture ?? 3);
-          setHineArmPosture(e.hineExam.armPosture ?? 3);
-          setHineHandsPosture(e.hineExam.handsPosture ?? 3);
-          setHineLegPosture(e.hineExam.legPosture ?? 3);
-          setHineLegsSupineProne(e.hineExam.legsSupineProne ?? 3);
-          setHineFeetPosture(e.hineExam.feetPosture ?? 3);
-
-          setHineMovementsQuantity(e.hineExam.movementsQuantity ?? 3);
-          setHineMovementsQuality(e.hineExam.movementsQuality ?? 3);
-
-          setHineScarfSign(e.hineExam.scarfSign ?? 3);
-          setHinePassiveShoulderElevation(e.hineExam.passiveShoulderElevation ?? 3);
-          setHinePronationSupination(e.hineExam.pronationSupination ?? 3);
-          setHineAdductorsAngle(e.hineExam.adductorsAngle ?? 3);
-          setHinePoplitealAngle(e.hineExam.poplitealAngle ?? 3);
-          setHineAnkleDorsiflexionAngle(e.hineExam.ankleDorsiflexionAngle ?? 3);
-          setHinePullToSit(e.hineExam.pullToSit ?? 3);
-          setHineVentralSuspension(e.hineExam.ventralSuspension ?? 3);
-
-          setHineArmProtectionReaction(e.hineExam.armProtectionReaction ?? 3);
-          setHineVerticalSuspension(e.hineExam.verticalSuspension ?? 3);
-          setHineLateralTilting(e.hineExam.lateralTilting ?? 3);
-          setHineForwardParachute(e.hineExam.forwardParachute ?? 3);
-          setHineTendonReflexes(e.hineExam.tendonReflexes ?? 3);
-
-          if (e.hineExam.motorMilestones) {
-            if (e.hineExam.motorMilestones.headControl) setHineMotorHeadControl(e.hineExam.motorMilestones.headControl);
-            if (e.hineExam.motorMilestones.sitting) setHineMotorSitting(e.hineExam.motorMilestones.sitting);
-            if (e.hineExam.motorMilestones.voluntaryGrasp) setHineMotorVoluntaryGrasp(e.hineExam.motorMilestones.voluntaryGrasp);
-            if (e.hineExam.motorMilestones.supineKicking) setHineMotorSupineKicking(e.hineExam.motorMilestones.supineKicking);
-            if (e.hineExam.motorMilestones.rolling) setHineMotorRolling(e.hineExam.motorMilestones.rolling);
-            if (e.hineExam.motorMilestones.crawling) setHineMotorCrawling(e.hineExam.motorMilestones.crawling);
-            if (e.hineExam.motorMilestones.standing) setHineMotorStanding(e.hineExam.motorMilestones.standing);
-            if (e.hineExam.motorMilestones.walking) setHineMotorWalking(e.hineExam.motorMilestones.walking);
-          }
-
-          if (e.hineExam.behavior) {
-            if (e.hineExam.behavior.consciousState) setHineBehaviorConscious(e.hineExam.behavior.consciousState);
-            if (e.hineExam.behavior.emotionalState) setHineBehaviorEmotional(e.hineExam.behavior.emotionalState);
-            if (e.hineExam.behavior.socialOrientation) setHineBehaviorSocial(e.hineExam.behavior.socialOrientation);
-          }
-
-          setHineObservations(e.hineExam.clinicalObservations || '');
-        }
-
-        if (e.criticalCommunication) {
-          setCriticalCommData(e.criticalCommunication);
-        }
-
-        if (e.psychomotorObservation) {
-          setArnaizMovementsFrequent(e.psychomotorObservation.movementsFrequent || '');
-          setArnaizMovementsQuality(e.psychomotorObservation.movementsQuality || '');
-          setArnaizBodyMobility(e.psychomotorObservation.bodyMobilityLevel || '');
-          setArnaizPostures(e.psychomotorObservation.posturesFrequent || '');
-          setArnaizToneQuality(e.psychomotorObservation.toneQuality || '');
-          setArnaizSpaceOccupancy(e.psychomotorObservation.spaceOccupancy || '');
-          setArnaizSpaceTrajectory(e.psychomotorObservation.spaceTrajectory || '');
-          setArnaizSpaceLevels(e.psychomotorObservation.spaceLevels || '');
-          setArnaizRhythmQuality(e.psychomotorObservation.rhythmQuality || '');
-          setArnaizActivityDuration(e.psychomotorObservation.activityDuration || '');
-          setArnaizObjectUsage(e.psychomotorObservation.objectUsage || '');
-          setArnaizObjectRelations(e.psychomotorObservation.objectsRelationWithOthers || '');
-          setArnaizCompanionsRelation(e.psychomotorObservation.companionsRelation || '');
-          setArnaizAdultRelation(e.psychomotorObservation.adultRelation || '');
-          setArnaizGlobalSynthesis(e.psychomotorObservation.globalSynthesis || '');
-        }
-
-        if (e.spmSensoryMeasure) {
-          setSpmSocial(e.spmSensoryMeasure.socialParticipationScore || 18);
-          setSpmVision(e.spmSensoryMeasure.visionScore || 14);
-          setSpmHearing(e.spmSensoryMeasure.hearingScore || 16);
-          setSpmTouch(e.spmSensoryMeasure.touchScore || 18);
-          setSpmTasteSmell(e.spmSensoryMeasure.tasteSmellScore || 13);
-          setSpmBodyAwareness(e.spmSensoryMeasure.bodyAwarenessScore || 22);
-          setSpmBalanceMotion(e.spmSensoryMeasure.balanceMotionScore || 20);
-          setSpmPlanningIdeas(e.spmSensoryMeasure.planningIdeasScore || 21);
-          setSpmApplicationMethod(e.spmSensoryMeasure.applicationMethod || 'presencial');
-          setSpmRespondentName(e.spmSensoryMeasure.respondentName || '');
-        }
-
-        if (e.daFonsecaBpm) {
-          setBpmConclusions(e.daFonsecaBpm.conclusions || '');
-        }
-      }
+    // Only synchronize from storage/props if the patient ID actually changed
+    if (loadedPatientIdRef.current === currentPatient.id) {
+      return;
     }
-  }, [selectedPatientId, currentPatient]);
+    loadedPatientIdRef.current = currentPatient.id;
+
+    const a = anamnesisData[currentPatient.id];
+    if (a) {
+      setAgeDecision(a.ageCategory === 'bebe_hasta_18_meses' ? 'menor_2_anos' : 'mayor_2_anos');
+      setCaregiverName(a.caregiverName || '');
+      setCaregiverPhone(a.caregiverPhone || '');
+      setSchoolOrCenter(a.schoolOrCenter || '');
+      setEducationalLevel(a.educationalLevel || '');
+      setPieSupport(a.pieSupport || false);
+      setHouseholdMembers(a.householdMembers || '');
+      setConsultationReason(a.consultationReason || '');
+      setProblemNoticedWhen(a.problemNoticedWhen || '');
+      setSpecialistsVisited(a.specialistsVisited || '');
+      setPreviousTreatments(a.previousTreatments || '');
+      setFamilyExpectations(a.familyExpectations || '');
+      setPregnancyHistory(a.pregnancyHistory || '');
+      setGestationalAgeWeeks(a.gestationalAgeWeeks || '');
+      setBirthWeightGrams(a.birthWeightGrams || '');
+      setBirthLengthCm(a.birthLengthCm || '');
+      setBirthType(a.birthType || 'Parto normal');
+      setBirthPresentation(a.birthPresentation || 'Cefálica');
+      setApgarScore(a.apgarScore || '9/10');
+      setNeonatalComplications(a.neonatalComplications || 'Sin complicaciones');
+      setFeedingType(a.feedingType || '');
+      setColic(a.colic || '');
+      setSleepPattern(a.sleepPattern || '');
+      setHeadControlMonths(a.headControlMonths || '');
+      setIndependentSittingMonths(a.independentSittingMonths || '');
+      setCrawlingMonths(a.crawlingMonths || '');
+      setStandingMonths(a.standingMonths || '');
+      setWalkingMonths(a.walkingMonths || '');
+      setFirstWords(a.firstWords || '');
+      setFirstPhrases(a.firstPhrases || '');
+      setLanguageDifficulties(a.languageDifficulties || '');
+      setCurrentMotorStatus(a.currentMotorStatus || '');
+      setFollowsInstructionsText(a.followsInstructions || '');
+      setIsRestless(a.isRestless || '');
+      setPlaysAloneOrAccompanied(a.playsAloneOrAccompanied || '');
+      setBedtimeRoutine(a.bedtimeRoutine || '');
+      setNightmares(a.nightmares || '');
+      setHasFears(a.hasFears || '');
+      setStrangerReaction(a.strangerReaction || '');
+      setTantrums(a.tantrums || '');
+      setAppearsSad(a.appearsSad || '');
+      setFamilyRelationships(a.familyRelationships || '');
+      setSchoolRelationships(a.schoolRelationships || '');
+      setLeisureActivities(a.leisureActivities || '');
+      setFamilyDiagnoses(a.familyDiagnoses || '');
+      setPharmacology(a.pharmacology || '');
+
+      if (a.cranialMeasurements) {
+        setCranialD1Mm(a.cranialMeasurements.d1Mm || 140);
+        setCranialD2Mm(a.cranialMeasurements.d2Mm || 135);
+        setCranialApMm(a.cranialMeasurements.apMm || 142);
+        setCranialBpMm(a.cranialMeasurements.bpMm || 118);
+        setHeadCircumferenceCm(a.cranialMeasurements.headCircumferenceCm || 37);
+        setCranialTreatmentIndication(a.cranialMeasurements.treatmentIndication || '');
+      } else {
+        setCranialD1Mm(140);
+        setCranialD2Mm(135);
+        setCranialApMm(142);
+        setCranialBpMm(118);
+        setHeadCircumferenceCm(37);
+        setCranialTreatmentIndication('');
+      }
+    } else {
+      // Cleanly initialize all fields for a new or unsaved patient so previous patient's data NEVER leaks
+      setAgeDecision('mayor_2_anos');
+      setCaregiverName(currentPatient.emergencyContact?.name || '');
+      setCaregiverPhone(currentPatient.emergencyContact?.phone || '');
+      setSchoolOrCenter('');
+      setEducationalLevel('');
+      setPieSupport(false);
+      setHouseholdMembers('');
+      setConsultationReason(currentPatient.diagnosis || '');
+      setProblemNoticedWhen('');
+      setSpecialistsVisited('');
+      setPreviousTreatments('');
+      setFamilyExpectations('');
+      setPregnancyHistory('');
+      setGestationalAgeWeeks('');
+      setBirthWeightGrams('');
+      setBirthLengthCm('');
+      setBirthType('Parto normal');
+      setBirthPresentation('Cefálica');
+      setApgarScore('9/10');
+      setNeonatalComplications('Sin complicaciones');
+      setFeedingType('');
+      setColic('');
+      setSleepPattern('');
+      setHeadControlMonths('');
+      setIndependentSittingMonths('');
+      setCrawlingMonths('');
+      setStandingMonths('');
+      setWalkingMonths('');
+      setFirstWords('');
+      setFirstPhrases('');
+      setLanguageDifficulties('');
+      setCurrentMotorStatus('');
+      setFollowsInstructionsText('');
+      setIsRestless('');
+      setPlaysAloneOrAccompanied('');
+      setBedtimeRoutine('');
+      setNightmares('');
+      setHasFears('');
+      setStrangerReaction('');
+      setTantrums('');
+      setAppearsSad('');
+      setFamilyRelationships('');
+      setSchoolRelationships('');
+      setLeisureActivities('');
+      setFamilyDiagnoses('');
+      setPharmacology('');
+      setCranialD1Mm(140);
+      setCranialD2Mm(135);
+      setCranialApMm(142);
+      setCranialBpMm(118);
+      setHeadCircumferenceCm(37);
+      setCranialTreatmentIndication('');
+    }
+
+    const e = evaluationsData[currentPatient.id];
+    if (e) {
+      if (e.patientAgeCategory) setAgeDecision(e.patientAgeCategory);
+      if (typeof e.followsCommands === 'boolean') setFollowsCommandsDecision(e.followsCommands);
+      
+      setSelectedCifCodes(e.cifCodes || []);
+      setFunctionalDiagnosisCIF(e.functionalDiagnosisCIF || '');
+      setTherapeuticGoalsShortTerm(e.therapeuticGoalsShortTerm || '');
+      setTherapeuticGoalsLongTerm(e.therapeuticGoalsLongTerm || '');
+      setTreatmentPlan(e.treatmentPlan || '');
+      setHomeAndSchoolRecommendations(e.homeAndSchoolRecommendations || '');
+      setHomeRecommendations(e.homeRecommendations || '');
+      setSchoolRecommendations(e.schoolRecommendations || '');
+
+      if (e.hineExam) {
+        setHineFacialAnimation(e.hineExam.facialAnimation ?? 3);
+        setHineEyeMovements(e.hineExam.eyeMovements ?? 3);
+        setHineVisualFollow(e.hineExam.visualFollow ?? 3);
+        setHineAuditoryResponse(e.hineExam.auditoryResponse ?? 3);
+        setHineSuckSwallow(e.hineExam.suckSwallow ?? 3);
+
+        setHineHeadPosture(e.hineExam.headPosture ?? 3);
+        setHineTrunkPosture(e.hineExam.trunkPosture ?? 3);
+        setHineArmPosture(e.hineExam.armPosture ?? 3);
+        setHineHandsPosture(e.hineExam.handsPosture ?? 3);
+        setHineLegPosture(e.hineExam.legPosture ?? 3);
+        setHineLegsSupineProne(e.hineExam.legsSupineProne ?? 3);
+        setHineFeetPosture(e.hineExam.feetPosture ?? 3);
+
+        setHineMovementsQuantity(e.hineExam.movementsQuantity ?? 3);
+        setHineMovementsQuality(e.hineExam.movementsQuality ?? 3);
+
+        setHineScarfSign(e.hineExam.scarfSign ?? 3);
+        setHinePassiveShoulderElevation(e.hineExam.passiveShoulderElevation ?? 3);
+        setHinePronationSupination(e.hineExam.pronationSupination ?? 3);
+        setHineAdductorsAngle(e.hineExam.adductorsAngle ?? 3);
+        setHinePoplitealAngle(e.hineExam.poplitealAngle ?? 3);
+        setHineAnkleDorsiflexionAngle(e.hineExam.ankleDorsiflexionAngle ?? 3);
+        setHinePullToSit(e.hineExam.pullToSit ?? 3);
+        setHineVentralSuspension(e.hineExam.ventralSuspension ?? 3);
+
+        setHineArmProtectionReaction(e.hineExam.armProtectionReaction ?? 3);
+        setHineVerticalSuspension(e.hineExam.verticalSuspension ?? 3);
+        setHineLateralTilting(e.hineExam.lateralTilting ?? 3);
+        setHineForwardParachute(e.hineExam.forwardParachute ?? 3);
+        setHineTendonReflexes(e.hineExam.tendonReflexes ?? 3);
+
+        if (e.hineExam.motorMilestones) {
+          if (e.hineExam.motorMilestones.headControl) setHineMotorHeadControl(e.hineExam.motorMilestones.headControl);
+          if (e.hineExam.motorMilestones.sitting) setHineMotorSitting(e.hineExam.motorMilestones.sitting);
+          if (e.hineExam.motorMilestones.voluntaryGrasp) setHineMotorVoluntaryGrasp(e.hineExam.motorMilestones.voluntaryGrasp);
+          if (e.hineExam.motorMilestones.supineKicking) setHineMotorSupineKicking(e.hineExam.motorMilestones.supineKicking);
+          if (e.hineExam.motorMilestones.rolling) setHineMotorRolling(e.hineExam.motorMilestones.rolling);
+          if (e.hineExam.motorMilestones.crawling) setHineMotorCrawling(e.hineExam.motorMilestones.crawling);
+          if (e.hineExam.motorMilestones.standing) setHineMotorStanding(e.hineExam.motorMilestones.standing);
+          if (e.hineExam.motorMilestones.walking) setHineMotorWalking(e.hineExam.motorMilestones.walking);
+        }
+
+        if (e.hineExam.behavior) {
+          if (e.hineExam.behavior.consciousState) setHineBehaviorConscious(e.hineExam.behavior.consciousState);
+          if (e.hineExam.behavior.emotionalState) setHineBehaviorEmotional(e.hineExam.behavior.emotionalState);
+          if (e.hineExam.behavior.socialOrientation) setHineBehaviorSocial(e.hineExam.behavior.socialOrientation);
+        }
+
+        setHineObservations(e.hineExam.clinicalObservations || '');
+      }
+
+      if (e.criticalCommunication) {
+        setCriticalCommData(e.criticalCommunication);
+      }
+
+      if (e.psychomotorObservation) {
+        setArnaizMovementsFrequent(e.psychomotorObservation.movementsFrequent || '');
+        setArnaizMovementsQuality(e.psychomotorObservation.movementsQuality || '');
+        setArnaizBodyMobility(e.psychomotorObservation.bodyMobilityLevel || '');
+        setArnaizPostures(e.psychomotorObservation.posturesFrequent || '');
+        setArnaizToneQuality(e.psychomotorObservation.toneQuality || '');
+        setArnaizSpaceOccupancy(e.psychomotorObservation.spaceOccupancy || '');
+        setArnaizSpaceTrajectory(e.psychomotorObservation.spaceTrajectory || '');
+        setArnaizSpaceLevels(e.psychomotorObservation.spaceLevels || '');
+        setArnaizRhythmQuality(e.psychomotorObservation.rhythmQuality || '');
+        setArnaizActivityDuration(e.psychomotorObservation.activityDuration || '');
+        setArnaizObjectUsage(e.psychomotorObservation.objectUsage || '');
+        setArnaizObjectRelations(e.psychomotorObservation.objectsRelationWithOthers || '');
+        setArnaizCompanionsRelation(e.psychomotorObservation.companionsRelation || '');
+        setArnaizAdultRelation(e.psychomotorObservation.adultRelation || '');
+        setArnaizGlobalSynthesis(e.psychomotorObservation.globalSynthesis || '');
+      }
+
+      if (e.spmSensoryMeasure) {
+        setSpmSocial(e.spmSensoryMeasure.socialParticipationScore || 18);
+        setSpmVision(e.spmSensoryMeasure.visionScore || 14);
+        setSpmHearing(e.spmSensoryMeasure.hearingScore || 16);
+        setSpmTouch(e.spmSensoryMeasure.touchScore || 18);
+        setSpmTasteSmell(e.spmSensoryMeasure.tasteSmellScore || 13);
+        setSpmBodyAwareness(e.spmSensoryMeasure.bodyAwarenessScore || 22);
+        setSpmBalanceMotion(e.spmSensoryMeasure.balanceMotionScore || 20);
+        setSpmPlanningIdeas(e.spmSensoryMeasure.planningIdeasScore || 21);
+        setSpmApplicationMethod(e.spmSensoryMeasure.applicationMethod || 'presencial');
+        setSpmRespondentName(e.spmSensoryMeasure.respondentName || '');
+      }
+
+      if (e.daFonsecaBpm) {
+        setBpmConclusions(e.daFonsecaBpm.conclusions || '');
+      }
+    } else {
+      // Cleanly initialize all evaluations for new patient
+      setSelectedCifCodes([]);
+      setFunctionalDiagnosisCIF('');
+      setTherapeuticGoalsShortTerm('');
+      setTherapeuticGoalsLongTerm('');
+      setTreatmentPlan('');
+      setHomeAndSchoolRecommendations('');
+      setHomeRecommendations('');
+      setSchoolRecommendations('');
+      setHineObservations('');
+      setBpmConclusions('');
+    }
+  }, [currentPatient?.id, anamnesisData, evaluationsData]);
 
   const handleClearForm = () => {
     setCaregiverName('');
@@ -670,10 +778,13 @@ export const PatientEvaluationForm: React.FC<PatientEvaluationFormProps> = ({
     setFamilyDiagnoses('');
     setPharmacology('');
     setFunctionalDiagnosisCIF('');
+    setSelectedCifCodes([]);
     setTherapeuticGoalsShortTerm('');
     setTherapeuticGoalsLongTerm('');
     setTreatmentPlan('');
     setHomeAndSchoolRecommendations('');
+    setHomeRecommendations('');
+    setSchoolRecommendations('');
     setSavedSuccessAlert('Formulario limpiado. Listo para nuevo registro.');
     setTimeout(() => setSavedSuccessAlert(null), 3000);
   };
@@ -962,6 +1073,7 @@ export const PatientEvaluationForm: React.FC<PatientEvaluationFormProps> = ({
         applicationMethod: spmApplicationMethod,
         respondentName: spmRespondentName
       },
+      cifCodes: selectedCifCodes,
       functionalDiagnosisCIF,
       therapeuticGoalsShortTerm,
       therapeuticGoalsLongTerm,
@@ -1209,22 +1321,27 @@ export const PatientEvaluationForm: React.FC<PatientEvaluationFormProps> = ({
     const updatedPatient: User = {
       ...currentPatient,
       firstName: patientFirstName.trim() || currentPatient.firstName,
-      lastName: patientLastName.trim(),
+      lastName: patientLastName.trim() || currentPatient.lastName || '',
       rut: patientRut.trim() || currentPatient.rut,
       birthDate: patientBirthDate || currentPatient.birthDate,
       gender: patientGender,
-      diagnosis: patientDiagnosis.trim() || consultationReason || currentPatient.diagnosis,
+      role: 'Padre/Niño',
+      diagnosis: patientDiagnosis.trim() || consultationReason.trim() || currentPatient.diagnosis,
       emergencyContact: {
-        name: patientEmergencyName.trim() || caregiverName || currentPatient.emergencyContact?.name || 'Tutor legal',
+        name: patientEmergencyName.trim() || caregiverName.trim() || currentPatient.emergencyContact?.name || 'Tutor legal',
         relationship: currentPatient.emergencyContact?.relationship || 'Tutor',
-        phone: patientEmergencyPhone.trim() || caregiverPhone || currentPatient.emergencyContact?.phone || ''
+        phone: patientEmergencyPhone.trim() || caregiverPhone.trim() || currentPatient.emergencyContact?.phone || ''
       }
     };
+
+    // Keep loadedPatientIdRef locked on current patient so sync effect does not reload
+    loadedPatientIdRef.current = currentPatient.id;
 
     if (onUpdatePatient) {
       onUpdatePatient(updatedPatient);
     }
     clinicalStorage.saveSinglePatient(updatedPatient);
+    clinicalStorage.saveSelectedPatientId(currentPatient.id);
 
     // 2. Save Anamnesis and Evaluations
     saveAnamnesisToState(currentPatient.id);
@@ -1237,7 +1354,7 @@ export const PatientEvaluationForm: React.FC<PatientEvaluationFormProps> = ({
     const now = new Date().toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
     setLastSavedTime(now);
 
-    setSavedSuccessAlert(`✓ ¡Información y evaluaciones de ${updatedPatient.firstName} guardadas con éxito en la base de datos permanente (${now})!`);
+    setSavedSuccessAlert(`✓ ¡Información, anamnesis y evaluaciones de ${updatedPatient.firstName} guardadas con éxito en la base de datos permanente (${now})!`);
     setTimeout(() => setSavedSuccessAlert(null), 4000);
   }, [
     currentPatient, 
@@ -1521,6 +1638,7 @@ export const PatientEvaluationForm: React.FC<PatientEvaluationFormProps> = ({
           applicationMethod: spmApplicationMethod,
           respondentName: spmRespondentName
         },
+        cifCodes: selectedCifCodes,
         functionalDiagnosisCIF,
         therapeuticGoalsShortTerm,
         therapeuticGoalsLongTerm,
@@ -2401,6 +2519,52 @@ export const PatientEvaluationForm: React.FC<PatientEvaluationFormProps> = ({
                       className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-hidden"
                     />
                   </div>
+                </div>
+              </div>
+
+              {/* Barra de Guardado y Continuación Rápida para Anamnesis Pediátrica */}
+              <div className="pt-5 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-50/80 p-4 rounded-2xl border border-slate-200">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs">
+                    1/3
+                  </div>
+                  <div>
+                    <span className="text-xs font-bold text-slate-800 block">
+                      Anamnesis Pediátrica de {currentPatient ? `${currentPatient.firstName} ${currentPatient.lastName}` : 'Paciente'}
+                    </span>
+                    <span className="text-[11px] text-slate-500">
+                      Datos personales, perinatales, hitos motores y antecedentes clínicos
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end">
+                  <button
+                    type="button"
+                    onClick={handleSaveAll}
+                    className="flex items-center gap-1.5 px-4 py-2.5 bg-white hover:bg-slate-100 text-slate-800 border border-slate-300 text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer hover:border-slate-400"
+                  >
+                    <Save className="w-3.5 h-3.5 text-blue-600" />
+                    <span>Guardar Anamnesis</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleSaveAll();
+                      if (ageDecision === 'menor_2_anos') {
+                        setActiveSection('hine');
+                      } else if (followsCommandsDecision) {
+                        setActiveSection('da_fonseca');
+                      } else {
+                        setActiveSection('arnaiz');
+                      }
+                    }}
+                    className="flex items-center gap-1.5 px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer hover:shadow-md"
+                  >
+                    <span>Guardar y Continuar a Pruebas</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
                 </div>
               </div>
 
@@ -4471,127 +4635,626 @@ export const PatientEvaluationForm: React.FC<PatientEvaluationFormProps> = ({
           {/* ========================================================================= */}
           {activeSection === 'cif_plan' && (
             <div className="space-y-6 animate-in fade-in">
-              <div className="space-y-4">
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">
-                    Diagnóstico Funcional CIF (Clasificación Internacional del Funcionamiento)
-                  </label>
-                  <textarea
-                    rows={3}
-                    value={functionalDiagnosisCIF}
-                    onChange={e => setFunctionalDiagnosisCIF(e.target.value)}
-                    placeholder="Describa limitaciones en actividades, funciones corporales y factores contextuales..."
-                    className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs"
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              
+              {/* Encabezado Asistente CIF */}
+              <div className="bg-gradient-to-r from-blue-900 to-indigo-900 text-white rounded-2xl p-5 shadow-sm space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div>
-                    <label className="font-bold text-slate-700 block mb-1">Objetivos Terapéuticos a Corto Plazo</label>
-                    <textarea
-                      rows={3}
-                      value={therapeuticGoalsShortTerm}
-                      onChange={e => setTherapeuticGoalsShortTerm(e.target.value)}
-                      placeholder="1) ... 2) ..."
-                      className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs"
-                    />
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-black uppercase tracking-wider bg-blue-500/30 text-blue-200 border border-blue-400/30 px-2.5 py-0.5 rounded-full">
+                        OMS · Marco C.I.F. Pediátrico
+                      </span>
+                      <span className="text-[10px] font-bold text-emerald-300 bg-emerald-950/60 border border-emerald-500/30 px-2 py-0.5 rounded-full">
+                        Válido Comités PIE y Salud
+                      </span>
+                    </div>
+                    <h3 className="text-sm sm:text-base font-extrabold text-white mt-1 flex items-center gap-2">
+                      <Brain className="w-4 h-4 text-sky-400" />
+                      <span>Diagnóstico Funcional CIF, Objetivos Terapéuticos & Plan Integral</span>
+                    </h3>
+                    <p className="text-xs text-blue-200 mt-0.5 max-w-2xl">
+                      Estructura formal basada en Funciones (b), Estructuras (s), Actividades y Participación (d), y Factores Ambientales (e) con sugerencias clínicas automáticas basadas en la evaluación.
+                    </p>
                   </div>
 
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const autoDiagnosis = generateAutomaticCIFDiagnosis(
+                        currentPatient,
+                        anamnesisData[currentPatient?.id || ''],
+                        evaluationsData[currentPatient?.id || '']
+                      );
+                      setFunctionalDiagnosisCIF(autoDiagnosis);
+
+                      // Detect and extract CIF codes mentioned in the diagnosis
+                      const codesFound = CIF_CODES_BANK
+                        .filter(item => autoDiagnosis.includes(item.code))
+                        .map(item => item.code);
+                      if (codesFound.length > 0) {
+                        setSelectedCifCodes(prev => Array.from(new Set([...prev, ...codesFound])));
+                      }
+
+                      setSavedSuccessAlert('⚡ Diagnóstico CIF autogenerado a partir de los datos clínicos del paciente.');
+                      setTimeout(() => setSavedSuccessAlert(null), 3500);
+                    }}
+                    className="flex items-center gap-1.5 px-4 py-2.5 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-black text-xs rounded-xl shadow-md transition-all cursor-pointer shrink-0 hover:scale-102 active:scale-98"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-slate-950" />
+                    <span>⚡ Autogenerar CIF desde Pruebas</span>
+                  </button>
+                </div>
+
+                {/* Códigos CIF Activos */}
+                {selectedCifCodes.length > 0 && (
+                  <div className="pt-2 border-t border-white/10 flex flex-wrap items-center gap-1.5 text-xs">
+                    <span className="text-[11px] font-bold text-blue-200 mr-1 flex items-center gap-1">
+                      <Tag className="w-3 h-3 text-amber-300" /> Códigos CIF Seleccionados ({selectedCifCodes.length}):
+                    </span>
+                    {selectedCifCodes.map(code => {
+                      const meta = CIF_CODES_BANK.find(c => c.code === code);
+                      return (
+                        <span
+                          key={code}
+                          className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-blue-800/80 border border-blue-400/40 text-[11px] font-mono font-bold text-white shadow-2xs"
+                        >
+                          <span>{code}</span>
+                          {meta && <span className="font-sans font-normal text-blue-200">({meta.title.slice(0, 20)}...)</span>}
+                          <button
+                            type="button"
+                            onClick={() => setSelectedCifCodes(prev => prev.filter(c => c !== code))}
+                            className="hover:text-rose-300 ml-0.5 cursor-pointer font-bold"
+                            title="Quitar código"
+                          >
+                            ✕
+                          </button>
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Selector Interactivo de Códigos CIF Oficiales (OMS) */}
+              <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 space-y-4 shadow-xs">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 pb-3">
                   <div>
-                    <label className="font-bold text-slate-700 block mb-1">Objetivos Terapéuticos a Largo Plazo</label>
-                    <textarea
-                      rows={3}
-                      value={therapeuticGoalsLongTerm}
-                      onChange={e => setTherapeuticGoalsLongTerm(e.target.value)}
-                      placeholder="1) ... 2) ..."
-                      className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs"
-                    />
+                    <h4 className="text-xs font-black uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
+                      <ListChecks className="w-3.5 h-3.5 text-blue-600" />
+                      <span>Banco de Códigos CIF Específicos para Kinesiología Pediátrica</span>
+                    </h4>
+                    <p className="text-[11px] text-slate-500">
+                      Haz clic en cualquier código para insertarlo con su calificación oficial en el texto del diagnóstico.
+                    </p>
+                  </div>
+
+                  {/* Selector de Severidad / Calificador */}
+                  <div className="flex items-center gap-2 shrink-0">
+                    <label className="text-[11px] font-bold text-slate-600">Calificador:</label>
+                    <select
+                      value={cifSeverityQualifier}
+                      onChange={e => setCifSeverityQualifier(e.target.value)}
+                      className="text-xs font-semibold px-2.5 py-1.5 bg-slate-50 border border-slate-300 rounded-xl outline-hidden focus:ring-2 focus:ring-blue-500"
+                    >
+                      {CIF_QUALIFIERS.map(q => (
+                        <option key={q.value} value={q.value}>{q.label}</option>
+                      ))}
+                    </select>
                   </div>
                 </div>
 
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Plan de Intervención y Frecuencia Kinésica</label>
-                  <textarea
-                    rows={2}
-                    value={treatmentPlan}
-                    onChange={e => setTreatmentPlan(e.target.value)}
-                    placeholder="Frecuencia semanal, abordaje motor, dieta sensorial, etc."
-                    className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs"
-                  />
+                {/* Pestañas de Dominio CIF: b, s, d, e */}
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {[
+                    { id: 'b', label: 'Funciones Corporales (b)', count: CIF_CODES_BANK.filter(c => c.domain === 'b').length, color: 'text-blue-700 bg-blue-50 border-blue-200' },
+                    { id: 's', label: 'Estructuras Corporales (s)', count: CIF_CODES_BANK.filter(c => c.domain === 's').length, color: 'text-purple-700 bg-purple-50 border-purple-200' },
+                    { id: 'd', label: 'Actividades y Participación (d)', count: CIF_CODES_BANK.filter(c => c.domain === 'd').length, color: 'text-teal-700 bg-teal-50 border-teal-200' },
+                    { id: 'e', label: 'Factores Ambientales (e)', count: CIF_CODES_BANK.filter(c => c.domain === 'e').length, color: 'text-emerald-700 bg-emerald-50 border-emerald-200' }
+                  ].map(tab => (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => setCifActiveDomain(tab.id as any)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 border ${
+                        cifActiveDomain === tab.id
+                          ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+                          : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                      }`}
+                    >
+                      <span>{tab.label}</span>
+                      <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${cifActiveDomain === tab.id ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-800'}`}>
+                        {tab.count}
+                      </span>
+                    </button>
+                  ))}
                 </div>
 
-                {/* Recomendaciones para el Hogar */}
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="font-bold text-slate-700 flex items-center gap-1.5">
-                      <Home className="w-3.5 h-3.5 text-emerald-600" />
-                      <span>Recomendaciones para el Hogar (Práctica Diaria & Juegos)</span>
+                {/* Grid de Códigos del Dominio Activo */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5 max-h-64 overflow-y-auto pr-1">
+                  {CIF_CODES_BANK
+                    .filter(item => item.domain === cifActiveDomain)
+                    .map(item => {
+                      const isSelected = selectedCifCodes.includes(item.code);
+                      return (
+                        <div
+                          key={item.code}
+                          className={`p-2.5 rounded-xl border text-xs transition-all flex flex-col justify-between gap-1.5 ${
+                            isSelected
+                              ? 'bg-blue-50/80 border-blue-300 ring-1 ring-blue-300'
+                              : 'bg-slate-50/70 border-slate-200 hover:bg-white hover:border-slate-300'
+                          }`}
+                        >
+                          <div>
+                            <div className="flex items-center justify-between gap-1">
+                              <span className="font-mono font-black text-blue-700 bg-white px-2 py-0.5 rounded border border-slate-200 text-[11px]">
+                                {item.code}
+                              </span>
+                              <span className="text-[10px] text-slate-500 font-bold">
+                                {item.domainLabel.split(' ')[0]}
+                              </span>
+                            </div>
+                            <strong className="text-slate-800 block text-xs mt-1 leading-tight">
+                              {item.title}
+                            </strong>
+                            <p className="text-[11px] text-slate-600 mt-0.5 line-clamp-2 leading-relaxed">
+                              {item.description}
+                            </p>
+                          </div>
+
+                          <div className="flex items-center justify-between pt-1 border-t border-slate-200/60 text-[11px]">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const qualifierToUse = item.domain === 'e' ? item.defaultQualifier : cifSeverityQualifier;
+                                const formattedLine = `• ${item.code}${qualifierToUse} ${item.title}: ${item.description}`;
+                                
+                                setFunctionalDiagnosisCIF(prev => {
+                                  if (prev.includes(item.code)) {
+                                    return prev;
+                                  }
+                                  return prev ? `${prev}\n${formattedLine}` : formattedLine;
+                                });
+
+                                setSelectedCifCodes(prev => Array.from(new Set([...prev, item.code])));
+                              }}
+                              className="text-blue-600 hover:text-blue-800 font-bold flex items-center gap-1 cursor-pointer"
+                            >
+                              <PlusCircle className="w-3 h-3" />
+                              <span>{isSelected ? 'Reinsertar en texto' : '+ Agregar código'}</span>
+                            </button>
+                            <span className="text-slate-400 font-mono text-[10px]">
+                              {item.domain === 'e' ? item.defaultQualifier : cifSeverityQualifier}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+
+                {/* Textarea del Diagnóstico Funcional CIF */}
+                <div className="pt-2">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="font-bold text-slate-800 text-xs flex items-center gap-1.5">
+                      <span>Texto Oficial del Diagnóstico Funcional CIF:</span>
                     </label>
-                    <span className="text-[10px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded font-bold border border-emerald-200">
-                      Familia & Cuidadores
+                    <span className="text-[11px] text-slate-500">
+                      Editable libremente · Se imprimirá en la sección 7 del informe consolidado
                     </span>
                   </div>
                   <textarea
-                    rows={2}
-                    value={homeRecommendations}
-                    onChange={e => {
-                      setHomeRecommendations(e.target.value);
-                      setHomeAndSchoolRecommendations([e.target.value, schoolRecommendations].filter(Boolean).join('\n\n'));
-                    }}
-                    placeholder="Pautas familiares, ejercicios diarios en colchoneta, juegos sensoriales, pautas de postura..."
-                    className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs bg-slate-50 focus:bg-white"
+                    rows={6}
+                    value={functionalDiagnosisCIF}
+                    onChange={e => setFunctionalDiagnosisCIF(e.target.value)}
+                    placeholder="Describa el diagnóstico funcional CIF completo: Funciones corporales (b), Estructuras (s), Actividades y participación (d), Factores ambientales (e) y Síntesis diagnóstica kinésica..."
+                    className="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-xs font-sans leading-relaxed focus:ring-2 focus:ring-blue-500 outline-hidden bg-slate-50/50 focus:bg-white"
                   />
                 </div>
+              </div>
 
-                {/* Recomendaciones para Jardín / Escuela con Detección Automática de Edad (> 3 años) */}
-                <div>
-                  <div className="flex flex-wrap items-center justify-between gap-1 mb-1">
-                    <label className="font-bold text-slate-700 flex items-center gap-1.5">
-                      <GraduationCap className="w-3.5 h-3.5 text-blue-600" />
-                      <span>
-                        {calculatePatientAge(currentPatient?.birthDate).isOlderThanThree 
-                          ? 'Recomendaciones para Jardín Infantil / Escuela / Aula PIE' 
-                          : 'Recomendaciones para Jardín / Sala Cuna (Opcional si asiste)'}
-                      </span>
-                    </label>
+              {/* Bloque: Objetivos Terapéuticos Corto y Largo Plazo */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                
+                {/* 1. Corto Plazo */}
+                <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 space-y-3 shadow-xs">
+                  <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                    <div>
+                      <h4 className="font-bold text-xs uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
+                        <Target className="w-3.5 h-3.5 text-blue-600" />
+                        <span>Objetivos a Corto Plazo (SMART: 4 - 8 Semanas)</span>
+                      </h4>
+                      <p className="text-[11px] text-slate-500">
+                        Metas medibles y específicas orientadas a la función
+                      </p>
+                    </div>
 
-                    {calculatePatientAge(currentPatient?.birthDate).isOlderThanThree ? (
-                      <span className="text-[10px] text-blue-800 bg-blue-50 px-2 py-0.5 rounded font-bold border border-blue-200 flex items-center gap-1">
-                        <CheckCircle2 className="w-3 h-3 text-blue-600" />
-                        <span>Mayor a 3 años · En edad de Jardín / Escuela</span>
-                      </span>
-                    ) : (
-                      <span className="text-[10px] text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded font-bold border border-emerald-200">
-                        Menor a 3 años (Enfoque Hogar)
-                      </span>
-                    )}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const goals = generateShortTermGoals(
+                          currentPatient,
+                          evaluationsData[currentPatient?.id || '']
+                        );
+                        setTherapeuticGoalsShortTerm(goals);
+                      }}
+                      className="text-[11px] font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-2.5 py-1 rounded-xl transition-colors cursor-pointer flex items-center gap-1 shrink-0"
+                    >
+                      <Sparkles className="w-3 h-3" />
+                      <span>Sugerir SMART</span>
+                    </button>
+                  </div>
+
+                  {/* Chips de Inserción Rápida */}
+                  <div className="flex flex-wrap gap-1.5 text-[11px]">
+                    {[
+                      { label: '+ Equilibrio estático y dinámico', text: 'Mejorar el equilibrio estático y dinámico monopodal durante 6 segundos alternando extremidades en circuito de psicomotricidad.' },
+                      { label: '+ Disociación de cinturas', text: 'Desarrollar disociación escapular y pélvica en saltos bipodales y marcha en tándem sin caídas.' },
+                      { label: '+ Regulación de alerta', text: 'Favorecer la autorregulación motriz mediante actividades de trabajo pesado para lograr 20 min de atención sostenida en mesa.' },
+                      { label: '+ Prensión y fuerza manual', text: 'Graduar la fuerza propioceptiva y prensión funcional en tareas de destreza bimanual y uso de tijeras/lápiz.' },
+                      { label: '+ Tummy Time y rolado (Bebés)', text: 'Consolidar control cefálico estable en prono 5 min continuos y rolado bidireccional fluido.' }
+                    ].map((chip, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => {
+                          setTherapeuticGoalsShortTerm(prev => prev ? `${prev}\n• ${chip.text}` : `• ${chip.text}`);
+                        }}
+                        className="px-2 py-0.5 bg-slate-100 hover:bg-blue-50 hover:text-blue-700 text-slate-700 border border-slate-200 rounded-lg text-[10px] font-semibold transition-colors cursor-pointer"
+                      >
+                        {chip.label}
+                      </button>
+                    ))}
                   </div>
 
                   <textarea
-                    rows={2}
-                    value={schoolRecommendations}
-                    onChange={e => {
-                      setSchoolRecommendations(e.target.value);
-                      setHomeAndSchoolRecommendations([homeRecommendations, e.target.value].filter(Boolean).join('\n\n'));
-                    }}
-                    placeholder={
-                      calculatePatientAge(currentPatient?.birthDate).isOlderThanThree
-                        ? "Pautas para educadoras y equipo PIE: pausas activas cada 30 min, adecuación sensorial en sala, apoyo en educación física..."
-                        : "Por su edad (< 3 años) se prioriza el hogar. Si asiste a sala cuna, registrar indicaciones de postura y colchoneta aquí..."
-                    }
-                    className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs bg-slate-50 focus:bg-white"
+                    rows={4}
+                    value={therapeuticGoalsShortTerm}
+                    onChange={e => setTherapeuticGoalsShortTerm(e.target.value)}
+                    placeholder="1) Lograr control cefálico estable en prono...\n2) Mejorar equilibrio dinámico monopodal..."
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-hidden leading-relaxed"
                   />
-                  {calculatePatientAge(currentPatient?.birthDate).isOlderThanThree ? (
-                    <p className="text-[10px] text-blue-700 mt-1">
-                      ℹ️ El paciente tiene más de 3 años: estas pautas se incluirán en el informe para el jardín/colegio y en el envío semanal de WhatsApp.
+                </div>
+
+                {/* 2. Largo Plazo */}
+                <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 space-y-3 shadow-xs">
+                  <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                    <div>
+                      <h4 className="font-bold text-xs uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
+                        <Target className="w-3.5 h-3.5 text-indigo-600" />
+                        <span>Objetivos a Largo Plazo (3 - 6 Meses)</span>
+                      </h4>
+                      <p className="text-[11px] text-slate-500">
+                        Metas de autonomía global y participación escolar/familiar
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const goals = generateLongTermGoals(
+                          currentPatient,
+                          evaluationsData[currentPatient?.id || '']
+                        );
+                        setTherapeuticGoalsLongTerm(goals);
+                      }}
+                      className="text-[11px] font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 px-2.5 py-1 rounded-xl transition-colors cursor-pointer flex items-center gap-1 shrink-0"
+                    >
+                      <Sparkles className="w-3 h-3" />
+                      <span>Sugerir Metas</span>
+                    </button>
+                  </div>
+
+                  {/* Chips de Inserción Rápida */}
+                  <div className="flex flex-wrap gap-1.5 text-[11px]">
+                    {[
+                      { label: '+ Perfil psicomotor eutráxico', text: 'Alcanzar un perfil psicomotor armónico y eutráxico que permita la participación activa y coordinada en juegos de recreo y educación física.' },
+                      { label: '+ Marcha y transiciones fluidas', text: 'Consolidar transiciones posturales fluidas desde el suelo a bipedestación y marcha independiente funcional en desniveles.' },
+                      { label: '+ Autonomía en AVD', text: 'Consolidar autonomía en actividades de la vida diaria: vestido, abotonado, manipulación de cubiertos y prensión eficaz del lápiz.' },
+                      { label: '+ Autorregulación sensorial', text: 'Desarrollar estrategias autónomas de autorregulación frente a ruidos, transiciones escolares y espacios masivos.' }
+                    ].map((chip, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => {
+                          setTherapeuticGoalsLongTerm(prev => prev ? `${prev}\n• ${chip.text}` : `• ${chip.text}`);
+                        }}
+                        className="px-2 py-0.5 bg-slate-100 hover:bg-indigo-50 hover:text-indigo-700 text-slate-700 border border-slate-200 rounded-lg text-[10px] font-semibold transition-colors cursor-pointer"
+                      >
+                        {chip.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  <textarea
+                    rows={4}
+                    value={therapeuticGoalsLongTerm}
+                    onChange={e => setTherapeuticGoalsLongTerm(e.target.value)}
+                    placeholder="1) Consolidar marcha autónoma en superficies irregulares...\n2) Participación activa y coordinada en juegos escolares..."
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-hidden leading-relaxed"
+                  />
+                </div>
+
+              </div>
+
+              {/* Plan de Intervención y Frecuencia Kinésica */}
+              <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 space-y-3 shadow-xs">
+                <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                  <div>
+                    <h4 className="font-bold text-xs uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
+                      <Activity className="w-3.5 h-3.5 text-teal-600" />
+                      <span>Plan de Intervención Detallado y Frecuencia Kinésica</span>
+                    </h4>
+                    <p className="text-[11px] text-slate-500">
+                      Modalidad, sesiones semanales, abordajes terapéuticos y controles de reevaluación
                     </p>
-                  ) : (
-                    <p className="text-[10px] text-slate-500 mt-1">
-                      ℹ️ Paciente menor a 3 años: se prioriza la estimulación en el hogar y vinculación con cuidadores primarios.
-                    </p>
-                  )}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const plan = generateTreatmentPlan(
+                        currentPatient,
+                        evaluationsData[currentPatient?.id || '']
+                      );
+                      setTreatmentPlan(plan);
+                    }}
+                    className="text-[11px] font-bold text-teal-700 bg-teal-50 hover:bg-teal-100 border border-teal-200 px-2.5 py-1 rounded-xl transition-colors cursor-pointer flex items-center gap-1 shrink-0"
+                  >
+                    <Sparkles className="w-3 h-3" />
+                    <span>Sugerir Plan Detallado</span>
+                  </button>
+                </div>
+
+                {/* Chips de Frecuencia y Técnicas */}
+                <div className="flex flex-wrap gap-1.5 text-[11px]">
+                  {[
+                    { label: '• 2 sesiones/sem (45 min) + Control a 3 meses', text: 'FRECUENCIA: 2 sesiones semanales de 45 minutos presenciales. Reevaluación estandarizada formal a los 3 meses (12 semanas).' },
+                    { label: '• Circuitos psicomotores y praxias', text: 'ABORDAJE: Circuitos motores de obstáculos para potenciar praxia global, equilibrio dinámico y coordinación óculo-pedal.' },
+                    { label: '• Dieta sensorial y trabajo pesado', text: 'SENSORIAL: Dieta sensorial clínica con actividades de trabajo pesado propioceptivo (empuje, tracción, suspensión).' },
+                    { label: '• Concepto Bobath y Tummy Time', text: 'NEURODESARROLLO: Enfoque Bobath para facilitación de hitos motores y pautas de Tummy Time graduado.' }
+                  ].map((preset, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => {
+                        setTreatmentPlan(prev => prev ? `${prev}\n\n${preset.text}` : preset.text);
+                      }}
+                      className="px-2.5 py-1 bg-slate-100 hover:bg-teal-50 hover:text-teal-800 text-slate-700 border border-slate-200 rounded-lg text-[10px] font-semibold transition-colors cursor-pointer"
+                    >
+                      {preset.label}
+                    </button>
+                  ))}
+                </div>
+
+                <textarea
+                  rows={4}
+                  value={treatmentPlan}
+                  onChange={e => setTreatmentPlan(e.target.value)}
+                  placeholder="FRECUENCIA: 2 sesiones semanales de 45 minutos...\n1. Neurorehabilitación sensoriomotriz...\n2. Dieta sensorial propioceptiva..."
+                  className="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-xs bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-hidden leading-relaxed"
+                />
+              </div>
+
+              {/* Recomendaciones Detalladas para el Hogar */}
+              <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 space-y-3 shadow-xs">
+                <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                      <Home className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-xs uppercase tracking-wider text-slate-800">
+                        Recomendaciones Detalladas para el Hogar (Familia & Cuidadores)
+                      </h4>
+                      <p className="text-[11px] text-slate-500">
+                        Pautas prácticas diarias, juegos con sentido y adaptaciones ambientales en casa
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const list = getRecommendedHomeList(
+                        currentPatient,
+                        evaluationsData[currentPatient?.id || '']
+                      );
+                      const text = list.join('\n');
+                      setHomeRecommendations(text);
+                      setHomeAndSchoolRecommendations([text, schoolRecommendations].filter(Boolean).join('\n\n'));
+                    }}
+                    className="text-[11px] font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-2.5 py-1 rounded-xl transition-colors cursor-pointer flex items-center gap-1 shrink-0"
+                  >
+                    <Sparkles className="w-3 h-3" />
+                    <span>Cargar Banco Hogar</span>
+                  </button>
+                </div>
+
+                {/* Tarjetas Interactivas de Recomendaciones Hogar */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                  {HOME_RECOMMENDATIONS_BANK.map(item => {
+                    const isAdded = homeRecommendations.includes(item.title);
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => {
+                          const snippet = `• ${item.title}: ${item.description}`;
+                          setHomeRecommendations(prev => {
+                            const updated = prev.includes(item.title) ? prev : prev ? `${prev}\n${snippet}` : snippet;
+                            setHomeAndSchoolRecommendations([updated, schoolRecommendations].filter(Boolean).join('\n\n'));
+                            return updated;
+                          });
+                        }}
+                        className={`text-left p-2.5 rounded-xl border text-xs transition-all cursor-pointer ${
+                          isAdded
+                            ? 'bg-emerald-50/90 border-emerald-300 text-emerald-950 font-medium'
+                            : 'bg-slate-50/70 border-slate-200 hover:bg-white hover:border-slate-300 text-slate-800'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between text-[10px] text-slate-400 font-bold mb-0.5">
+                          <span>{item.category}</span>
+                          <span className={isAdded ? 'text-emerald-600 font-black' : 'text-slate-400'}>
+                            {isAdded ? '✓ Agregado' : '+ Agregar'}
+                          </span>
+                        </div>
+                        <strong className="block text-xs text-slate-900 leading-tight">
+                          {item.title}
+                        </strong>
+                        <p className="text-[11px] text-slate-600 line-clamp-2 mt-0.5 leading-snug">
+                          {item.description}
+                        </p>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <textarea
+                  rows={4}
+                  value={homeRecommendations}
+                  onChange={e => {
+                    setHomeRecommendations(e.target.value);
+                    setHomeAndSchoolRecommendations([e.target.value, schoolRecommendations].filter(Boolean).join('\n\n'));
+                  }}
+                  placeholder="• Trabajo Pesado antes de tareas: ayudar a empujar canastas de juguetes...\n• Rincón de la calma con cojines y luces tenues...\n• Juego descalzo en superficies variadas para propiocepción..."
+                  className="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-xs bg-slate-50 focus:bg-white focus:ring-2 focus:ring-emerald-500 outline-hidden leading-relaxed"
+                />
+              </div>
+
+              {/* Recomendaciones Detalladas para el Sistema Educativo */}
+              <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 space-y-3 shadow-xs">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 pb-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center">
+                      <GraduationCap className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h4 className="font-bold text-xs uppercase tracking-wider text-slate-800">
+                          Recomendaciones para el Sistema Educativo (Jardín / Escuela / Aula PIE)
+                        </h4>
+                        {calculatePatientAge(currentPatient?.birthDate).isOlderThanThree ? (
+                          <span className="text-[10px] font-bold text-blue-800 bg-blue-100 px-2 py-0.5 rounded-full">
+                            Paciente &gt; 3 años
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full">
+                            &lt; 3 años (Sala cuna / Hogar)
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-slate-500">
+                        Pautas para educadoras de párvulos, profesores de Educación Física y equipo PIE
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const list = getRecommendedSchoolList(
+                        currentPatient,
+                        evaluationsData[currentPatient?.id || '']
+                      );
+                      const text = list.join('\n');
+                      setSchoolRecommendations(text);
+                      setHomeAndSchoolRecommendations([homeRecommendations, text].filter(Boolean).join('\n\n'));
+                    }}
+                    className="text-[11px] font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-2.5 py-1 rounded-xl transition-colors cursor-pointer flex items-center gap-1 shrink-0"
+                  >
+                    <Sparkles className="w-3 h-3" />
+                    <span>Cargar Banco Educativo</span>
+                  </button>
+                </div>
+
+                {/* Tarjetas Interactivas de Recomendaciones Escuela */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                  {SCHOOL_RECOMMENDATIONS_BANK.map(item => {
+                    const isAdded = schoolRecommendations.includes(item.title);
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => {
+                          const snippet = `• ${item.title}: ${item.description}`;
+                          setSchoolRecommendations(prev => {
+                            const updated = prev.includes(item.title) ? prev : prev ? `${prev}\n${snippet}` : snippet;
+                            setHomeAndSchoolRecommendations([homeRecommendations, updated].filter(Boolean).join('\n\n'));
+                            return updated;
+                          });
+                        }}
+                        className={`text-left p-2.5 rounded-xl border text-xs transition-all cursor-pointer ${
+                          isAdded
+                            ? 'bg-blue-50/90 border-blue-300 text-blue-950 font-medium'
+                            : 'bg-slate-50/70 border-slate-200 hover:bg-white hover:border-slate-300 text-slate-800'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between text-[10px] text-slate-400 font-bold mb-0.5">
+                          <span>{item.category}</span>
+                          <span className={isAdded ? 'text-blue-600 font-black' : 'text-slate-400'}>
+                            {isAdded ? '✓ Agregado' : '+ Agregar'}
+                          </span>
+                        </div>
+                        <strong className="block text-xs text-slate-900 leading-tight">
+                          {item.title}
+                        </strong>
+                        <p className="text-[11px] text-slate-600 line-clamp-2 mt-0.5 leading-snug">
+                          {item.description}
+                        </p>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <textarea
+                  rows={4}
+                  value={schoolRecommendations}
+                  onChange={e => {
+                    setSchoolRecommendations(e.target.value);
+                    setHomeAndSchoolRecommendations([homeRecommendations, e.target.value].filter(Boolean).join('\n\n'));
+                  }}
+                  placeholder="• Pausas activas sensoriomotoras cada 25-30 minutos...\n• Ubicación estratégica en la primera fila, centrado a la pizarra...\n• Apoyos propioceptivos en pupitre (elástico en patas de la silla)..."
+                  className="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-xs bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-hidden leading-relaxed"
+                />
+              </div>
+
+              {/* Barra Final de Guardado y Consolidación */}
+              <div className="pt-4 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-2xl border border-blue-200">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-xs">
+                    ✓
+                  </div>
+                  <div>
+                    <span className="text-xs font-bold text-slate-900 block">
+                      Evaluación Clínica y Diagnóstico CIF Completados
+                    </span>
+                    <span className="text-[11px] text-slate-600">
+                      Guarda los cambios o genera directamente el informe médico consolidado en Word y PDF
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end">
+                  <button
+                    type="button"
+                    onClick={handleSaveAll}
+                    className="flex items-center gap-1.5 px-4 py-2.5 bg-white hover:bg-slate-100 text-slate-800 border border-slate-300 text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer"
+                  >
+                    <Save className="w-3.5 h-3.5 text-blue-600" />
+                    <span>Guardar Diagnóstico & Plan</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleGenerateAndOpenReport}
+                    className="flex items-center gap-1.5 px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-extrabold rounded-xl shadow-md transition-all cursor-pointer hover:scale-102"
+                  >
+                    <FileText className="w-4 h-4 text-white" />
+                    <span>Generar Informe Consolidado (Word / PDF)</span>
+                    <ArrowRight className="w-3.5 h-3.5 ml-1" />
+                  </button>
                 </div>
               </div>
+
             </div>
           )}
 

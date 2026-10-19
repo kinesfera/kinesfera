@@ -466,10 +466,10 @@ export function calculateSPMScores(
     return Math.min(80, Math.max(40, tScore));
   };
 
-  const getRange = (t: number): 'Sin dificultades' | 'Dificultades moderadas' | 'Con dificultades' => {
-    if (t < 60) return 'Sin dificultades';
-    if (t <= 69) return 'Dificultades moderadas';
-    return 'Con dificultades';
+  const getRange = (t: number): 'Típico (40-59)' | 'Dificultades Moderadas (60-69)' | 'Disfunción Severa (70-80)' => {
+    if (t < 60) return 'Típico (40-59)';
+    if (t <= 69) return 'Dificultades Moderadas (60-69)';
+    return 'Disfunción Severa (70-80)';
   };
 
   const socT = convertToT(scaleRaw.SOC, (scaleCounts.SOC || 10) * 4, (scaleCounts.SOC || 10) * 1);

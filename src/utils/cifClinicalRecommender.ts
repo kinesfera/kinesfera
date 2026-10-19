@@ -9,6 +9,245 @@ export interface RecommendationItem {
   tags?: string[];
 }
 
+export interface CIFCodeItem {
+  code: string;
+  domain: 'b' | 's' | 'd' | 'e';
+  domainLabel: string;
+  title: string;
+  description: string;
+  defaultQualifier: string; // e.g. '.1' o '.2'
+}
+
+/**
+ * Banco oficial de Códigos CIF (OMS) adaptado a Kinesiología Pediátrica,
+ * Neurodesarrollo y Psicomotricidad Infantil.
+ */
+export const CIF_CODES_BANK: CIFCodeItem[] = [
+  // ==========================================
+  // FUNCIONES CORPORALES (b)
+  // ==========================================
+  {
+    code: 'b760',
+    domain: 'b',
+    domainLabel: 'Funciones Corporales (b)',
+    title: 'Control de los movimientos voluntarios',
+    description: 'Control y coordinación motora simple y compleja, praxia global, disociación de cinturas y patrones motores voluntarios.',
+    defaultQualifier: '.2'
+  },
+  {
+    code: 'b755',
+    domain: 'b',
+    domainLabel: 'Funciones Corporales (b)',
+    title: 'Funciones involuntarias del movimiento',
+    description: 'Respuestas de equilibración, reacciones de enderezamiento y apoyo protector postural ante perturbaciones gravitatorias.',
+    defaultQualifier: '.1'
+  },
+  {
+    code: 'b735',
+    domain: 'b',
+    domainLabel: 'Funciones Corporales (b)',
+    title: 'Funciones del tono muscular',
+    description: 'Modulación del tono postural (hipotonía axial, hipertonía fásica, paratonía o extensibilidad articular).',
+    defaultQualifier: '.2'
+  },
+  {
+    code: 'b730',
+    domain: 'b',
+    domainLabel: 'Funciones Corporales (b)',
+    title: 'Funciones de la fuerza muscular',
+    description: 'Fuerza antigravitatoria de tronco, cinturas escapular y pélvica requerida para la estabilidad postural y bipedestación.',
+    defaultQualifier: '.1'
+  },
+  {
+    code: 'b260',
+    domain: 'b',
+    domainLabel: 'Funciones Corporales (b)',
+    title: 'Funciones propioceptivas',
+    description: 'Esquema corporal, graduación de la fuerza, sentido de la posición articular y retroalimentación neuromuscular.',
+    defaultQualifier: '.2'
+  },
+  {
+    code: 'b235',
+    domain: 'b',
+    domainLabel: 'Funciones Corporales (b)',
+    title: 'Funciones vestibulares de la posición y equilibrio',
+    description: 'Sensación de movimiento corporal, aceleración lineal/angular y estabilidad de la mirada durante el desplazamiento.',
+    defaultQualifier: '.1'
+  },
+  {
+    code: 'b147',
+    domain: 'b',
+    domainLabel: 'Funciones Corporales (b)',
+    title: 'Funciones psicomotoras',
+    description: 'Integración motriz, organización en el espacio, imitación de gestos, ritmo psicomotor y juego sensoriomotor.',
+    defaultQualifier: '.2'
+  },
+  {
+    code: 'b710',
+    domain: 'b',
+    domainLabel: 'Funciones Corporales (b)',
+    title: 'Movilidad de las articulaciones',
+    description: 'Rango de movilidad activa y pasiva en columna cervical (rotación e inclinación lateral) y articulaciones periféricas.',
+    defaultQualifier: '.1'
+  },
+  {
+    code: 'b130',
+    domain: 'b',
+    domainLabel: 'Funciones Corporales (b)',
+    title: 'Funciones de la energía y del impulso (Alerta)',
+    description: 'Nivel de alerta fisiológica, autorregulación y motivación para la exploración activa en el entorno lúdico.',
+    defaultQualifier: '.1'
+  },
+
+  // ==========================================
+  // ESTRUCTURAS CORPORALES (s)
+  // ==========================================
+  {
+    code: 's110',
+    domain: 's',
+    domainLabel: 'Estructuras Corporales (s)',
+    title: 'Estructura del cerebro y encéfalo',
+    description: 'Circuitos corticosubcorticales, vías de mielinización activa e integración sensoriomotriz central.',
+    defaultQualifier: '.1'
+  },
+  {
+    code: 's710',
+    domain: 's',
+    domainLabel: 'Estructuras Corporales (s)',
+    title: 'Estructura de la cabeza y cuello',
+    description: 'Bóveda craneana (asimetría craneofacial posicional, CVAI), columna cervical y musculatura suboccipital/ECM.',
+    defaultQualifier: '.2'
+  },
+  {
+    code: 's760',
+    domain: 's',
+    domainLabel: 'Estructuras Corporales (s)',
+    title: 'Estructura del tronco y columna vertebral',
+    description: 'Alineación de la columna toracolumbar, estabilidad pelviana y control de musculatura paravertebral y abdominal.',
+    defaultQualifier: '.1'
+  },
+  {
+    code: 's750',
+    domain: 's',
+    domainLabel: 'Estructuras Corporales (s)',
+    title: 'Estructura de la extremidad inferior',
+    description: 'Articulaciones coxofemorales, rodillas, tobillos y bóveda plantar en carga y dinámica.',
+    defaultQualifier: '.1'
+  },
+  {
+    code: 's730',
+    domain: 's',
+    domainLabel: 'Estructuras Corporales (s)',
+    title: 'Estructura de la extremidad superior',
+    description: 'Cintura escapular, articulación glenohumeral, antebrazo y mano para prensión y alcance funcional.',
+    defaultQualifier: '.0'
+  },
+
+  // ==========================================
+  // ACTIVIDADES Y PARTICIPACIÓN (d)
+  // ==========================================
+  {
+    code: 'd450',
+    domain: 'd',
+    domainLabel: 'Actividades y Participación (d)',
+    title: 'Andar y desplazarse',
+    description: 'Marcha en diversas superficies, saltos bipodales/monopodales, carrera y cambios de dirección coordinados.',
+    defaultQualifier: '.2'
+  },
+  {
+    code: 'd455',
+    domain: 'd',
+    domainLabel: 'Actividades y Participación (d)',
+    title: 'Desplazarse por el entorno y salvar obstáculos',
+    description: 'Sortear desniveles, trepar en juegos de plaza, subir y bajar escaleras de forma autónoma con apoyo alterno.',
+    defaultQualifier: '.1'
+  },
+  {
+    code: 'd410',
+    domain: 'd',
+    domainLabel: 'Actividades y Participación (d)',
+    title: 'Cambiar las posturas corporales básicas',
+    description: 'Transiciones posturales fluidas: rolado, decúbito a sedente, cuatro puntos a hincado y pase a bipedestación.',
+    defaultQualifier: '.2'
+  },
+  {
+    code: 'd415',
+    domain: 'd',
+    domainLabel: 'Actividades y Participación (d)',
+    title: 'Mantener la posición del cuerpo',
+    description: 'Sedente activo libre de apoyo, prono con apoyo de antebrazos o palmas, y bipedestación estática prolongada.',
+    defaultQualifier: '.1'
+  },
+  {
+    code: 'd440',
+    domain: 'd',
+    domainLabel: 'Actividades y Participación (d)',
+    title: 'Uso fino de la mano y manipulación de objetos',
+    description: 'Prensión palmar y pinza digital, uso bimanual coordinado, grafomotricidad y manipulación de útiles escolares.',
+    defaultQualifier: '.2'
+  },
+  {
+    code: 'd710',
+    domain: 'd',
+    domainLabel: 'Actividades y Participación (d)',
+    title: 'Relaciones interpersonales básicas y juego compartido',
+    description: 'Interacción lúdica con pares y adultos, turnos de juego, seguimiento de reglas motoras y permanencia en la actividad.',
+    defaultQualifier: '.1'
+  },
+  {
+    code: 'd815',
+    domain: 'd',
+    domainLabel: 'Actividades y Participación (d)',
+    title: 'Educación preescolar y vida en aula',
+    description: 'Permanencia en el puesto de trabajo, seguimiento de instrucciones grupales y participación en Educación Física y recreos.',
+    defaultQualifier: '.2'
+  },
+
+  // ==========================================
+  // FACTORES AMBIENTALES (e)
+  // ==========================================
+  {
+    code: 'e310',
+    domain: 'e',
+    domainLabel: 'Factores Ambientales (e)',
+    title: 'Familia cercana y cuidadores inmediatos (Facilitador)',
+    description: 'Cuidadores con alta motivación y adherencia al programa kinésico y rutinas hogareñas (+3 Facilitador sustancial).',
+    defaultQualifier: '+3'
+  },
+  {
+    code: 'e585',
+    domain: 'e',
+    domainLabel: 'Factores Ambientales (e)',
+    title: 'Servicios, sistemas y políticas de educación (PIE / Escuela)',
+    description: 'Equipo de integración escolar, educadoras de párvulos y profesores de Educación Física coordinados.',
+    defaultQualifier: '+2'
+  },
+  {
+    code: 'e115',
+    domain: 'e',
+    domainLabel: 'Factores Ambientales (e)',
+    title: 'Productos y tecnología de apoyo para la vida diaria',
+    description: 'Adaptaciones ergonómicas en aula (cojines propioceptivos, banda elástica en silla) y juegos sensoriales en hogar.',
+    defaultQualifier: '+2'
+  },
+  {
+    code: 'e250',
+    domain: 'e',
+    domainLabel: 'Factores Ambientales (e)',
+    title: 'Sonido y acústica ambiental (Barrera potencial)',
+    description: 'Ruidos intensos en recreos escolares, salas concurridas o timbres que generan sobrecarga sensorial auditiva (-2 Barrera).',
+    defaultQualifier: '-2'
+  }
+];
+
+export const CIF_QUALIFIERS = [
+  { value: '.0', label: '.0 Sin problema (0-4%)', desc: 'No existe dificultad apreciable en la función o actividad.' },
+  { value: '.1', label: '.1 Dificultad leve (5-24%)', desc: 'Presente en baja intensidad, rendimiento funcional conservado.' },
+  { value: '.2', label: '.2 Dificultad moderada (25-49%)', desc: 'Interfiere notoriamente en actividades cotidianas o escolares.' },
+  { value: '.3', label: '.3 Dificultad grave (50-95%)', desc: 'Afectación significativa que requiere apoyo asistido constante.' },
+  { value: '.4', label: '.4 Dificultad completa (96-100%)', desc: 'Incapacidad total para ejecutar la función o actividad.' }
+];
+
 /**
  * Genera automáticamente el Diagnóstico Funcional según el marco C.I.F. (OMS)
  * evaluando Funciones Corporales (b), Estructuras Corporales (s),
@@ -28,108 +267,115 @@ export function generateAutomaticCIFDiagnosis(
   const eFactors: string[] = [];
 
   // Factores Ambientales comunes
-  eFactors.push('e310 Familia y cuidadores comprometidos con el plan terapéutico');
+  eFactors.push('e310+3 Familia y cuidadores comprometidos con el plan terapéutico kinésico (Facilitador sustancial)');
   if (ageInfo.isOlderThanThree || anamnesis?.pieSupport) {
-    eFactors.push('e585 Entorno educativo (Jardín / Escuela / Equipo PIE)');
+    eFactors.push('e585+2 Entorno educativo coordinado (Jardín / Escuela / Equipo PIE) (Facilitador moderado)');
   }
-  eFactors.push('e115 Apoyos y adaptaciones ergonómicas en el entorno habitual');
+  eFactors.push('e115+2 Apoyos y adaptaciones ergonómicas en el entorno habitual del hogar y aula');
 
   // Evaluación específica por edad y pruebas
   if (isBaby) {
     // Lactante: HINE + Asimetría craneal
-    const hine = evaluations?.hine;
+    const hine = evaluations?.hineExam;
     const cranial = anamnesis?.cranialMeasurements;
 
-    sStructures.push('s110 Estructura del sistema nervioso central en fase activa de mielinización');
+    sStructures.push('s110.1 Estructura del sistema nervioso central en fase activa de neurodesarrollo y mielinización');
 
-    if (cranial && cranial.cvaMm > 5) {
-      sStructures.push(`s710 Estructura ósea craneofacial con asimetría posicional (${cranial.cvaMm} mm CVA, ${cranial.severity})`);
-      bDeficits.push('b710 Funciones de movilidad y alineación de la articulación occipitoatloidea y columna cervical');
-      dLimitations.push('d410 Dificultad para mantener postura cefálica neutra simétrica en sedente con apoyo y prono');
+    if (cranial && (cranial.differenceMm ?? 0) > 4) {
+      sStructures.push(`s710.2 Estructura ósea craneofacial con asimetría posicional (${cranial.differenceMm} mm diferencia, ${cranial.plagiocephalySeverity || 'asimetría'})`);
+      bDeficits.push('b710.2 Funciones de movilidad y alineación articular cervical occipitoatloidea');
+      dLimitations.push('d410.2 Dificultad para mantener postura cefálica neutra simétrica en sedente con apoyo y decúbito prono');
     }
 
     if (hine) {
-      if (hine.globalScore < 65) {
-        bDeficits.push(`b735 Alteración del tono muscular y reacciones posturales tempranas (HINE: ${hine.globalScore}/78)`);
-        bDeficits.push('b760 Dificultad en control motor antigravitatorio temprano');
-        dLimitations.push('d415 Limitación en transiciones posturales (rolado, control de cabeza, sedente asistido)');
+      const score = hine.totalScore ?? 0;
+      if (score < 65) {
+        bDeficits.push(`b735.2 Alteración del tono muscular y reacciones posturales tempranas (HINE: ${score}/78, Riesgo)`);
+        bDeficits.push('b760.2 Dificultad en control motor antigravitatorio temprano y disociación de cinturas');
+        dLimitations.push('d415.2 Limitación en transiciones posturales (rolado, control de cabeza en prono, sedente asistido)');
       } else {
-        bDeficits.push(`b730 Tono muscular y reflejos dentro de parámetros esperados con requerimiento de estimulación (HINE: ${hine.globalScore}/78)`);
-        dLimitations.push('d410 Adquisición de hitos del desarrollo motor acorde a edad cronológica y corregida');
+        bDeficits.push(`b730.1 Tono muscular y reflejos dentro de parámetros esperados con requerimiento de estimulación (HINE: ${score}/78)`);
+        dLimitations.push('d410.1 Adquisición de hitos del desarrollo motor acorde a edad cronológica y corregida');
       }
     } else {
-      bDeficits.push('b760 Funciones de control de los movimientos voluntarios y modulación postural');
-      dLimitations.push('d410 Mantenimiento y transición de posturas corporales según hitos de neurodesarrollo');
+      bDeficits.push('b760.1 Funciones de control de los movimientos voluntarios y modulación postural');
+      dLimitations.push('d410.1 Mantenimiento y transición de posturas corporales según hitos del neurodesarrollo');
     }
   } else {
     // Mayor a 2 años: Da Fonseca o Pilar Arnaiz + SPM-2
-    sStructures.push('s110 Estructura encefálica y circuitos de integración sensoriomotriz');
-    sStructures.push('s798 Estructuras musculoesqueléticas relacionadas con la postura y marcha');
+    sStructures.push('s110.1 Estructura encefálica y circuitos de integración sensoriomotriz');
+    sStructures.push('s798.1 Estructuras musculoesqueléticas relacionadas con la postura, equilibrio y marcha');
 
     // BPM Da Fonseca
     const bpm = evaluations?.daFonsecaBpm;
     if (bpm) {
-      const isDyspraxic = bpm.totalScore <= 13;
-      const isDispractor = bpm.totalScore >= 14 && bpm.totalScore <= 21;
+      const score = bpm.totalScore ?? 0;
+      const isDyspraxic = score > 0 && score <= 13;
+      const isDispractor = score >= 14 && score <= 21;
 
       if (isDyspraxic) {
-        bDeficits.push(`b760 Dificultad severa en control de movimientos voluntarios y praxias (BPM: ${bpm.totalScore}/28, Perfil Dispráxico)`);
-        bDeficits.push('b735 Alteración de la tonicidad muscular y extensibilidad corporal');
-        bDeficits.push('b755 Dificultad en respuestas de equilibración estática y dinámica');
-        dLimitations.push('d450 Dificultad para correr, saltar y sortear obstáculos de forma coordinada');
-        dLimitations.push('d440 Limitación en motricidad fina, prensión de utensilios y grafomotricidad');
+        bDeficits.push(`b760.3 Dificultad severa en control de movimientos voluntarios y praxias (BPM: ${score}/28, Perfil Dispráxico)`);
+        bDeficits.push('b735.2 Alteración de la tonicidad muscular y extensibilidad corporal');
+        bDeficits.push('b755.3 Dificultad en respuestas de equilibración estática y dinámica');
+        dLimitations.push('d450.3 Dificultad para correr, saltar y sortear obstáculos de forma coordinada');
+        dLimitations.push('d440.2 Limitación en motricidad fina, prensión de utensilios y grafomotricidad');
       } else if (isDispractor) {
-        bDeficits.push(`b760 Discreta inmadurez en integración praxica y ritmo (BPM: ${bpm.totalScore}/28, Perfil Dispractor)`);
-        bDeficits.push('b755 Desajustes en coordinación dinámica y disociación de cinturas');
-        dLimitations.push('d455 Dificultad en desplazamientos con cambio de ritmo y velocidad');
-        dLimitations.push('d440 Precisión bimanual que requiere mediación verbal o modelado');
+        bDeficits.push(`b760.2 Inmadurez en integración práxica, ritmo y disociación motora (BPM: ${score}/28, Perfil Dispractor)`);
+        bDeficits.push('b755.2 Desajustes en coordinación dinámica y equilibrio monopodal');
+        dLimitations.push('d455.2 Dificultad en desplazamientos con cambio de ritmo y velocidad en aula/recreo');
+        dLimitations.push('d440.2 Precisión bimanual que requiere modelado y mediación verbal continua');
       } else {
-        bDeficits.push(`b760 Perfil psicomotor armónico eutráxico (BPM: ${bpm.totalScore}/28) con áreas de optimización`);
-        dLimitations.push('d450 Participación adecuada en juegos motores con requerimiento de resistencia a la fatiga');
+        bDeficits.push(`b760.1 Perfil psicomotor armónico eutráxico (BPM: ${score}/28) con áreas de optimización`);
+        dLimitations.push('d450.1 Participación adecuada en juegos motores con requerimiento de resistencia a la fatiga');
       }
     }
 
-    // Pilar Arnaiz & Comunicación Crítica
-    const arnaiz = evaluations?.arnaizObservations;
+    // Pilar Arnaiz
+    const arnaiz = evaluations?.psychomotorObservation;
     if (arnaiz) {
-      bDeficits.push('b147 Funciones psicomotoras de expresión corporal y juego sensoriomotor libre');
-      dLimitations.push('d710 Limitación en interacción con pares y permanencia compartida en el juego lúdico');
+      bDeficits.push('b147.2 Funciones psicomotoras de expresión corporal, modulación tónica y juego sensoriomotor libre');
+      dLimitations.push('d710.2 Limitación en permanencia compartida e interacción con pares en el juego estructurado');
     }
 
     // Perfil SPM-2
     const spm = evaluations?.spmSensoryMeasure;
     if (spm) {
       const issues: string[] = [];
-      if (spm.touchRange?.includes('dificultad') || spm.touchRange?.includes('Dificultades') || spm.touchScore >= 20) {
-        issues.push('modulación táctil (hipersensibilidad/defensividad)');
+      const touch = spm.touchScore ?? 0;
+      const bal = spm.balanceMotionScore ?? 0;
+      const body = spm.bodyAwarenessScore ?? 0;
+      const hea = spm.hearingScore ?? 0;
+
+      if (spm.touchRange?.includes('dificultad') || spm.touchRange?.includes('Dificultades') || touch >= 20) {
+        issues.push('modulación táctil');
       }
-      if (spm.balanceMotionRange?.includes('dificultad') || spm.balanceMotionRange?.includes('Dificultades') || spm.balanceMotionScore >= 19) {
-        issues.push('procesamiento vestibular (búsqueda de movimiento o inseguridad gravitacional)');
+      if (spm.balanceMotionRange?.includes('dificultad') || spm.balanceMotionRange?.includes('Dificultades') || bal >= 19) {
+        issues.push('procesamiento vestibular');
       }
-      if (spm.bodyAwarenessRange?.includes('dificultad') || spm.bodyAwarenessRange?.includes('Dificultades') || spm.bodyAwarenessScore >= 19) {
+      if (spm.bodyAwarenessRange?.includes('dificultad') || spm.bodyAwarenessRange?.includes('Dificultades') || body >= 19) {
         issues.push('propiocepción y graduación de fuerza');
       }
-      if (spm.hearingRange?.includes('dificultad') || spm.hearingRange?.includes('Dificultades') || spm.hearingScore >= 15) {
+      if (spm.hearingRange?.includes('dificultad') || spm.hearingRange?.includes('Dificultades') || hea >= 15) {
         issues.push('reactividad auditiva');
       }
 
       if (issues.length > 0) {
-        bDeficits.push(`b260-b270 Dificultades en procesamiento sensorial con afectación en: ${issues.join(', ')}`);
-        dLimitations.push('d815 Sobrecarga sensorial que interfiere en la permanencia en sala de clases y rutinas grupales');
+        bDeficits.push(`b260.2-b270.2 Dificultades en procesamiento sensorial con afectación en: ${issues.join(', ')}`);
+        dLimitations.push('d815.2 Sobrecarga sensorial que interfiere en la permanencia en sala de clases y rutinas grupales');
       } else {
-        bDeficits.push('b260 Perfil sensorial global equilibrado (sin dificultades significativas en modulación)');
+        bDeficits.push('b260.0 Perfil sensorial global equilibrado (sin dificultades significativas en modulación)');
       }
     }
   }
 
   // Fallback si no hay pruebas cargadas todavía
   if (bDeficits.length === 0) {
-    bDeficits.push('b760 Control motor voluntario y modulación del tono muscular');
-    bDeficits.push('b755 Coordinación y equilibración dinámica en actividades cotidianas');
+    bDeficits.push('b760.2 Control motor voluntario y modulación del tono postural');
+    bDeficits.push('b755.2 Coordinación y equilibración dinámica en actividades cotidianas');
   }
   if (dLimitations.length === 0) {
-    dLimitations.push('d450 Desplazamientos autónomos y participación activa en juegos de patio y aula');
-    dLimitations.push('d440 Destrezas visomotoras y manipulación funcional en actividades de la vida diaria');
+    dLimitations.push('d450.2 Desplazamientos autónomos y participación activa en juegos de patio y aula');
+    dLimitations.push('d440.2 Destrezas visomotoras y manipulación funcional en actividades de la vida diaria');
   }
 
   return `CLASIFICACIÓN DEL DIAGNÓSTICO FUNCIONAL (C.I.F. - OMS):
@@ -147,7 +393,7 @@ ${dLimitations.map(d => `• ${d}`).join('\n')}
 ${eFactors.map(e => `• ${e}`).join('\n')}
 
 SÍNTESIS DIAGNÓSTICA KINÉSICA:
-Paciente de ${ageInfo.ageString} que presenta compromiso en la modulación sensoriomotriz y funciones de control motor voluntario, lo cual genera limitaciones en la coordinación dinámica, praxia y participación en actividades lúdicas y escolares, requiriendo intervención kinésica especializada con enfoque ecológico en el hogar y aula educacional.`;
+Paciente de ${ageInfo.ageText || 'edad pediátrica'} que presenta compromiso en la modulación sensoriomotriz y funciones de control motor voluntario, lo cual genera limitaciones en la coordinación dinámica, praxia y participación en actividades lúdicas y escolares, requiriendo intervención kinésica especializada con enfoque ecológico en el hogar y aula educacional.`;
 }
 
 /**
@@ -161,14 +407,14 @@ export function generateShortTermGoals(
   const isBaby = ageInfo.totalMonths < 24;
 
   if (isBaby) {
-    return `1) Lograr control cefálico estable en posición prono y sedente con apoyo durante al menos 3 a 5 minutos continuos sin inclinación lateral fija.
+    return `1) Lograr control cefálico estable en posición decúbito prono y sedente con apoyo durante al menos 3 a 5 minutos continuos sin inclinación lateral fija.
 2) Fomentar el rolado voluntario bidireccional (supino a prono y viceversa) facilitando la disociación pélvica en 4 de 5 ensayos.
-3) Promover apoyo simétrico de antebrazos y descarga de peso en cuatro puntos para estimular la transición al gateo.
+3) Promover apoyo simétrico de antebrazos y descarga de peso en cuatro puntos para estimular la transición al gateo autónomo.
 4) Disminuir la asimetría posicional cervical facilitando giros cefálicos completos activos hacia ambos hemicuerpos mediante estímulos visuales y sonoros.`;
   }
 
   const spm = evaluations?.spmSensoryMeasure;
-  const hasSensoryIssues = spm && (spm.touchScore >= 18 || spm.balanceMotionScore >= 19 || spm.bodyAwarenessScore >= 19);
+  const hasSensoryIssues = spm && ((spm.touchScore ?? 0) >= 18 || (spm.balanceMotionScore ?? 0) >= 19 || (spm.bodyAwarenessScore ?? 0) >= 19);
 
   return `1) Mejorar el equilibrio estático y dinámico monopodal durante al menos 6 segundos alternando ambas extremidades inferiores sobre superficie plana y colchoneta.
 2) Desarrollar la coordinación dinámica general y disociación de cinturas en circuitos motores de saltos bipodales y marcha en tándem sin caídas.
@@ -353,7 +599,8 @@ export function getRecommendedHomeList(
   ];
 
   const spm = evaluations?.spmSensoryMeasure;
-  if (spm && (spm.touchScore >= 18 || spm.touchRange?.includes('dificultad'))) {
+  const touch = spm?.touchScore ?? 0;
+  if (spm && (touch >= 18 || spm.touchRange?.includes('dificultad') || spm.touchRange?.includes('Dificultades'))) {
     list.push('• Exposición táctil gradual a texturas sin forzar (espumas, harina, semillas) mediante juego lúdico guiado.');
   }
 
