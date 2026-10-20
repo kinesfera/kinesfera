@@ -21,8 +21,12 @@ import {
   ShieldCheck, 
   Cloud, 
   CheckCircle2, 
-  AlertCircle 
+  AlertCircle,
+  ExternalLink,
+  Copy,
+  Globe
 } from 'lucide-react';
+import firebaseConfig from '../../firebase-applet-config.json';
 
 interface LoginViewProps {
   users: User[];
@@ -44,6 +48,19 @@ export const LoginView: React.FC<LoginViewProps> = ({
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // Unauthorized Domain helper modal
+  const [showDomainModal, setShowDomainModal] = useState(false);
+  const [domainCopied, setDomainCopied] = useState(false);
+  const currentHostname = typeof window !== 'undefined' ? window.location.hostname : '';
+
+  const handleCopyHostname = () => {
+    if (currentHostname) {
+      navigator.clipboard.writeText(currentHostname);
+      setDomainCopied(true);
+      setTimeout(() => setDomainCopied(false), 3000);
+    }
+  };
 
   // Register modal state
   const [showRegisterModal, setShowRegisterModal] = useState(false);
@@ -94,6 +111,9 @@ export const LoginView: React.FC<LoginViewProps> = ({
       console.error('Google Sign-In Error:', err);
       if (err.code === 'auth/popup-closed-by-user') {
         setErrorMsg('Ventana de acceso cerrada antes de completar el inicio de sesión.');
+      } else if (err.code === 'auth/unauthorized-domain') {
+        setShowDomainModal(true);
+        setErrorMsg(`Dominio no autorizado en Firebase (${currentHostname}). Haz clic en el botón de abajo para agregarlo en tu consola de Firebase o inicia sesión con correo y contraseña.`);
       } else {
         setErrorMsg(`Error al iniciar sesión con Google: ${err.message || 'Intente nuevamente'}`);
       }
@@ -315,9 +335,21 @@ export const LoginView: React.FC<LoginViewProps> = ({
 
               {/* Error Alert */}
               {errorMsg && (
-                <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-start gap-2">
-                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-rose-600" />
-                  <span>{errorMsg}</span>
+                <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex flex-col gap-2 animate-in fade-in">
+                  <div className="flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-rose-600" />
+                    <span className="leading-relaxed">{errorMsg}</span>
+                  </div>
+                  {(errorMsg.includes('unauthorized-domain') || errorMsg.includes('Dominio no autorizado')) && (
+                    <button
+                      type="button"
+                      onClick={() => setShowDomainModal(true)}
+                      className="self-start text-[11px] font-bold text-blue-700 hover:text-blue-900 bg-white hover:bg-slate-50 border border-blue-200 px-3 py-1.5 rounded-xl shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer mt-1"
+                    >
+                      <Globe className="w-3.5 h-3.5 text-blue-600" />
+                      <span>Ver cómo autorizar {currentHostname} en Firebase</span>
+                    </button>
+                  )}
                 </div>
               )}
 
@@ -503,6 +535,101 @@ export const LoginView: React.FC<LoginViewProps> = ({
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Authorized Domain in Firebase instructions */}
+      {showDomainModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-white border border-slate-200 rounded-3xl shadow-2xl max-w-lg w-full p-6 sm:p-7 space-y-5 animate-in zoom-in-95 duration-150">
+            
+            <div className="flex items-start justify-between gap-4 border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center">
+                  <Globe className="w-5 h-5 text-amber-700" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">
+                    Autorizar Dominio en Firebase
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Paso necesario para iniciar sesión con Google en Vercel
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowDomainModal(false)}
+                className="text-slate-400 hover:text-slate-700 p-1 rounded-lg cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4 text-xs text-slate-600 leading-relaxed">
+              <p>
+                Google Identity y Firebase bloquean el inicio de sesión emergente desde dominios externos nuevos hasta que los registres en la lista de <strong>Dominios autorizados</strong> de tu proyecto Firebase.
+              </p>
+
+              {/* Dominio actual a copiar */}
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl space-y-1.5">
+                <span className="text-[11px] font-bold text-slate-700 block">
+                  Dominio de tu aplicación en Vercel:
+                </span>
+                <div className="flex items-center justify-between gap-2 bg-white px-3 py-2 border border-slate-200 rounded-xl font-mono text-slate-900 font-bold text-xs">
+                  <span className="truncate">{currentHostname || 'tu-proyecto.vercel.app'}</span>
+                  <button
+                    type="button"
+                    onClick={handleCopyHostname}
+                    className="flex items-center gap-1 px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-lg text-[11px] font-sans font-bold cursor-pointer transition-colors shrink-0"
+                  >
+                    {domainCopied ? (
+                      <>
+                        <Check className="w-3.5 h-3.5 text-emerald-600" />
+                        <span className="text-emerald-700">¡Copiado!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3.5 h-3.5" />
+                        <span>Copiar</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Pasos */}
+              <div className="space-y-2">
+                <span className="font-bold text-slate-800 block text-[11px] uppercase tracking-wide">
+                  Instrucciones (30 segundos):
+                </span>
+                <ol className="list-decimal list-inside space-y-1.5 text-slate-600 pl-1">
+                  <li>Abre la sección de Configuración de Firebase Authentication.</li>
+                  <li>Baja hasta la tarjeta <strong>"Dominios autorizados"</strong> y haz clic en <strong>"Agregar dominio"</strong>.</li>
+                  <li>Pega <code className="bg-slate-100 px-1 py-0.5 rounded font-bold text-slate-800">{currentHostname || 'tu-dominio.vercel.app'}</code> y pulsa <strong>Guardar</strong>.</li>
+                </ol>
+              </div>
+
+              <div className="pt-2 flex flex-col sm:flex-row gap-2.5">
+                <a
+                  href={`https://console.firebase.google.com/project/${firebaseConfig.projectId}/authentication/settings`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold text-xs shadow-xs transition-colors"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  <span>Abrir Consola de Firebase</span>
+                </a>
+                <button
+                  type="button"
+                  onClick={() => setShowDomainModal(false)}
+                  className="px-4 py-2.5 border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-xl font-bold text-xs cursor-pointer transition-colors"
+                >
+                  Usar Correo y Contraseña
+                </button>
+              </div>
+            </div>
+
           </div>
         </div>
       )}
