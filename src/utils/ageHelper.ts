@@ -11,6 +11,7 @@ export interface PatientAgeInfo {
   isOlderThanThree: boolean;
   isUnderTwo: boolean;
   ageText: string;
+  detailedChronologicalAge: string;
   stageBadgeText: string;
 }
 
@@ -24,6 +25,7 @@ export function calculatePatientAge(birthDateString?: string): PatientAgeInfo {
       isOlderThanThree: false,
       isUnderTwo: false,
       ageText: 'Edad no registrada',
+      detailedChronologicalAge: 'Edad no registrada',
       stageBadgeText: 'Sin fecha'
     };
   }
@@ -38,6 +40,7 @@ export function calculatePatientAge(birthDateString?: string): PatientAgeInfo {
       isOlderThanThree: false,
       isUnderTwo: false,
       ageText: birthDateString,
+      detailedChronologicalAge: birthDateString,
       stageBadgeText: 'Sin fecha válida'
     };
   }
@@ -72,6 +75,16 @@ export function calculatePatientAge(birthDateString?: string): PatientAgeInfo {
     ageText = `${years} años (${months} meses)`;
   }
 
+  // Format detailed chronological age like in medical reports: "7 años, 4 meses y 12 días"
+  const parts: string[] = [];
+  if (years > 0) parts.push(`${years} año${years > 1 ? 's' : ''}`);
+  if (months > 0 || years === 0) parts.push(`${months} mes${months !== 1 ? 'es' : ''}`);
+  if (days >= 0) parts.push(`${days} día${days !== 1 ? 's' : ''}`);
+  
+  const detailedChronologicalAge = parts.length > 2 
+    ? `${parts[0]}, ${parts[1]} y ${parts[2]}` 
+    : parts.join(' y ');
+
   let stageBadgeText = '';
   if (isOlderThanThree) {
     stageBadgeText = 'En edad de Jardín / Escuela (> 3 años)';
@@ -89,6 +102,7 @@ export function calculatePatientAge(birthDateString?: string): PatientAgeInfo {
     isOlderThanThree,
     isUnderTwo,
     ageText,
+    detailedChronologicalAge,
     stageBadgeText
   };
 }

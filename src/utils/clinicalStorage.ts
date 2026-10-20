@@ -12,8 +12,33 @@ const STORAGE_KEYS = {
   SELECTED_PATIENT_ID: 'kinesfera_selected_patient_id'
 };
 
-// Fallback patient (Blaz) to ensure the user's patient is always present and never lost
+// Fallback patients (Miranda Victoria Coromoto Ramos model report and Blaz)
 const DEFAULT_FALLBACK_PATIENTS: User[] = [
+  {
+    id: 'patient_miranda_coromoto',
+    email: 'miranda.coromoto@kinesfera.cl',
+    role: 'Padre/Niño',
+    firstName: 'Miranda Victoria',
+    lastName: 'Coromoto Ramos',
+    rut: '27.145.892-3',
+    birthDate: '2019-05-13',
+    gender: 'Mujer',
+    plan: 'Premium',
+    credits: 80,
+    assignedExercise: 'armsUp',
+    diagnosis: 'Déficit de Atención',
+    medicalRecordNumber: 'KIN-2026-089',
+    emergencyContact: {
+      name: 'Padres de Miranda',
+      relationship: 'Madre / Padre',
+      phone: '+56 9 8456 1234'
+    },
+    avatarConfig: {
+      skinTone: '#F1C27D',
+      hairColor: '#4A3728',
+      shirtColor: '#0284C7'
+    }
+  },
   {
     id: 'patient_blaz_01',
     email: 'blaz@kinesfera.cl',
@@ -42,6 +67,42 @@ const DEFAULT_FALLBACK_PATIENTS: User[] = [
 ];
 
 const DEFAULT_FALLBACK_ANAMNESIS: Record<string, PatientAnamnesis> = {
+  patient_miranda_coromoto: {
+    id: 'anam_patient_miranda_coromoto',
+    patientId: 'patient_miranda_coromoto',
+    evaluatorName: 'Aldo Olivares Araya',
+    evaluationDate: '2026-09-24',
+    ageCategory: 'mayor_2_anos',
+    caregiverName: 'Padres de Miranda',
+    caregiverPhone: '+56 9 8456 1234',
+    schoolOrCenter: 'Colegio San Agustín',
+    educationalLevel: '1° básico',
+    pieSupport: true,
+    householdMembers: 'Padres y Miranda (duerme con sus padres)',
+    consultationReason: 'Miranda asiste a consulta derivada por su neuróloga, debido a un diagnóstico de Trastorno por Déficit Atencional. Se encuentra cursando 1° básico y desde el inicio de la etapa escolar se han observado dificultades en la concentración y en el rendimiento académico, especialmente en las asignaturas de Lenguaje y Matemáticas. La lectura se está adquiriendo, pero aún no es fluida.',
+    problemNoticedWhen: 'Al inicio de la etapa escolar de 1° básico',
+    specialistsVisited: 'Neuróloga infantil',
+    previousTreatments: 'Control neurológico y pediátrico',
+    familyExpectations: 'Mejorar concentración, rendimiento escolar en lectura y matemáticas, organización espacial y autonomía en el hogar.',
+    pregnancyHistory: 'Nació a las 37 semanas por parto de cesárea, sin complicaciones perinatales.',
+    gestationalAgeWeeks: '37 semanas',
+    birthWeightGrams: '3100 g',
+    birthLengthCm: '49 cm',
+    birthType: 'Parto por cesárea',
+    birthPresentation: 'Cefálica',
+    apgarScore: '9/10',
+    neonatalComplications: 'Sin complicaciones perinatales',
+    surgeries: 'Sin cirugías',
+    assistiveDevices: 'Ninguna',
+    feedingType: 'Alimentación regular, suplementación con Omega 3',
+    sleepPattern: 'En cuanto al sueño, no presenta despertares nocturnos, duerme con sus padres.',
+    currentMotorStatus: 'A nivel de autonomía, se limpia con algunas dificultades. No se reportan antecedentes familiares relevantes ni enfermedades previas de importancia.',
+    followsInstructions: 'Buena comprensión de instrucciones, mostrando buena motivación por la actividad, moderada tolerancia a la frustración, moderado nivel de impulsividad y con bajos indicadores de fatigabilidad.',
+    isRestless: 'Actualmente, utiliza el celular entre 1 y 2 horas diarias.',
+    medicalDiagnoses: 'Déficit de Atención',
+    pharmacology: 'Recibe suplementación con Omega 3. Sin fármacos psicotrópicos reportados.',
+    allergicConditions: 'Sin alergias'
+  },
   patient_blaz_01: {
     id: 'anam_patient_blaz_01',
     patientId: 'patient_blaz_01',

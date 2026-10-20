@@ -587,8 +587,25 @@ export interface DaFonsecaBPM {
   finePraxiaScore?: number; // 1-4
 
   totalScore?: number; // 7-28
-  profileResult?: 'Perfil Apráxico (7-13 puntos)' | 'Perfil Dispráxico (14-20 puntos)' | 'Perfil Eupráxico (21-26 puntos)' | 'Perfil Hiperpráxico (27-28 puntos)';
+  profileResult?: string;
   conclusions?: string;
+  generalObservation?: string;
+  
+  // Specific factor observations and interpretations for family report
+  tonicityObservations?: string;
+  tonicityInterpretation?: string;
+  equilibriumObservations?: string;
+  equilibriumInterpretation?: string;
+  lateralityObservations?: string;
+  lateralityInterpretation?: string;
+  bodyNotionObservations?: string;
+  bodyNotionInterpretation?: string;
+  spatialTemporalObservations?: string;
+  spatialTemporalInterpretation?: string;
+  globalPraxiaObservations?: string;
+  globalPraxiaInterpretation?: string;
+  finePraxiaObservations?: string;
+  finePraxiaInterpretation?: string;
 }
 
 export interface PatientAnamnesis {
@@ -722,6 +739,14 @@ export interface ClinicalEvaluations {
   homeAndSchoolRecommendations?: string;
   homeRecommendations?: string; // Recomendaciones específicas para el hogar
   schoolRecommendations?: string; // Recomendaciones específicas para jardín/escuela si > 3 años
+  
+  // Family-friendly structured report fields (Kinesfera format)
+  interventionGoals?: string[]; // Objetivos de intervención terapéutica
+  sensoryProfileAnalysis?: string; // Análisis amigable del perfil sensorial para la familia
+  initialConclusions?: string; // Conclusiones iniciales estructuradas
+  functionalManifestations?: string[]; // Manifestaciones funcionales en aula y hogar (1 a 6)
+  prognosis?: string; // Pronóstico y justificación terapéutica
+  interventionNeeds?: string[]; // Áreas prioritarias de intervención kinésica
 }
 
 export interface ComprehensiveReport {
@@ -740,6 +765,13 @@ export interface ComprehensiveReport {
   evaluations: ClinicalEvaluations;
   clinicalSummary: string;
   planAndFollowUp: string;
+  
+  // Optional family report overrides
+  interventionGoals?: string[];
+  sensoryProfileAnalysis?: string;
+  initialConclusions?: string;
+  functionalManifestations?: string[];
+  prognosis?: string;
 }
 
 export interface WeeklyHomePracticePackage {
