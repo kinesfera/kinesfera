@@ -1,0 +1,233 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile containing clinician credentials and metadata",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Unique user ID" },
+        "email": { "type": "string", "description": "User email address" },
+        "displayName": { "type": "string", "description": "Display name" },
+        "role": { "type": "string", "description": "Clinical role or user type" },
+        "specialty": { "type": "string", "description": "Clinical specialty" },
+        "institution": { "type": "string", "description": "Clinical institution or clinic" },
+        "rut": { "type": "string", "description": "Professional or personal RUT" },
+        "registry": { "type": "string", "description": "Health professional registry number" },
+        "createdAt": { "type": "string", "description": "Creation timestamp" },
+        "updatedAt": { "type": "string", "description": "Last update timestamp" }
+      },
+      "required": ["uid", "email"]
+    },
+    "Patient": {
+      "title": "Patient",
+      "description": "Pediatric patient primary record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Patient identifier" },
+        "userId": { "type": "string", "description": "Owner clinician user ID" },
+        "firstName": { "type": "string", "description": "Child first name" },
+        "lastName": { "type": "string", "description": "Child last name" },
+        "rut": { "type": "string", "description": "Patient RUT" },
+        "birthDate": { "type": "string", "description": "Child birth date" },
+        "gender": { "type": "string", "description": "Gender" },
+        "diagnosis": { "type": "string", "description": "Medical admission diagnosis" },
+        "medicalRecordNumber": { "type": "string", "description": "Medical record number" },
+        "role": { "type": "string", "description": "Account role" },
+        "plan": { "type": "string", "description": "Service plan" },
+        "credits": { "type": "number", "description": "Session credits" },
+        "assignedExercise": { "type": "string", "description": "Assigned exercise" },
+        "emergencyContact": { "type": "object", "description": "Emergency contact" },
+        "updatedAt": { "type": "string", "description": "Last updated" }
+      },
+      "required": ["id", "userId", "firstName"]
+    },
+    "Anamnesis": {
+      "title": "Anamnesis",
+      "description": "Pediatric patient comprehensive clinical anamnesis",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Anamnesis record ID" },
+        "userId": { "type": "string", "description": "Owner clinician user ID" },
+        "patientId": { "type": "string", "description": "Target patient ID" },
+        "evaluatorName": { "type": "string", "description": "Evaluator name" },
+        "evaluationDate": { "type": "string", "description": "Date of evaluation" },
+        "ageCategory": { "type": "string", "description": "Age category" },
+        "caregiverName": { "type": "string", "description": "Caregiver name" },
+        "caregiverPhone": { "type": "string", "description": "Caregiver phone" },
+        "schoolOrCenter": { "type": "string", "description": "School or center" },
+        "educationalLevel": { "type": "string", "description": "Educational grade" },
+        "pieSupport": { "type": "boolean", "description": "PIE program support" },
+        "householdMembers": { "type": "string", "description": "Household members" },
+        "consultationReason": { "type": "string", "description": "Main reason for consultation" },
+        "problemNoticedWhen": { "type": "string", "description": "Onset of difficulty" },
+        "specialistsVisited": { "type": "string", "description": "Specialists visited" },
+        "previousTreatments": { "type": "string", "description": "Previous therapies" },
+        "familyExpectations": { "type": "string", "description": "Family expectations" },
+        "pregnancyHistory": { "type": "string", "description": "Perinatal history" },
+        "gestationalAgeWeeks": { "type": "string", "description": "Gestational age in weeks" },
+        "birthWeightGrams": { "type": "string", "description": "Birth weight in grams" },
+        "birthLengthCm": { "type": "string", "description": "Birth length in cm" },
+        "birthType": { "type": "string", "description": "Type of birth" },
+        "birthPresentation": { "type": "string", "description": "Birth presentation" },
+        "apgarScore": { "type": "string", "description": "Apgar score" },
+        "neonatalComplications": { "type": "string", "description": "Neonatal complications" },
+        "feedingType": { "type": "string", "description": "Feeding modality" },
+        "colic": { "type": "string", "description": "Colic history" },
+        "sleepPattern": { "type": "string", "description": "Sleep patterns" },
+        "headControlMonths": { "type": "string", "description": "Head control milestone" },
+        "independentSittingMonths": { "type": "string", "description": "Sitting milestone" },
+        "crawlingMonths": { "type": "string", "description": "Crawling milestone" },
+        "standingMonths": { "type": "string", "description": "Standing milestone" },
+        "walkingMonths": { "type": "string", "description": "Walking milestone" },
+        "firstWords": { "type": "string", "description": "First words" },
+        "firstPhrases": { "type": "string", "description": "First phrases" },
+        "currentMotorStatus": { "type": "string", "description": "Current motor status" },
+        "followsInstructions": { "type": "string", "description": "Instruction following" },
+        "isRestless": { "type": "string", "description": "Restlessness or hyperactive play" },
+        "playsAloneOrAccompanied": { "type": "string", "description": "Social play pattern" },
+        "bedtimeRoutine": { "type": "string", "description": "Bedtime routine" },
+        "nightmares": { "type": "string", "description": "Nightmares or sleep disturbances" },
+        "hasFears": { "type": "string", "description": "Fears or phobias" },
+        "strangerReaction": { "type": "string", "description": "Reaction to strangers" },
+        "tantrums": { "type": "string", "description": "Tantrum frequency and management" },
+        "appearsSad": { "type": "string", "description": "Affective status" },
+        "familyRelationships": { "type": "string", "description": "Family dynamics" },
+        "schoolRelationships": { "type": "string", "description": "Peer relationships" },
+        "leisureActivities": { "type": "string", "description": "Leisure activities" },
+        "familyDiagnoses": { "type": "string", "description": "Family clinical diagnoses" },
+        "pharmacology": { "type": "string", "description": "Prescriptions and supplements" },
+        "cranialMeasurements": { "type": "object", "description": "Infant cranial measurements" },
+        "updatedAt": { "type": "string", "description": "Last updated" }
+      },
+      "required": ["id", "userId", "patientId"]
+    },
+    "Evaluation": {
+      "title": "Evaluation",
+      "description": "Standardized clinical tests, CIF functional diagnosis and intervention plan",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Evaluation record ID" },
+        "userId": { "type": "string", "description": "Owner clinician user ID" },
+        "patientId": { "type": "string", "description": "Target patient ID" },
+        "evaluationDate": { "type": "string", "description": "Date of clinical evaluation" },
+        "evaluatorName": { "type": "string", "description": "Evaluator name" },
+        "gmfcsLevel": { "type": "string", "description": "GMFCS functional level" },
+        "macsLevel": { "type": "string", "description": "MACS functional level" },
+        "eedpOrTepsiScore": { "type": "string", "description": "EEDP or TEPSI screening score" },
+        "ashworthScore": { "type": "string", "description": "Modified Ashworth spasticity score" },
+        "tonePattern": { "type": "string", "description": "Muscle tone description" },
+        "deepTendonReflexes": { "type": "string", "description": "Osteotendinous reflexes" },
+        "patientAgeCategory": { "type": "string", "description": "Protocol age branch" },
+        "followsCommands": { "type": "boolean", "description": "Whether child follows structured commands" },
+        "hineExam": { "type": "object", "description": "Hammersmith Infant Neurological Exam" },
+        "psychomotorObservation": { "type": "object", "description": "Pilar Arnaiz psychomotor observation" },
+        "criticalCommunication": { "type": "object", "description": "Critical communication checklist" },
+        "daFonsecaBpm": { "type": "object", "description": "Da Fonseca Psychomotor Battery (BPM)" },
+        "spmSensoryMeasure": { "type": "object", "description": "SPM-2 Sensory Processing Measure" },
+        "cifCodes": { "type": "array", "description": "Selected WHO CIF codes" },
+        "functionalDiagnosisCIF": { "type": "string", "description": "Official CIF functional diagnosis text" },
+        "therapeuticGoalsShortTerm": { "type": "string", "description": "Short-term SMART therapeutic goals" },
+        "therapeuticGoalsLongTerm": { "type": "string", "description": "Long-term functional goals" },
+        "treatmentPlan": { "type": "string", "description": "Detailed intervention plan and frequency" },
+        "homeRecommendations": { "type": "string", "description": "Recommendations for home environment" },
+        "schoolRecommendations": { "type": "string", "description": "Recommendations for school and PIE" },
+        "homeAndSchoolRecommendations": { "type": "string", "description": "Combined home and school recommendations" },
+        "updatedAt": { "type": "string", "description": "Last updated" }
+      },
+      "required": ["id", "userId", "patientId"]
+    },
+    "ProgressNote": {
+      "title": "ProgressNote",
+      "description": "Clinical evolution and therapy session note including payment tracking",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Note unique ID" },
+        "userId": { "type": "string", "description": "Owner clinician user ID" },
+        "patientId": { "type": "string", "description": "Patient ID" },
+        "date": { "type": "string", "description": "Session date (MM/DD/YYYY or YYYY-MM-DD)" },
+        "notes": { "type": "string", "description": "Clinical evolution and psychomotor progress" },
+        "professionalName": { "type": "string", "description": "Treating professional" },
+        "paymentMethod": { "type": "string", "description": "Payment method (Efectivo, Transferencia, Fonasa, etc.)" },
+        "paymentStatus": { "type": "string", "description": "Payment status (Pagado, Pendiente, En convenio)" },
+        "paymentAmount": { "type": "number", "description": "Session payment amount" },
+        "paymentDate": { "type": "string", "description": "Payment date" },
+        "sessionNumber": { "type": "number", "description": "Sequential session number" },
+        "updatedAt": { "type": "string", "description": "Last updated" }
+      },
+      "required": ["id", "userId", "patientId", "notes"]
+    },
+    "ComprehensiveReport": {
+      "title": "ComprehensiveReport",
+      "description": "Consolidated medical and kinesiology comprehensive report",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Report ID" },
+        "userId": { "type": "string", "description": "Owner clinician user ID" },
+        "patientId": { "type": "string", "description": "Patient ID" },
+        "patientName": { "type": "string", "description": "Patient full name" },
+        "patientRut": { "type": "string", "description": "Patient RUT" },
+        "patientBirthDate": { "type": "string", "description": "Birth date" },
+        "medicalRecordNumber": { "type": "string", "description": "Medical record number" },
+        "professionalName": { "type": "string", "description": "Professional name" },
+        "professionalSpecialty": { "type": "string", "description": "Specialty" },
+        "professionalRegistry": { "type": "string", "description": "Registry number" },
+        "institution": { "type": "string", "description": "Institution" },
+        "anamnesis": { "type": "object", "description": "Embedded anamnesis snapshot" },
+        "evaluations": { "type": "object", "description": "Embedded evaluations snapshot" },
+        "createdAt": { "type": "string", "description": "Creation date" }
+      },
+      "required": ["id", "userId", "patientId"]
+    },
+    "MarketingPlan": {
+      "title": "MarketingPlan",
+      "description": "Monthly marketing plan and content generated from anonymized clinic cases",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Plan unique ID" },
+        "userId": { "type": "string", "description": "Owner clinician user ID" },
+        "month": { "type": "string", "description": "Target month and year" },
+        "pillars": { "type": "array", "description": "Content pillars" },
+        "weeklyCalendar": { "type": "array", "description": "Weekly calendar posts" },
+        "socialMediaHooks": { "type": "array", "description": "High conversion hooks" },
+        "anonymizedCasesCount": { "type": "number", "description": "Number of cases analyzed" },
+        "generatedAt": { "type": "string", "description": "Generation timestamp" },
+        "updatedAt": { "type": "string", "description": "Last updated" }
+      },
+      "required": ["id", "userId", "month"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profile document owned by the authenticated clinician"
+    },
+    "/users/{userId}/patients/{patientId}": {
+      "schema": "Patient",
+      "description": "Collection of pediatric patients belonging to the clinician"
+    },
+    "/users/{userId}/anamnesis/{patientId}": {
+      "schema": "Anamnesis",
+      "description": "Clinical anamnesis records keyed by patientId"
+    },
+    "/users/{userId}/evaluations/{patientId}": {
+      "schema": "Evaluation",
+      "description": "Clinical evaluation records keyed by patientId"
+    },
+    "/users/{userId}/progressNotes/{noteId}": {
+      "schema": "ProgressNote",
+      "description": "Evolution and session progress notes with payments"
+    },
+    "/users/{userId}/reports/{reportId}": {
+      "schema": "ComprehensiveReport",
+      "description": "Consolidated medical and clinical reports"
+    },
+    "/users/{userId}/marketingPlan/{planId}": {
+      "schema": "MarketingPlan",
+      "description": "Monthly marketing plans generated from clinical data"
+    },
+    "/users/{userId}/migrationMeta/{metaId}": {
+      "schema": "MigrationMeta",
+      "description": "Migration metadata tracking local storage sync to Firestore"
+    }
+  }
+}

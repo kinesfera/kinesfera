@@ -1,8 +1,3 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
 import React, { useState, useEffect } from 'react';
 import { 
   UserRole, 
@@ -39,8 +34,25 @@ import { EducatorPortalView } from './components/EducatorPortalView';
 import { AdminPortalView } from './components/AdminPortalView';
 import { ExerciseSessionModal } from './components/ExerciseSessionModal';
 import { ChatSystemModal } from './components/ChatSystemModal';
+import { 
+  auth, 
+  onAuthStateChanged, 
+  signOut, 
+  FirebaseUser,
+  testFirestoreConnection
+} from './services/firebase';
+import { firebaseClinicalService } from './services/firebaseClinicalService';
+import { CheckCircle2, X as CloseIcon, Loader2, Cloud } from 'lucide-react';
 
 export default function App() {
+  // Authentication & session state
+  const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
+  const [authLoading, setAuthLoading] = useState<boolean>(true);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [activeLoggedInUserId, setActiveLoggedInUserId] = useState<string>('');
+  const [migrationNotice, setMigrationNotice] = useState<string | null>(null);
+  const [cloudSyncStatus, setCloudSyncStatus] = useState<'synced' | 'syncing' | 'offline'>('synced');
+
   // Global application states with robust persistent storage
   const [users, setUsers] = useState<User[]>(() => {
     const savedPatients = clinicalStorage.loadPatients();
@@ -58,38 +70,147 @@ export default function App() {
   const [comprehensiveReports, setComprehensiveReports] = useState<ComprehensiveReport[]>(() => clinicalStorage.loadReports());
   const [leads, setLeads] = useState<LeadProspect[]>(INITIAL_LEADS);
 
-  // Automatic synchronized persistence whenever state changes
-  useEffect(() => {
-    clinicalStorage.savePatients(users);
-  }, [users]);
-
-  useEffect(() => {
-    clinicalStorage.saveProgressNotes(progressNotes);
-  }, [progressNotes]);
-
-  useEffect(() => {
-    clinicalStorage.saveAnamnesis(anamnesisData);
-  }, [anamnesisData]);
-
-  useEffect(() => {
-    clinicalStorage.saveEvaluations(evaluationsData);
-  }, [evaluationsData]);
-
-  useEffect(() => {
-    clinicalStorage.saveReports(comprehensiveReports);
-  }, [comprehensiveReports]);
-
-  useEffect(() => {
-    clinicalStorage.saveSessionHistory(sessionHistory);
-  }, [sessionHistory]);
-
-  // Authentication & session state
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [activeLoggedInUserId, setActiveLoggedInUserId] = useState<string>('user_clinician_1');
-
   // Active view & role
   const [currentRole, setCurrentRole] = useState<UserRole>('Profesionales Clínicos');
   const [activeTab, setActiveTab] = useState<'child' | 'clinical' | 'educator' | 'admin'>('clinical');
+
+  // Verify connection to Firestore on initialization (Mandated by Firebase Skill)
+  useEffect(() => {
+    testFirestoreConnection();
+  }, []);
+
+  // 1. Listen to Firebase Auth state & safely migrate local data upon login
+  useEffect(() => {
+    const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
+      setAuthLoading(false);
+      if (user) {
+        setFirebaseUser(user);
+        setIsLoggedIn(true);
+        setActiveLoggedInUserId(user.uid);
+
+        // Run safe automated migration from localStorage to Firestore
+        try {
+          setCloudSyncStatus('syncing');
+          const migResult = await firebaseClinicalService.migrateLocalStorageToFirestore(user.uid);
+          if (migResult.migrated) {
+            setMigrationNotice(migResult.message);
+          }
+          setCloudSyncStatus('synced');
+        } catch (migErr) {
+          console.warn('Migration completed with notice:', migErr);
+          setCloudSyncStatus('synced');
+        }
+      } else {
+        setFirebaseUser(null);
+        setIsLoggedIn(false);
+        setActiveLoggedInUserId('');
+        // Enforce: "Sin login no se muestra ningún dato"
+        setUsers(INITIAL_USERS.filter(u => u.role !== 'Padre/Niño'));
+        setProgressNotes([]);
+        setAnamnesisData({});
+        setEvaluationsData({});
+        setComprehensiveReports([]);
+      }
+    });
+
+    return () => unsubscribeAuth();
+  }, []);
+
+  // 2. Real-time Firestore subscriptions for authenticated user
+  useEffect(() => {
+    if (!firebaseUser?.uid) return;
+
+    const uid = firebaseUser.uid;
+    setCloudSyncStatus('syncing');
+
+    const unsubPatients = firebaseClinicalService.subscribePatients(uid, (remotePatients) => {
+      if (remotePatients && remotePatients.length > 0) {
+        setUsers(prev => {
+          const staff = prev.filter(u => u.role !== 'Padre/Niño');
+          return [...staff, ...remotePatients];
+        });
+        clinicalStorage.savePatients(remotePatients);
+      }
+      setCloudSyncStatus('synced');
+    });
+
+    const unsubAnamnesis = firebaseClinicalService.subscribeAnamnesis(uid, (remoteAnamnesis) => {
+      if (remoteAnamnesis && Object.keys(remoteAnamnesis).length > 0) {
+        setAnamnesisData(remoteAnamnesis);
+        clinicalStorage.saveAnamnesis(remoteAnamnesis);
+      }
+      setCloudSyncStatus('synced');
+    });
+
+    const unsubEvaluations = firebaseClinicalService.subscribeEvaluations(uid, (remoteEvaluations) => {
+      if (remoteEvaluations && Object.keys(remoteEvaluations).length > 0) {
+        setEvaluationsData(remoteEvaluations);
+        clinicalStorage.saveEvaluations(remoteEvaluations);
+      }
+      setCloudSyncStatus('synced');
+    });
+
+    const unsubNotes = firebaseClinicalService.subscribeProgressNotes(uid, (remoteNotes) => {
+      if (remoteNotes && remoteNotes.length > 0) {
+        setProgressNotes(remoteNotes);
+        clinicalStorage.saveProgressNotes(remoteNotes);
+      }
+      setCloudSyncStatus('synced');
+    });
+
+    const unsubReports = firebaseClinicalService.subscribeReports(uid, (remoteReports) => {
+      if (remoteReports && remoteReports.length > 0) {
+        setComprehensiveReports(remoteReports);
+        clinicalStorage.saveReports(remoteReports);
+      }
+      setCloudSyncStatus('synced');
+    });
+
+    return () => {
+      unsubPatients();
+      unsubAnamnesis();
+      unsubEvaluations();
+      unsubNotes();
+      unsubReports();
+    };
+  }, [firebaseUser?.uid]);
+
+  // Synchronized persistence to local storage as offline cache
+  useEffect(() => {
+    if (isLoggedIn) {
+      clinicalStorage.savePatients(users);
+    }
+  }, [users, isLoggedIn]);
+
+  useEffect(() => {
+    if (isLoggedIn) {
+      clinicalStorage.saveProgressNotes(progressNotes);
+    }
+  }, [progressNotes, isLoggedIn]);
+
+  useEffect(() => {
+    if (isLoggedIn) {
+      clinicalStorage.saveAnamnesis(anamnesisData);
+    }
+  }, [anamnesisData, isLoggedIn]);
+
+  useEffect(() => {
+    if (isLoggedIn) {
+      clinicalStorage.saveEvaluations(evaluationsData);
+    }
+  }, [evaluationsData, isLoggedIn]);
+
+  useEffect(() => {
+    if (isLoggedIn) {
+      clinicalStorage.saveReports(comprehensiveReports);
+    }
+  }, [comprehensiveReports, isLoggedIn]);
+
+  useEffect(() => {
+    if (isLoggedIn) {
+      clinicalStorage.saveSessionHistory(sessionHistory);
+    }
+  }, [sessionHistory, isLoggedIn]);
 
   // Modals
   const [activeExerciseForSession, setActiveExerciseForSession] = useState<{
@@ -125,10 +246,6 @@ export default function App() {
     else if (role === 'Educadores') setActiveTab('educator');
     else if (role === 'Administrador (Neuronexin)') setActiveTab('admin');
     setIsLoggedIn(true);
-  };
-
-  const handleLogout = () => {
-    setIsLoggedIn(false);
   };
 
   // Handlers
@@ -240,6 +357,9 @@ export default function App() {
       clinicalStorage.saveProgressNotes(updated);
       return updated;
     });
+    if (firebaseUser?.uid) {
+      firebaseClinicalService.saveProgressNote(firebaseUser.uid, newNote);
+    }
   };
 
   const handleUpdateProgressNote = (updatedNote: ProgressNote) => {
@@ -248,6 +368,9 @@ export default function App() {
       clinicalStorage.saveProgressNotes(updated);
       return updated;
     });
+    if (firebaseUser?.uid) {
+      firebaseClinicalService.saveProgressNote(firebaseUser.uid, updatedNote);
+    }
   };
 
   const handleDeleteProgressNote = (noteId: string) => {
@@ -256,6 +379,9 @@ export default function App() {
       clinicalStorage.saveProgressNotes(updated);
       return updated;
     });
+    if (firebaseUser?.uid) {
+      firebaseClinicalService.deleteProgressNote(firebaseUser.uid, noteId);
+    }
   };
 
   const handleAddNewPatient = (newPatient: User) => {
@@ -266,6 +392,9 @@ export default function App() {
       return updated;
     });
     clinicalStorage.saveSelectedPatientId(newPatient.id);
+    if (firebaseUser?.uid) {
+      firebaseClinicalService.savePatient(firebaseUser.uid, newPatient);
+    }
   };
 
   const handleUpdatePatient = (updatedPatient: User) => {
@@ -278,6 +407,9 @@ export default function App() {
       return updated;
     });
     clinicalStorage.saveSelectedPatientId(updatedPatient.id);
+    if (firebaseUser?.uid) {
+      firebaseClinicalService.savePatient(firebaseUser.uid, updatedPatient);
+    }
   };
 
   const handleSaveAnamnesis = (patientId: string, data: PatientAnamnesis) => {
@@ -286,6 +418,9 @@ export default function App() {
       clinicalStorage.saveAnamnesis(updated);
       return updated;
     });
+    if (firebaseUser?.uid) {
+      firebaseClinicalService.saveAnamnesis(firebaseUser.uid, patientId, data);
+    }
   };
 
   const handleSaveEvaluations = (patientId: string, data: ClinicalEvaluations) => {
@@ -294,6 +429,9 @@ export default function App() {
       clinicalStorage.saveEvaluations(updated);
       return updated;
     });
+    if (firebaseUser?.uid) {
+      firebaseClinicalService.saveEvaluations(firebaseUser.uid, patientId, data);
+    }
   };
 
   const handleGenerateComprehensiveReport = (newReport: ComprehensiveReport) => {
@@ -302,10 +440,13 @@ export default function App() {
       clinicalStorage.saveReports(updated);
       return updated;
     });
+    if (firebaseUser?.uid) {
+      firebaseClinicalService.saveReport(firebaseUser.uid, newReport);
+    }
   };
 
   const handleClearAllPatients = () => {
-    // Completely wipe all previous patients, evaluations, anamnesis, progress notes and reports
+    // Wipe patients, evaluations, anamnesis, progress notes and reports
     setUsers(prev => prev.filter(u => u.role !== 'Padre/Niño'));
     setProgressNotes([]);
     setAnamnesisData({});
@@ -316,14 +457,51 @@ export default function App() {
     clinicalStorage.clearAllClinicalData();
   };
 
-  // If not logged in, render the harmonious pastel login view
+  // Export full backup as JSON
+  const handleExportBackup = () => {
+    firebaseClinicalService.exportFullCloudBackup(
+      firebaseUser?.uid || 'offline',
+      {
+        patients: users.filter(u => u.role === 'Padre/Niño'),
+        anamnesis: anamnesisData,
+        evaluations: evaluationsData,
+        progressNotes: progressNotes,
+        reports: comprehensiveReports
+      }
+    );
+  };
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+    } catch (err) {
+      console.warn('Sign-out error:', err);
+    }
+    setIsLoggedIn(false);
+    setFirebaseUser(null);
+    setActiveLoggedInUserId('');
+  };
+
+  // Loading indicator while Firebase verifies authentication
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 text-slate-800 font-sans">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="w-9 h-9 text-blue-600 animate-spin" />
+          <span className="text-sm font-bold text-slate-700">Verificando sesión segura en Firebase...</span>
+          <span className="text-xs text-slate-400">Protección Zero-Trust y Base de Datos en la Nube</span>
+        </div>
+      </div>
+    );
+  }
+
+  // If not logged in, render the login view: Enforces "Sin login no se muestra ningún dato"
   if (!isLoggedIn) {
     return (
       <LoginView
         users={users}
         onLoginSuccess={handleLoginSuccess}
         onRegisterUser={(newUser) => setUsers(prev => [...prev, newUser])}
-        onExploreAsGuest={() => setIsLoggedIn(true)}
       />
     );
   }
@@ -341,7 +519,26 @@ export default function App() {
         unreadCount={chats.reduce((acc, c) => acc + (c.unreadCount || 0), 0)}
         onOpenChat={() => setIsChatOpen(true)}
         onLogout={handleLogout}
+        onExportBackup={handleExportBackup}
+        cloudSyncStatus={cloudSyncStatus}
       />
+
+      {/* Migration Success / Notice Banner */}
+      {migrationNotice && (
+        <div className="bg-gradient-to-r from-emerald-600 to-teal-700 text-white px-6 py-3 shadow-sm flex items-center justify-between gap-4 animate-in slide-in-from-top duration-200">
+          <div className="flex items-center gap-2.5 text-xs sm:text-sm font-medium">
+            <CheckCircle2 className="w-5 h-5 text-emerald-200 shrink-0" />
+            <span>{migrationNotice}</span>
+          </div>
+          <button
+            onClick={() => setMigrationNotice(null)}
+            className="text-white/80 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
+            title="Cerrar aviso de migración"
+          >
+            <CloseIcon className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {/* Main View Portals */}
       <main className="flex-1">

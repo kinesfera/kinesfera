@@ -263,8 +263,10 @@ export interface ProgressNote {
   patientId: string;
   date: string; // e.g. "07/28/2026" or YYYY-MM-DD
   paymentMethod: PaymentMethod;
-  paymentStatus?: 'Pagado' | 'Pendiente';
+  paymentStatus?: 'Pagado' | 'Pendiente' | 'En convenio';
   amount?: number;
+  paymentDate?: string;
+  sessionNumber?: number;
   notes: string;
   professionalName?: string;
   createdAt?: string;

@@ -74,6 +74,9 @@ export const PatientProgressSheet: React.FC<PatientProgressSheetProps> = ({
     return `${mm}/${dd}/${yyyy}`;
   });
   const [formPayment, setFormPayment] = useState<PaymentMethod>('Efectivo');
+  const [formPaymentStatus, setFormPaymentStatus] = useState<'Pagado' | 'Pendiente' | 'En convenio'>('Pagado');
+  const [formPaymentAmount, setFormPaymentAmount] = useState<number>(25000);
+  const [formPaymentDate, setFormPaymentDate] = useState<string>(() => new Date().toISOString().slice(0, 10));
   const [formNotes, setFormNotes] = useState('');
 
   const currentPatient = patients.find(p => p.id === selectedPatientId) || patients[0];
@@ -84,7 +87,8 @@ export const PatientProgressSheet: React.FC<PatientProgressSheetProps> = ({
   const filteredNotes = patientNotes.filter(n => 
     n.notes.toLowerCase().includes(searchFilter.toLowerCase()) ||
     n.date.includes(searchFilter) ||
-    n.paymentMethod.toLowerCase().includes(searchFilter.toLowerCase())
+    n.paymentMethod.toLowerCase().includes(searchFilter.toLowerCase()) ||
+    (n.paymentStatus && n.paymentStatus.toLowerCase().includes(searchFilter.toLowerCase()))
   );
 
   const handleOpenAddModal = () => {
@@ -94,6 +98,9 @@ export const PatientProgressSheet: React.FC<PatientProgressSheetProps> = ({
     const yyyy = today.getFullYear();
     setFormDate(`${mm}/${dd}/${yyyy}`);
     setFormPayment('Efectivo');
+    setFormPaymentStatus('Pagado');
+    setFormPaymentAmount(25000);
+    setFormPaymentDate(today.toISOString().slice(0, 10));
     setFormNotes('');
     setEditingNote(null);
     setShowAddModal(true);
@@ -103,6 +110,9 @@ export const PatientProgressSheet: React.FC<PatientProgressSheetProps> = ({
     setEditingNote(note);
     setFormDate(note.date);
     setFormPayment(note.paymentMethod);
+    setFormPaymentStatus(note.paymentStatus || (note.paymentMethod === 'Pendiente' ? 'Pendiente' : 'Pagado'));
+    setFormPaymentAmount(typeof note.amount === 'number' ? note.amount : (note.paymentMethod === 'Fonasa' ? 14500 : note.paymentMethod === 'Particular' ? 30000 : 25000));
+    setFormPaymentDate(note.paymentDate || note.date);
     setFormNotes(note.notes);
     setShowAddModal(true);
   };
@@ -116,6 +126,9 @@ export const PatientProgressSheet: React.FC<PatientProgressSheetProps> = ({
         ...editingNote,
         date: formDate,
         paymentMethod: formPayment,
+        paymentStatus: formPaymentStatus,
+        amount: Number(formPaymentAmount) || 0,
+        paymentDate: formPaymentDate || formDate,
         notes: formNotes.trim()
       });
     } else {
@@ -123,8 +136,11 @@ export const PatientProgressSheet: React.FC<PatientProgressSheetProps> = ({
         patientId: currentPatient.id,
         date: formDate,
         paymentMethod: formPayment,
+        paymentStatus: formPaymentStatus,
+        amount: Number(formPaymentAmount) || 0,
+        paymentDate: formPaymentDate || formDate,
         notes: formNotes.trim(),
-        professionalName: 'Klgo/a. Profesional Tratante'
+        professionalName: clinicianName || 'Klgo/a. Profesional Tratante'
       });
     }
 
@@ -440,20 +456,45 @@ export const PatientProgressSheet: React.FC<PatientProgressSheetProps> = ({
 
                   {/* PAGO Column */}
                   <td className="py-4 px-5 border-r border-slate-200 align-top whitespace-nowrap bg-slate-50/20">
-                    <span className={`inline-flex items-center gap-1 font-semibold px-2.5 py-1 rounded-md text-[11px] ${
-                      note.paymentMethod === 'Efectivo'
-                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                        : note.paymentMethod === 'Transferencia'
-                        ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                        : note.paymentMethod === 'Fonasa'
-                        ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                        : note.paymentMethod === 'Isapre'
-                        ? 'bg-purple-50 text-purple-700 border border-purple-200'
-                        : 'bg-slate-100 text-slate-700 border border-slate-200'
-                    }`}>
-                      <CreditCard className="w-3 h-3" />
-                      <span>{note.paymentMethod}</span>
-                    </span>
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className={`inline-flex items-center gap-1 font-semibold px-2 py-0.5 rounded text-[11px] ${
+                          note.paymentMethod === 'Efectivo'
+                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                            : note.paymentMethod === 'Transferencia'
+                            ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                            : note.paymentMethod === 'Fonasa'
+                            ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                            : note.paymentMethod === 'Isapre'
+                            ? 'bg-purple-50 text-purple-700 border border-purple-200'
+                            : 'bg-slate-100 text-slate-700 border border-slate-200'
+                        }`}>
+                          <CreditCard className="w-3 h-3" />
+                          <span>{note.paymentMethod}</span>
+                        </span>
+
+                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                          (note.paymentStatus || (note.paymentMethod === 'Pendiente' ? 'Pendiente' : 'Pagado')) === 'Pagado'
+                            ? 'bg-emerald-100 text-emerald-800'
+                            : (note.paymentStatus || (note.paymentMethod === 'Pendiente' ? 'Pendiente' : 'Pagado')) === 'Pendiente'
+                            ? 'bg-amber-100 text-amber-800'
+                            : 'bg-purple-100 text-purple-800'
+                        }`}>
+                          {note.paymentStatus || (note.paymentMethod === 'Pendiente' ? 'Pendiente' : 'Pagado')}
+                        </span>
+                      </div>
+
+                      <div className="text-[11px] font-mono text-slate-600 flex items-center justify-between gap-2">
+                        <span className="font-bold text-slate-800">
+                          ${((typeof note.amount === 'number' ? note.amount : (note.paymentMethod === 'Fonasa' ? 14500 : note.paymentMethod === 'Particular' ? 30000 : 25000))).toLocaleString('es-CL')}
+                        </span>
+                        {note.paymentDate && (
+                          <span className="text-[10px] text-slate-400">
+                            {note.paymentDate}
+                          </span>
+                        )}
+                      </div>
+                    </div>
                   </td>
 
                   {/* NOTAS DE PROGRESO Column (Rich narrative text) */}
@@ -593,25 +634,90 @@ export const PatientProgressSheet: React.FC<PatientProgressSheetProps> = ({
                   </span>
                 </div>
 
-                {/* PAGO */}
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">
-                    MÉTODO / ESTADO DE PAGO
-                  </label>
-                  <select
-                    value={formPayment}
-                    onChange={e => setFormPayment(e.target.value as PaymentMethod)}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white font-semibold outline-hidden"
-                  >
-                    <option value="Efectivo">Efectivo</option>
-                    <option value="Transferencia">Transferencia</option>
-                    <option value="Fonasa">Bono Fonasa</option>
-                    <option value="Isapre">Reembolso Isapre</option>
-                    <option value="Tarjeta">Tarjeta Débito/Crédito</option>
-                    <option value="Particular">Particular</option>
-                    <option value="Bono Web">Bono Web / Convenio</option>
-                    <option value="Pendiente">Pendiente de Pago</option>
-                  </select>
+                {/* PAGO Y CONTROL FINANCIERO */}
+                <div className="sm:col-span-2 p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-slate-800 text-xs flex items-center gap-1.5">
+                      <CreditCard className="w-3.5 h-3.5 text-indigo-600" />
+                      <span>Registro de Pago de la Sesión (Guardado en Firestore)</span>
+                    </span>
+                    <span className="text-[10px] text-emerald-700 font-semibold bg-emerald-100/70 px-2 py-0.5 rounded-md">
+                      Sincronizado en la nube
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                    {/* Medio */}
+                    <div>
+                      <label className="font-bold text-slate-600 block mb-1 text-[11px]">Medio de Pago</label>
+                      <select
+                        value={formPayment}
+                        onChange={e => {
+                          const val = e.target.value as PaymentMethod;
+                          setFormPayment(val);
+                          if (val === 'Pendiente') setFormPaymentStatus('Pendiente');
+                          if (val === 'Fonasa') setFormPaymentAmount(14500);
+                          else if (val === 'Particular') setFormPaymentAmount(30000);
+                        }}
+                        className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg bg-white font-medium"
+                      >
+                        <option value="Efectivo">Efectivo</option>
+                        <option value="Transferencia">Transferencia</option>
+                        <option value="Fonasa">Bono Fonasa</option>
+                        <option value="Isapre">Reembolso Isapre</option>
+                        <option value="Tarjeta">Tarjeta Débito/Crédito</option>
+                        <option value="Particular">Particular</option>
+                        <option value="Bono Web">Bono Web / Convenio</option>
+                        <option value="Pendiente">Pendiente de Pago</option>
+                      </select>
+                    </div>
+
+                    {/* Estado */}
+                    <div>
+                      <label className="font-bold text-slate-600 block mb-1 text-[11px]">Estado del Pago</label>
+                      <select
+                        value={formPaymentStatus}
+                        onChange={e => setFormPaymentStatus(e.target.value as 'Pagado' | 'Pendiente' | 'En convenio')}
+                        className={`w-full px-2.5 py-1.5 border rounded-lg font-bold ${
+                          formPaymentStatus === 'Pagado' 
+                            ? 'bg-emerald-50 text-emerald-800 border-emerald-300' 
+                            : formPaymentStatus === 'Pendiente'
+                            ? 'bg-amber-50 text-amber-800 border-amber-300'
+                            : 'bg-purple-50 text-purple-800 border-purple-300'
+                        }`}
+                      >
+                        <option value="Pagado">✓ Pagado</option>
+                        <option value="Pendiente">⏳ Pendiente</option>
+                        <option value="En convenio">🤝 En convenio</option>
+                      </select>
+                    </div>
+
+                    {/* Monto CLP */}
+                    <div>
+                      <label className="font-bold text-slate-600 block mb-1 text-[11px]">Monto ($ CLP)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="500"
+                        value={formPaymentAmount}
+                        onChange={e => setFormPaymentAmount(Number(e.target.value))}
+                        className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg bg-white font-mono font-bold text-slate-800"
+                        placeholder="25000"
+                      />
+                    </div>
+
+                    {/* Fecha de Pago */}
+                    <div>
+                      <label className="font-bold text-slate-600 block mb-1 text-[11px]">Fecha de Pago</label>
+                      <input
+                        type="text"
+                        value={formPaymentDate}
+                        onChange={e => setFormPaymentDate(e.target.value)}
+                        placeholder="YYYY-MM-DD"
+                        className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg bg-white font-mono text-[11px]"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
 

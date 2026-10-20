@@ -1,6 +1,6 @@
 import React from 'react';
 import { UserRole, User } from '../types';
-import { Sparkles, MessageSquare, Shield, Users, Stethoscope, Compass, LogOut } from 'lucide-react';
+import { Sparkles, MessageSquare, Shield, Users, Stethoscope, Compass, LogOut, Download, Cloud } from 'lucide-react';
 
 interface NavbarProps {
   currentRole: UserRole;
@@ -11,6 +11,8 @@ interface NavbarProps {
   unreadCount: number;
   onOpenChat: () => void;
   onLogout?: () => void;
+  onExportBackup?: () => void;
+  cloudSyncStatus?: 'synced' | 'syncing' | 'offline';
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -21,7 +23,9 @@ export const Navbar: React.FC<NavbarProps> = ({
   onChangeTab,
   unreadCount,
   onOpenChat,
-  onLogout
+  onLogout,
+  onExportBackup,
+  cloudSyncStatus = 'synced'
 }) => {
   return (
     <header className="sticky top-0 z-40 w-full bg-white/95 backdrop-blur-md border-b border-sky-100 shadow-xs">
@@ -135,11 +139,31 @@ export const Navbar: React.FC<NavbarProps> = ({
         )}
 
         {/* Zone 3: Primary Action & Quick Switcher */}
-        <div className="flex items-center gap-3 shrink-0">
-          
+        <div className="flex items-center gap-2.5 shrink-0">
+
+          {/* Cloud Sync Status Badge */}
+          <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs" title="Sincronizado con Firebase Firestore">
+            <span className={`w-2 h-2 rounded-full ${cloudSyncStatus === 'syncing' ? 'bg-amber-400 animate-pulse' : 'bg-emerald-500'}`} />
+            <Cloud className="w-3.5 h-3.5 text-blue-600" />
+            <span className="text-[11px] font-semibold text-slate-700">Firebase Cloud</span>
+          </div>
+
+          {/* Export Full Backup Button (JSON) */}
+          {onExportBackup && (
+            <button
+              onClick={onExportBackup}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold rounded-lg border border-emerald-200 transition-colors cursor-pointer shadow-2xs"
+              title="Descargar respaldo completo (JSON) con todos los pacientes, evaluaciones y pagos"
+            >
+              <Download className="w-3.5 h-3.5 text-emerald-600" />
+              <span className="hidden md:inline">Exportar Respaldo (JSON)</span>
+              <span className="md:hidden">Respaldo JSON</span>
+            </button>
+          )}
+
           {/* Active User Name Chip */}
           {currentUser && (
-            <div className="hidden lg:flex items-center gap-2 px-2.5 py-1 bg-sky-50/80 border border-sky-100 rounded-lg text-xs text-sky-900">
+            <div className="hidden xl:flex items-center gap-2 px-2.5 py-1 bg-sky-50/80 border border-sky-100 rounded-lg text-xs text-sky-900">
               <span className="w-2 h-2 rounded-full bg-emerald-500" />
               <span className="font-semibold truncate max-w-[130px]">
                 {currentUser.firstName ? `${currentUser.firstName} ${currentUser.lastName}`.trim() : (currentRole === 'Profesionales Clínicos' ? 'Profesional Clínico' : 'Usuario')}
