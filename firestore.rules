@@ -21,41 +21,67 @@ service cloud.firestore {
 
     // User Profile: each authenticated user only accesses their own profile
     match /users/{userId} {
-      allow read, write: if isOwner(userId) && isValidId(userId);
+      allow get, write: if isOwner(userId) && isValidId(userId);
+      allow list: if isOwner(userId);
 
       // Patients subcollection
       match /patients/{patientId} {
-        allow read, write: if isOwner(userId) && isValidId(patientId);
+        allow list: if isOwner(userId);
+        allow get, write: if isOwner(userId) && isValidId(patientId);
       }
 
       // Anamnesis subcollection
       match /anamnesis/{patientId} {
-        allow read, write: if isOwner(userId) && isValidId(patientId);
+        allow list: if isOwner(userId);
+        allow get, write: if isOwner(userId) && isValidId(patientId);
       }
 
       // Clinical evaluations subcollection
       match /evaluations/{patientId} {
-        allow read, write: if isOwner(userId) && isValidId(patientId);
+        allow list: if isOwner(userId);
+        allow get, write: if isOwner(userId) && isValidId(patientId);
       }
 
       // Progress notes and session logs subcollection
       match /progressNotes/{noteId} {
-        allow read, write: if isOwner(userId) && isValidId(noteId);
+        allow list: if isOwner(userId);
+        allow get, write: if isOwner(userId) && isValidId(noteId);
       }
 
       // Medical and clinical reports subcollection
       match /reports/{reportId} {
-        allow read, write: if isOwner(userId) && isValidId(reportId);
+        allow list: if isOwner(userId);
+        allow get, write: if isOwner(userId) && isValidId(reportId);
       }
 
       // Marketing plan subcollection
       match /marketingPlan/{planId} {
-        allow read, write: if isOwner(userId) && isValidId(planId);
+        allow list: if isOwner(userId);
+        allow get, write: if isOwner(userId) && isValidId(planId);
+      }
+
+      // Library files and documents subcollection
+      match /libraryFiles/{fileId} {
+        allow list: if isOwner(userId);
+        allow get, write: if isOwner(userId) && isValidId(fileId);
+      }
+
+      // SPM age-based evaluations subcollection
+      match /spmEvaluations/{evalId} {
+        allow list: if isOwner(userId);
+        allow get, write: if isOwner(userId) && isValidId(evalId);
+      }
+
+      // Critical communication skills subcollection
+      match /communicationSkills/{commId} {
+        allow list: if isOwner(userId);
+        allow get, write: if isOwner(userId) && isValidId(commId);
       }
 
       // Migration metadata subcollection
       match /migrationMeta/{metaId} {
-        allow read, write: if isOwner(userId) && isValidId(metaId);
+        allow list: if isOwner(userId);
+        allow get, write: if isOwner(userId) && isValidId(metaId);
       }
     }
   }

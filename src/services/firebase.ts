@@ -14,6 +14,13 @@ import {
   doc, 
   getDocFromServer 
 } from 'firebase/firestore';
+import { 
+  getStorage, 
+  ref as storageRef, 
+  uploadBytes, 
+  getDownloadURL, 
+  deleteObject 
+} from 'firebase/storage';
 import firebaseConfig from '../../firebase-applet-config.json';
 
 // Initialize Firebase App
@@ -24,6 +31,10 @@ export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
 
 // Initialize Firebase Authentication
 export const auth = getAuth(app);
+
+// Initialize Firebase Storage
+export const storage = getStorage(app);
+export { storageRef, uploadBytes, getDownloadURL, deleteObject };
 
 // Providers
 export const googleProvider = new GoogleAuthProvider();

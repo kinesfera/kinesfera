@@ -12,8 +12,33 @@ const STORAGE_KEYS = {
   SELECTED_PATIENT_ID: 'kinesfera_selected_patient_id'
 };
 
-// Fallback patients (Miranda Victoria Coromoto Ramos model report and Blaz)
+// Fallback patients (Miranda Victoria, Mauro Valentino, Wagner Amir, and Blaz)
 const DEFAULT_FALLBACK_PATIENTS: User[] = [
+  {
+    id: 'patient_mauro_mora',
+    email: 'familia.mora@kinesfera.cl',
+    role: 'Padre/Niño',
+    firstName: 'Mauro Valentino',
+    lastName: 'Mora Cofre',
+    rut: '28.314.590-1',
+    birthDate: '2024-02-09',
+    gender: 'Hombre',
+    plan: 'Premium',
+    credits: 90,
+    assignedExercise: 'armsUp',
+    diagnosis: 'Plagiocefalia posicional derecha y tortícolis postural congénita',
+    medicalRecordNumber: 'KIN-2024-042',
+    emergencyContact: {
+      name: 'Padres de Mauro',
+      relationship: 'Madre / Padre',
+      phone: '+56 9 8456 1234'
+    },
+    avatarConfig: {
+      skinTone: '#F1C27D',
+      hairColor: '#3B2F2F',
+      shirtColor: '#0284C7'
+    }
+  },
   {
     id: 'patient_miranda_coromoto',
     email: 'miranda.coromoto@kinesfera.cl',
@@ -37,6 +62,31 @@ const DEFAULT_FALLBACK_PATIENTS: User[] = [
       skinTone: '#F1C27D',
       hairColor: '#4A3728',
       shirtColor: '#0284C7'
+    }
+  },
+  {
+    id: 'patient_wagner_vasquez',
+    email: 'familia.vasquez@kinesfera.cl',
+    role: 'Padre/Niño',
+    firstName: 'Wagner Amir',
+    lastName: 'Vásquez Venegas',
+    rut: '25.918.442-9',
+    birthDate: '2015-01-23',
+    gender: 'Hombre',
+    plan: 'Premium',
+    credits: 75,
+    assignedExercise: 'squats',
+    diagnosis: 'Trastorno del Espectro Autista (TEA) · Integración Sensorial',
+    medicalRecordNumber: 'KIN-2024-108',
+    emergencyContact: {
+      name: 'Familia de Wagner',
+      relationship: 'Madre / Padre',
+      phone: '+56 9 8456 1234'
+    },
+    avatarConfig: {
+      skinTone: '#E0AC69',
+      hairColor: '#1F2937',
+      shirtColor: '#10B981'
     }
   },
   {
@@ -67,6 +117,106 @@ const DEFAULT_FALLBACK_PATIENTS: User[] = [
 ];
 
 const DEFAULT_FALLBACK_ANAMNESIS: Record<string, PatientAnamnesis> = {
+  patient_mauro_mora: {
+    id: 'anam_patient_mauro_mora',
+    patientId: 'patient_mauro_mora',
+    evaluatorName: 'Aldo Olivares Araya',
+    evaluationDate: '2024-06-06',
+    ageCategory: 'bebe_hasta_18_meses',
+    caregiverName: 'Padres de Mauro',
+    caregiverPhone: '+56 9 8456 1234',
+    schoolOrCenter: 'Cuidado en el hogar',
+    educationalLevel: 'Lactante (4 meses)',
+    pieSupport: false,
+    householdMembers: 'Madre, Padre y Mauro',
+    consultationReason: 'Mauro asiste a evaluación kinesiológica por asimetría craneal posterior derecha observada por sus padres y pediatra, asociada a preferencia postural de cabeza hacia la derecha y limitación activa de giro cervical hacia la izquierda.',
+    problemNoticedWhen: 'A los 2 meses de vida',
+    specialistsVisited: 'Pediatra de cabecera',
+    previousTreatments: 'Indicaciones de reposicionamiento básico en cuna',
+    familyExpectations: 'Recuperar la simetría de la cabecita, recuperar la movilidad de cuello y recibir pautas prácticas de estimulación y posicionamiento en el hogar.',
+    pregnancyHistory: 'Embarazo único, controlado, sin complicaciones perinatales.',
+    gestationalAgeWeeks: '39 semanas',
+    birthWeightGrams: '3420 g',
+    birthLengthCm: '50 cm',
+    birthType: 'Parto por cesárea',
+    birthPresentation: 'Cefálica',
+    apgarScore: '9/10',
+    neonatalComplications: 'Sin complicaciones perinatales',
+    surgeries: 'Sin cirugías',
+    assistiveDevices: 'Ninguna',
+    feedingType: 'Lactancia materna exclusiva',
+    sleepPattern: 'Sueño nocturno de 8 a 9 horas con preferencia de apoyo sobre hemicráneo derecho.',
+    headControlMonths: '3 meses',
+    independentSittingMonths: 'En desarrollo',
+    crawlingMonths: 'En desarrollo',
+    standingMonths: 'En desarrollo',
+    walkingMonths: 'En desarrollo',
+    currentMotorStatus: 'Movilidad activa en supino con pataleo simétrico. En prono tolera apoyo en antebrazos con fatiga progresiva. Limitación de rotación cervical izquierda a 45° con restricción miofascial.',
+    followsInstructions: 'Atento al contacto visual, sonríe a estímulos vocales y auditivos.',
+    isRestless: 'Tranquilo durante la sesión, tolera las maniobras de valoración y movilización.',
+    medicalDiagnoses: 'Plagiocefalia posicional derecha moderada y tortícolis postural congénita',
+    pharmacology: 'Sin fármacos',
+    allergicConditions: 'Sin alergias',
+    cranialMeasurements: {
+      d1Mm: 145,
+      d2Mm: 132,
+      differenceMm: 13,
+      apMm: 135,
+      bpMm: 119,
+      cephalicIndex: 88.1,
+      plagiocephalySeverity: 'Moderada (10-12 mm)',
+      brachycephalyClassification: 'Braquicefalia (> 85%)',
+      cervicalRomRightDegInitial: 80,
+      cervicalRomLeftDegInitial: 45,
+      cervicalRomRightDegFinal: 85,
+      cervicalRomLeftDegFinal: 80,
+      intermediateD1Mm: 142,
+      intermediateD2Mm: 135,
+      intermediateDifferenceMm: 7,
+      finalD1Mm: 139,
+      finalD2Mm: 136,
+      finalDifferenceMm: 3
+    }
+  },
+  patient_wagner_vasquez: {
+    id: 'anam_patient_wagner_vasquez',
+    patientId: 'patient_wagner_vasquez',
+    evaluatorName: 'Aldo Olivares Araya',
+    evaluationDate: '2024-09-24',
+    ageCategory: 'mayor_2_anos',
+    caregiverName: 'Familia de Wagner',
+    caregiverPhone: '+56 9 8456 1234',
+    schoolOrCenter: 'Colegio Adventista de Copiapó',
+    educationalLevel: '4° básico',
+    pieSupport: true,
+    householdMembers: 'Padres y hermano menor',
+    consultationReason: 'Wagner asiste a evaluación kinésica y psicomotriz derivado por Neurología Infantil en el contexto de su diagnóstico de Trastorno del Espectro Autista. Se busca evaluar su perfil sensoriomotriz (SPM-2) y organización psicomotora (batería da Fonseca) para fortalecer su autorregulación, equilibrio y autonomía escolar.',
+    problemNoticedWhen: 'Desde etapa preescolar, con mayor desafío en el ámbito escolar',
+    specialistsVisited: 'Neurólogo infantil, terapeuta ocupacional',
+    previousTreatments: 'Apoyo PIE escolar y terapia ocupacional previa',
+    familyExpectations: 'Mejorar tolerancia a estímulos sensoriales, equilibrio dinámico y coordinación para el juego con pares.',
+    pregnancyHistory: 'Parto de término a las 38 semanas sin complicaciones agudas.',
+    gestationalAgeWeeks: '38 semanas',
+    birthWeightGrams: '3200 g',
+    birthLengthCm: '49 cm',
+    birthType: 'Parto por cesárea',
+    birthPresentation: 'Cefálica',
+    apgarScore: '9/10',
+    neonatalComplications: 'Sin complicaciones perinatales',
+    surgeries: 'Sin cirugías',
+    assistiveDevices: 'Ninguna',
+    sleepPattern: 'Sueño adecuado con rutina de descanso estructurada.',
+    headControlMonths: '3 meses',
+    independentSittingMonths: '6 meses',
+    crawlingMonths: '9 meses',
+    standingMonths: '11 meses',
+    walkingMonths: '13 meses',
+    currentMotorStatus: 'Marcha independiente, dismetrías leves en saltos coordinados y agarre del lápiz con presión moderada.',
+    followsInstructions: 'Colaborador y receptivo a dinámicas estructuradas con apoyos visuales.',
+    medicalDiagnoses: 'Trastorno del Espectro Autista (TEA)',
+    pharmacology: 'Sin fármacos permanentes',
+    allergicConditions: 'Sin alergias conocidas'
+  },
   patient_miranda_coromoto: {
     id: 'anam_patient_miranda_coromoto',
     patientId: 'patient_miranda_coromoto',
@@ -96,6 +246,11 @@ const DEFAULT_FALLBACK_ANAMNESIS: Record<string, PatientAnamnesis> = {
     assistiveDevices: 'Ninguna',
     feedingType: 'Alimentación regular, suplementación con Omega 3',
     sleepPattern: 'En cuanto al sueño, no presenta despertares nocturnos, duerme con sus padres.',
+    headControlMonths: '3 meses',
+    independentSittingMonths: '6 meses',
+    crawlingMonths: '8 meses',
+    standingMonths: '10 meses',
+    walkingMonths: '12 meses',
     currentMotorStatus: 'A nivel de autonomía, se limpia con algunas dificultades. No se reportan antecedentes familiares relevantes ni enfermedades previas de importancia.',
     followsInstructions: 'Buena comprensión de instrucciones, mostrando buena motivación por la actividad, moderada tolerancia a la frustración, moderado nivel de impulsividad y con bajos indicadores de fatigabilidad.',
     isRestless: 'Actualmente, utiliza el celular entre 1 y 2 horas diarias.',
@@ -151,6 +306,150 @@ const DEFAULT_FALLBACK_ANAMNESIS: Record<string, PatientAnamnesis> = {
 };
 
 const DEFAULT_FALLBACK_EVALUATIONS: Record<string, ClinicalEvaluations> = {
+  patient_mauro_mora: {
+    id: 'eval_patient_mauro_mora',
+    patientId: 'patient_mauro_mora',
+    evaluationDate: '2024-06-06',
+    evaluatorName: 'Aldo Olivares Araya',
+    patientAgeCategory: 'menor_2_anos',
+    gmfcsLevel: 'Nivel I',
+    macsLevel: 'Nivel I',
+    eedpOrTepsiScore: 'EEDP: Coeficiente de desarrollo psicomotor normal (0.92)',
+    ashworthScore: '0',
+    tonePattern: 'Normotonía en 4 extremidades con hipertonía leve en ECM derecho',
+    deepTendonReflexes: 'Normales ++/++++ rotulianos y bicipitales simétricos',
+    hipFlexionExt: '150° / 0°',
+    kneeFlexionExt: '140° / 0°',
+    ankleDorsiflexion: '30° bilateral',
+    shoulderMobility: 'Completa sin restricciones pasivas',
+    headAndTrunkControl: 'Control cefálico en desarrollo, con fatiga en prono prolongado',
+    rightingReactions: 'Presentes en supino y sedente asistido',
+    protectiveResponses: 'Reacciones de enderezamiento presentes con soporte',
+    balanceSittingAndStanding: 'Sedente con asistencia',
+    transferAbility: 'Giros espontáneos a la derecha, en facilitación hacia la izquierda',
+    gaitObservation: 'Etapa pre-marcha (lactante 4 meses)',
+    sensoryProfile: 'Responde a estímulos auditivos y visuales con mayor atención a la derecha',
+    followsCommands: false,
+    functionalDiagnosisCIF: 'Lactante de 4 meses con asimetría craneal posicional moderada (diferencia de 13 mm) y restricción de movilidad activa cervical izquierda secundaria a tortícolis postural. Se evidencia conservación de hitos motores globales con necesidad de estimulación kinésica simétrica.',
+    initialConclusions: 'Diagnóstico kinésico de Plagiocefalia postural moderada derecha con limitación de rango cervical izquierdo. Pronóstico de recuperación favorable mediante terapia motriz, Tummy Time y pautas de higiene postural familiar.',
+    prognosis: 'Favorable con alta adherencia a recomendaciones en el hogar y control periódico.',
+    interventionGoals: [
+      'Alcanzar la simetría de la bóveda craneal reduciendo la diferencia diagonal por debajo de 5 mm.',
+      'Restablecer el rango completo de rotación cervical izquierda (80°-90°) sin dolor ni compensaciones.',
+      'Fortalecer la musculatura extensora del cuello y tronco mediante Tummy Time (guatita abajo) activo.',
+      'Promover giros coordinados y simétricos hacia ambos lados en colchoneta.',
+      'Capacitar a la familia en posiciones de porteo, juego y descanso para evitar puntos de presión continua.'
+    ],
+    therapeuticGoalsShortTerm: 'Lograr 70° de rotación cervical izquierda y tolerancia a 15 minutos acumulados de Tummy Time diario.',
+    therapeuticGoalsLongTerm: 'Simetría craneal completa (< 3 mm de diferencia) e hitos de sedestación independiente consolidados.',
+    treatmentPlan: 'Kinesioterapia motriz y sensoriomotriz 1 a 2 veces por semana, movilizaciones cervicales miofasciales suaves y juego con sentido Kinesfera.',
+    homeRecommendations: 'Posicionamiento alternado durante el sueño, uso de juguetes sonoros hacia el lado izquierdo y juego en colchoneta supervisado.',
+    schoolRecommendations: 'No aplica (lactante).'
+  },
+  patient_wagner_vasquez: {
+    id: 'eval_patient_wagner_vasquez',
+    patientId: 'patient_wagner_vasquez',
+    evaluationDate: '2024-09-24',
+    evaluatorName: 'Aldo Olivares Araya',
+    patientAgeCategory: 'mayor_2_anos',
+    gmfcsLevel: 'Nivel I',
+    macsLevel: 'Nivel I',
+    eedpOrTepsiScore: 'Desarrollo motor grueso funcional con dispraxia leve',
+    ashworthScore: '0',
+    tonePattern: 'Normotonía con fluctuación tónica durante tareas de alta demanda atencional',
+    deepTendonReflexes: 'Normales ++/++++ rotulianos y bicipitales simétricos',
+    hipFlexionExt: '120° / 0°',
+    kneeFlexionExt: '135° / 0°',
+    ankleDorsiflexion: '20°',
+    shoulderMobility: 'Completa sin restricciones',
+    headAndTrunkControl: 'Conservado y estable',
+    rightingReactions: 'Presentes y funcionales',
+    protectiveResponses: 'Presentes en todos los planos',
+    balanceSittingAndStanding: 'Dificultades leves en apoyo unipodal estático',
+    transferAbility: 'Independiente en todas las transiciones',
+    gaitObservation: 'Marcha independiente, leve disociación en balanceo de brazos',
+    sensoryProfile: 'SPM-2: Dificultades moderadas en reactividad táctil y conciencia corporal',
+    followsCommands: true,
+    functionalDiagnosisCIF: 'Escolar de 9 años con diagnóstico de TEA que presenta desafíos en modulación sensorial (SPM-2: reactividad táctil y conciencia corporal) y dispraxia moderada en la batería de Vítor da Fonseca (equilibrio dinámico y praxia fina).',
+    initialConclusions: 'Evaluación kinésica y psicomotriz compatible con necesidades de integración vestibular-propioceptiva, regulación tónica y estructuración temporo-espacial para el desempeño escolar y recreativo.',
+    prognosis: 'Favorable con intervención psicomotriz continua y adecuaciones sensoriomotrices en el aula.',
+    therapeuticGoalsShortTerm: '1. Modular fuerza manual y agarre del lápiz con menor fatiga.\n2. Mejorar estabilidad en circuitos motores de salto y balanceo.',
+    therapeuticGoalsLongTerm: '1. Optimizar autorregulación e integración sensoriomotriz en aula escolar.\n2. Afianzar praxias globales y coordinación visomotora.',
+    homeRecommendations: 'Promover pausas sensoriales activas de 5 minutos, juegos de tracción/empuje y actividades al aire libre.',
+    schoolRecommendations: 'Apoyo PIE con adaptaciones en tiempos de descanso motor y descansos propioceptivos durante la jornada.',
+    interventionGoals: [
+      'Contribuir al desarrollo de una óptima integración sensorio-motriz que favorezca el aprendizaje y la autorregulación.',
+      'Regulación del tono muscular, la fuerza y la energía para una mejor ejecución motora.',
+      'Mejorar el equilibrio, las reacciones de protección y la coordinación vestibular al moverse o saltar.',
+      'Potenciar la noción del cuerpo, la conciencia corporal y el mapa mental propioceptivo.',
+      'Afianzar la estructuración espacio-temporal para una mejor orientación en rutinas escolares y papel.',
+      'Favorecer la praxia global y fina, con especial énfasis en la grafomotricidad.',
+      'Desarrollar la atención sostenida a través del juego y el movimiento guiado.',
+      'Entregar estrategias de regulación sensorial a la familia y al colegio PIE.'
+    ],
+    daFonsecaBpm: {
+      tonicityExtensibility: 3,
+      tonicityPassivity: 3,
+      tonicityParatonia: 3,
+      tonicityDiadochokinesia: 3,
+      tonicitySynkinesia: 3,
+      tonicityScore: 3,
+      equilibriumImmobility: 2,
+      equilibriumStatic: 2,
+      equilibriumDynamic: 2,
+      equilibriumScore: 2,
+      lateralityOcular: 3,
+      lateralityAuditory: 3,
+      lateralityManual: 3,
+      lateralityPodal: 3,
+      lateralityProfile: 'Diestro Completo',
+      lateralityScore: 3,
+      bodyNotionKinesthetic: 2,
+      bodyNotionRightLeft: 2,
+      bodyNotionAutoimage: 2,
+      bodyNotionGesturesImitation: 2,
+      bodyNotionScore: 2,
+      spatialOrientation: 2,
+      spatialOrganization: 2,
+      spatialRhythmStructure: 2,
+      spatialTemporalScore: 2,
+      globalPraxiaOculomanual: 2,
+      globalPraxiaOculopodal: 2,
+      globalPraxiaDysmetria: 2,
+      globalPraxiaDissociation: 2,
+      globalPraxiaScore: 2,
+      finePraxiaDynamicCoordination: 3,
+      finePraxiaDigitalDrumming: 3,
+      finePraxiaGraphomotorSpeed: 3,
+      finePraxiaScore: 3,
+      totalScore: 17,
+      profileResult: 'Perfil Dispráxico (14-21 puntos)',
+      conclusions: 'Dificultades en equilibrio estático/dinámico y estructuración espacial, con buena conservación de tonicidad y praxia fina.'
+    },
+    spmSensoryMeasure: {
+      socialParticipationScore: 62,
+      socialParticipationRange: 'Dificultades Moderadas (60-69)',
+      visionScore: 61,
+      visionRange: 'Dificultades Moderadas (60-69)',
+      hearingScore: 50,
+      hearingRange: 'Típico (40-59)',
+      touchScore: 63,
+      touchRange: 'Dificultades Moderadas (60-69)',
+      tasteSmellScore: 48,
+      tasteSmellRange: 'Típico (40-59)',
+      bodyAwarenessScore: 67,
+      bodyAwarenessRange: 'Dificultades Moderadas (60-69)',
+      balanceMotionScore: 62,
+      balanceMotionRange: 'Dificultades Moderadas (60-69)',
+      planningIdeasScore: 61,
+      planningIdeasRange: 'Dificultades Moderadas (60-69)',
+      totalSensoryScore: 62,
+      totalSensoryRange: 'Dificultades Moderadas (60-69)',
+      applicationMethod: 'presencial',
+      respondentName: 'Familia de Wagner'
+    },
+    treatmentPlan: 'Programa de intervención psicomotriz Kinesfera 1 a 2 sesiones semanales enfocado en circuitos vestibulares, propiocepción y juego reglado.'
+  },
   patient_blaz_01: {
     id: 'eval_patient_blaz_01',
     patientId: 'patient_blaz_01',
@@ -264,6 +563,17 @@ export const clinicalStorage = {
       if (raw) {
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed) && parsed.length > 0) {
+          const ids = new Set(parsed.map((p: User) => p.id));
+          let changed = false;
+          DEFAULT_FALLBACK_PATIENTS.forEach(p => {
+            if (!ids.has(p.id)) {
+              parsed.push(p);
+              changed = true;
+            }
+          });
+          if (changed) {
+            this.savePatients(parsed);
+          }
           return parsed;
         }
       }
@@ -279,7 +589,7 @@ export const clinicalStorage = {
         }
       }
 
-      // 3. Fallback: return Blaz so user never loses their patient
+      // 3. Fallback: return default patients so user always has rich clinical records
       this.savePatients(DEFAULT_FALLBACK_PATIENTS);
       return DEFAULT_FALLBACK_PATIENTS;
     } catch (err) {
@@ -378,6 +688,14 @@ export const clinicalStorage = {
       if (raw) {
         const parsed = JSON.parse(raw);
         if (parsed && typeof parsed === 'object') {
+          let changed = false;
+          Object.keys(DEFAULT_FALLBACK_ANAMNESIS).forEach(key => {
+            if (!parsed[key]) {
+              parsed[key] = DEFAULT_FALLBACK_ANAMNESIS[key];
+              changed = true;
+            }
+          });
+          if (changed) this.saveAnamnesis(parsed);
           return parsed;
         }
       }
@@ -414,6 +732,14 @@ export const clinicalStorage = {
       if (raw) {
         const parsed = JSON.parse(raw);
         if (parsed && typeof parsed === 'object') {
+          let changed = false;
+          Object.keys(DEFAULT_FALLBACK_EVALUATIONS).forEach(key => {
+            if (!parsed[key]) {
+              parsed[key] = DEFAULT_FALLBACK_EVALUATIONS[key];
+              changed = true;
+            }
+          });
+          if (changed) this.saveEvaluations(parsed);
           return parsed;
         }
       }

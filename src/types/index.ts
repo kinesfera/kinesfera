@@ -310,6 +310,20 @@ export interface CranialMeasurements {
   brachycephalyClassification?: 'Dolicocefalia (< 75%)' | 'Mesocefalia / Normal (75-85%)' | 'Braquicefalia (> 85%)' | 'Braquicefalia Severa (> 90%)';
   headCircumferenceCm?: number;
   treatmentIndication?: string;
+  
+  // Follow-up evaluations for comparative tables & charts
+  intermediateD1Mm?: number;
+  intermediateD2Mm?: number;
+  intermediateDifferenceMm?: number;
+  intermediateCvaiPercent?: number;
+  finalD1Mm?: number;
+  finalD2Mm?: number;
+  finalDifferenceMm?: number;
+  finalCvaiPercent?: number;
+  cervicalRomRightDegInitial?: number;
+  cervicalRomLeftDegInitial?: number;
+  cervicalRomRightDegFinal?: number;
+  cervicalRomLeftDegFinal?: number;
 }
 
 export interface EarlyInfantObservation {
@@ -501,7 +515,7 @@ export interface PsychomotorObservationKinesfera {
 
 export interface SensoryProcessingMeasureSPM2 {
   // Configuración del Cuestionario
-  targetAgeGroup?: '2_a_5_anos' | 'mayor_5_anos'; // 2 a 5 años (Preschool) vs > 5 años (Escolar / Primaria)
+  targetAgeGroup?: 'bebes_4_9' | '10_a_30_meses' | '2_a_5_anos' | 'mayor_5_anos'; // 4-9m (Bebés), 10-30m (Niños Pequeños), 2-5a (Preescolar), >5a (Escolar)
   questionnaireType?: 'hogar' | 'escuela'; // Cuestionario para Padres (Hogar) vs Cuestionario Escolar (Aula)
 
   // Puntajes estándar T o brutos por dimensión
@@ -953,4 +967,111 @@ export interface MonthlyContentPlan {
     bestFormatsRecommended: string;
   };
   posts: ContentPlanPost[];
+}
+
+// ============================================================================
+// BIBLIOTECA INSTITUCIONAL & DOCUMENTOS DE REFERENCIA
+// ============================================================================
+export type LibraryFileScope = 'negocio' | 'paciente';
+export type LibraryFileCategory = 
+  | 'comunicacion_critica' 
+  | 'evaluacion_spm' 
+  | 'clinico_general' 
+  | 'marketing' 
+  | 'protocolo' 
+  | 'otro';
+
+export interface LibraryFileDocument {
+  id: string;
+  name: string;
+  fileName: string;
+  fileType: 'pdf' | 'doc' | 'docx' | 'xls' | 'xlsx' | 'image' | 'other';
+  scope: LibraryFileScope;
+  patientId?: string; // Si está asociado a un paciente específico
+  patientName?: string;
+  category: LibraryFileCategory;
+  downloadUrl: string;
+  storagePath?: string;
+  fileSizeBytes: number;
+  uploadedAt: string;
+  uploadedBy?: string;
+  // Resumen breve y datos clave para usar como contexto sin gastar tokens excesivos
+  summary: string;
+  keyPoints: string[];
+  isChecklistActive?: boolean; // Marca si es la lista de control activa para CAA/Comunicación
+  checklistItems?: {
+    id: string;
+    skillName: string;
+    description: string;
+    instructionsCheck?: boolean; // Indica si evalúa seguimiento de instrucciones
+  }[];
+}
+
+// ============================================================================
+// EVALUACIONES SPM POR RANGO DE EDAD
+// ============================================================================
+export type SPMAgeCategory = 
+  | 'bebes_4_9' 
+  | 'toddler_10_30' 
+  | 'preescolar_2_5' 
+  | 'escolar_5_12' 
+  | 'adolescente_adulto';
+
+export interface SPMScaleScore {
+  raw: number;
+  tScore: number;
+  percentile?: number;
+  range: 'Típico (40-59)' | 'Dificultades Moderadas (60-69)' | 'Dificultades Severas (≥ 70)';
+  interpretation: string;
+}
+
+export interface SPMEvaluationRecord {
+  id: string;
+  patientId: string;
+  patientName: string;
+  patientBirthDate?: string;
+  ageMonths: number;
+  ageCategory: SPMAgeCategory;
+  formTitle: string; // e.g. "SPM-2 Bebés (4-9 meses)", "SPM-2 Niños Pequeños (10-30 meses)"
+  formContext: 'Hogar / Padres' | 'Escuela / Aula' | 'Autoinforme';
+  evaluationDate: string;
+  evaluatorName: string;
+  evaluatorRole: string;
+  includeInReport: boolean;
+  notes?: string;
+  responses: Record<number, number>; // ítem 1..80, valor 1..4 (Nunca..Siempre)
+  scales: {
+    vis?: SPMScaleScore; // Visión
+    hea?: SPMScaleScore; // Audición / Oído
+    tou?: SPMScaleScore; // Tacto
+    ts?: SPMScaleScore;  // Gusto y Olfato
+    bod?: SPMScaleScore; // Conciencia Corporal
+    bal?: SPMScaleScore; // Equilibrio y Movimiento
+    st?: SPMScaleScore;  // Total Sensorial
+    pln?: SPMScaleScore; // Planificación e Ideas / Praxis
+    soc?: SPMScaleScore; // Participación Social
+  };
+}
+
+// ============================================================================
+// LISTA DE CONTROL DE HABILIDADES DE COMUNICACIÓN CRÍTICAS (RESUMEN INFORME)
+// ============================================================================
+export interface CommunicationChecklistItemEvaluation {
+  id: string;
+  skillName: string;
+  statusInitial: 'si' | 'en_proceso' | 'no';
+  statusFinal?: 'si' | 'en_proceso' | 'no';
+  observations?: string;
+  isInstructionFollowing?: boolean;
+}
+
+export interface PatientCommunicationEvaluation {
+  id: string;
+  patientId: string;
+  sourceFileId?: string; // Documento de origen en la Biblioteca
+  sourceFileName?: string;
+  updatedAt: string;
+  evaluatorName: string;
+  hasInstructionFollowLimitation: boolean; // Flag para activar objetivo automático
+  items: CommunicationChecklistItemEvaluation[];
 }

@@ -1,7 +1,36 @@
-import React, { useState } from 'react';
-import { ComprehensiveReport, User } from '../types';
+import React, { useState, useEffect } from 'react';
+import { 
+  ComprehensiveReport, 
+  ProgressNote, 
+  PatientCommunicationEvaluation, 
+  SPMEvaluationRecord 
+} from '../types';
 import { downloadReportAsWord } from '../utils/documentExport';
 import { calculatePatientAge } from '../utils/ageHelper';
+import { clinicalStorage } from '../utils/clinicalStorage';
+import { 
+  getFamilyThreeLineSummary,
+  getFamilyTrafficLightItems,
+  getFamilyComparativeItems,
+  getFamilyTimelinePoints,
+  getFamilyAchievements,
+  getFamilyNextSteps,
+  getFamilyHomeRecommendations,
+  generateWhatsAppMessage
+} from '../utils/familyReportHelper';
+import { KinesferaClinicalTables } from './KinesferaClinicalTables';
+import { CriticalCommunicationTable } from './CriticalCommunicationTable';
+import { communicationSkillsService } from '../services/communicationSkillsService';
+import { spmEvaluationService } from '../services/spmEvaluationService';
+import { 
+  CranialSymmetryBarsChart,
+  CranialDifferenceLineChart,
+  CephalicIndexChart,
+  CervicalRomBarsChart,
+  PsychomotorTrafficLightChart
+} from './KinesferaReportCharts';
+import { FamilyComparativeBarChart } from './FamilyComparativeBarChart';
+import { FamilyTimelineProgressChart } from './FamilyTimelineProgressChart';
 import { WeeklyHomePracticeModal } from './WeeklyHomePracticeModal';
 import { CompanyDocumentHeader } from './CompanyDocumentHeader';
 import { 
@@ -13,844 +42,879 @@ import {
   User as UserIcon, 
   CheckCircle2, 
   Sparkles, 
-  Building2, 
   Phone, 
+  Send,
   Heart,
+  Share2,
+  Check,
+  Copy,
+  ChevronRight,
+  ArrowRight,
+  Home,
+  Clock,
+  BookOpen,
+  Smartphone,
   Activity,
+  Layers,
+  X,
+  Target,
   Brain,
   Scale,
-  MessageSquare,
-  GraduationCap,
-  Home,
-  Send
+  RefreshCw,
+  GitBranch,
+  MessageSquare
 } from 'lucide-react';
 
 interface ComprehensiveReportViewerProps {
   report: ComprehensiveReport;
+  progressNotes?: ProgressNote[];
   onEditReport?: () => void;
   onSelectAnotherPatient?: () => void;
+  onGoToLibrary?: () => void;
+  onGoToSPM?: () => void;
 }
 
 export const ComprehensiveReportViewer: React.FC<ComprehensiveReportViewerProps> = ({
   report,
-  onEditReport
+  progressNotes: propNotes,
+  onEditReport,
+  onSelectAnotherPatient,
+  onGoToLibrary,
+  onGoToSPM
 }) => {
-  const { anamnesis, evaluations } = report;
-  const cranial = anamnesis?.cranialMeasurements;
-  const earlyObs = anamnesis?.earlyInfantObservation;
-  const psychomotor = evaluations?.psychomotorObservation;
-  const criticalComm = evaluations?.criticalCommunication;
-  const hine = evaluations?.hineExam;
-  const spm = evaluations?.spmSensoryMeasure;
-  const bpm = evaluations?.daFonsecaBpm;
+  // Load notes for this patient if not passed via props
+  const patientNotes: ProgressNote[] = propNotes && propNotes.length > 0
+    ? propNotes.filter(n => n.patientId === report.patientId)
+    : clinicalStorage.loadProgressNotes().filter(n => n.patientId === report.patientId);
 
   const [showWeeklyPracticeModal, setShowWeeklyPracticeModal] = useState(false);
-  const ageInfo = calculatePatientAge(report.patientBirthDate);
+  const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
+  const [copiedWhatsApp, setCopiedWhatsApp] = useState(false);
+  const [whatsappPhone, setWhatsappPhone] = useState(
+    report.anamnesis?.caregiverPhone || ''
+  );
 
-  const handleDownloadWord = () => {
-    downloadReportAsWord(report);
-  };
+  const ageInfo = calculatePatientAge(report.patientBirthDate);
+  const anam = report.anamnesis;
+  const evalData = report.evaluations;
+  const cranial = anam?.cranialMeasurements;
+  const bpm = evalData?.daFonsecaBpm;
+
+  // Communication evaluation and SPM evaluation records
+  const [commEval, setCommEval] = useState<PatientCommunicationEvaluation | null>(null);
+  const [spmEval, setSpmEval] = useState<SPMEvaluationRecord | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    communicationSkillsService.loadCommunicationEvaluations().then(evals => {
+      if (isMounted && evals[report.patientId]) {
+        setCommEval(evals[report.patientId]);
+      }
+    });
+    spmEvaluationService.loadSPMEvaluations().then(allSpm => {
+      if (isMounted && allSpm[report.patientId]) {
+        setSpmEval(allSpm[report.patientId]);
+      }
+    });
+    return () => { isMounted = false; };
+  }, [report.patientId]);
+
+  // Check if patient has limitation following instructions (Requirement 4)
+  const followsText = typeof anam?.followsInstructions === 'string' ? anam.followsInstructions.toLowerCase() : '';
+  const hasInstructionLimitation = communicationSkillsService.shouldAddInstructionFollowingGoal(commEval) || 
+    (followsText.includes('dificultad') || followsText.includes('no sigue') || followsText.includes('no') || followsText.includes('cuesta') || followsText.includes('parcial'));
+
+  // Extract structured, family-friendly clinical data
+  const summary = getFamilyThreeLineSummary(report, patientNotes);
+  const trafficLightItems = getFamilyTrafficLightItems(report);
+  const comparativeItems = getFamilyComparativeItems(report);
+  const timelinePoints = getFamilyTimelinePoints(patientNotes);
+  const achievements = getFamilyAchievements(report);
+  const nextSteps = getFamilyNextSteps(report);
+  const homeTips = getFamilyHomeRecommendations(report);
+
+  const formattedWhatsAppText = generateWhatsAppMessage(
+    report,
+    summary,
+    achievements,
+    nextSteps,
+    homeTips
+  );
 
   const handlePrintPDF = () => {
     window.print();
   };
 
+  const handleDownloadWord = () => {
+    downloadReportAsWord(report);
+  };
+
+  const handleCopyWhatsApp = () => {
+    navigator.clipboard.writeText(formattedWhatsAppText);
+    setCopiedWhatsApp(true);
+    setTimeout(() => setCopiedWhatsApp(false), 2500);
+  };
+
+  const handleSendWhatsApp = () => {
+    let cleanPhone = whatsappPhone.replace(/\D/g, '');
+    if (cleanPhone.length === 9 && cleanPhone.startsWith('9')) {
+      cleanPhone = `56${cleanPhone}`;
+    }
+    const url = cleanPhone
+      ? `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(formattedWhatsAppText)}`
+      : `https://api.whatsapp.com/send?text=${encodeURIComponent(formattedWhatsAppText)}`;
+    window.open(url, '_blank');
+  };
+
+  const patientFirstName = report.patientName.split(' ')[0] || report.patientName;
+
+  // Instrument description (No usar "integración sensorial" ni "integración sensorio-motriz")
+  const evaluationInstrumentsText = bpm 
+    ? 'Observación de Capacidades Psicomotoras batería de Vítor da Fonseca. Cuestionario de Exploración y Respuesta a Estímulos (SPM-2).'
+    : cranial
+    ? 'Protocolo Clínico de Craneometría (Sant Joan de Déu) y Valoración del Neurodesarrollo Infantil.'
+    : 'Evaluación Neuropsicomotriz Pediátrica y Parámetros Funcionales del Desarrollo.';
+
+  // Intervention goals: sanitized and with automatic instruction-following goal when applicable
+  let baseGoals: string[] = evalData?.interventionGoals && evalData.interventionGoals.length > 0
+    ? [...evalData.interventionGoals]
+    : [
+        'Contribuir a favorecer un desarrollo psicomotor óptimo que potencie el aprendizaje y la autorregulación.',
+        'Regulación del tono muscular, la fuerza y la energía para una mejor ejecución motora.',
+        'Mejorar el equilibrio, las reacciones de protección y la coordinación vestibular (estabilidad al moverse o saltar).',
+        'Potenciar la noción del cuerpo, la conciencia corporal y el mapa mental del cuerpo (propiocepción).',
+        'Afianzar la estructuración espacio-temporal para una mejor organización en el espacio y el tiempo (orientación en el papel y rutinas).',
+        'Favorecer la planificación motora y la praxia global y fina, con especial énfasis en la grafomotricidad (agarre del lápiz y tijeras).',
+        'Desarrollar la atención sostenida y la concentración a través del juego y el movimiento.',
+        'Entregar estrategias de regulación y modulación adaptadas a la familia y a la escuela.'
+      ];
+
+  // Sanitize according to Requirement 1
+  baseGoals = baseGoals.map(g => 
+    g.replace(/óptima integración sensorio-motriz/gi, 'favorecer un desarrollo psicomotor óptimo')
+     .replace(/integración sensorio-motriz/gi, 'desarrollo psicomotor óptimo')
+     .replace(/integración sensorial/gi, 'exploración y respuesta a estímulos')
+     .replace(/regulación sensorial/gi, 'regulación y modulación motriz')
+  );
+
+  // Requirement 4: automatic goal if patient does not follow instructions
+  const instructionGoal = 'Lograr que el paciente siga instrucciones a través de la intervención kinésica y psicomotriz';
+  if (hasInstructionLimitation) {
+    if (!baseGoals.some(g => g.toLowerCase().includes('siga instrucciones'))) {
+      baseGoals = [instructionGoal, ...baseGoals];
+    }
+  } else {
+    baseGoals = baseGoals.filter(g => !g.toLowerCase().includes('siga instrucciones a través de la intervención kinésica'));
+  }
+
+  const interventionGoalsList = baseGoals;
+
+  // Follow-up information
+  const followUpSessions = 'Bloque de 10 sesiones de kinesiología y psicomotricidad';
+  const followUpFrequency = '1 a 2 veces por semana (sesiones de 45 minutos)';
+  const followUpNextReeval = 'Evaluación intermedia en sesión 5 y reevaluación final en sesión 10';
+  const followUpReferrals = 'Coordinación con equipo de aula y programa PIE del colegio; seguimiento conjunto con Neurología Infantil.';
+
   return (
     <div className="space-y-6">
       
-      {/* Action Header Strip (Hidden in print) */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs flex flex-wrap items-center justify-between gap-4 print:hidden">
+      {/* 1. TOP ACTION BAR (Hidden in print) */}
+      <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 shadow-xs flex flex-wrap items-center justify-between gap-4 print:hidden">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
-            <FileText className="w-5 h-5" />
+          <div className="w-12 h-12 rounded-2xl bg-cyan-50 text-cyan-700 flex items-center justify-center font-black shadow-2xs">
+            <FileText className="w-6 h-6" />
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <h3 className="text-sm font-bold text-slate-900">
-                Informe Clínico Consolidado: {report.patientName}
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="text-base sm:text-lg font-black text-slate-900">
+                Informe de Evaluación Kinesiológica: {report.patientName}
               </h3>
-              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                ageInfo.isOlderThanThree ? 'bg-blue-100 text-blue-800' : 'bg-emerald-100 text-emerald-800'
-              }`}>
-                {ageInfo.ageText} ({ageInfo.stageBadgeText})
+              <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-cyan-100 text-cyan-800 border border-cyan-300">
+                {ageInfo.detailedChronologicalAge || ageInfo.ageText}
               </span>
             </div>
-            <p className="text-xs text-slate-500">
-              RUT: <strong className="font-mono text-slate-700">{report.patientRut}</strong> · Ficha: {report.medicalRecordNumber}
+            <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+              RUT: <strong className="font-mono text-slate-700">{report.patientRut}</strong> · Ficha: {report.medicalRecordNumber} · Emisión: {report.dateGenerated}
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        {/* Action Buttons */}
+        <div className="flex flex-wrap items-center gap-2.5">
           {onEditReport && (
             <button
               onClick={onEditReport}
-              className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition-colors cursor-pointer"
+              className="flex items-center gap-1.5 px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs sm:text-sm font-semibold rounded-xl transition-colors cursor-pointer"
             >
-              <Edit3 className="w-3.5 h-3.5" />
-              <span>Editar Evaluación</span>
+              <Edit3 className="w-4 h-4" />
+              <span>Editar Datos</span>
             </button>
           )}
 
-          {/* Weekly Practice WhatsApp / PDF button */}
+          {/* Compartir por WhatsApp */}
           <button
-            onClick={() => setShowWeeklyPracticeModal(true)}
-            className="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black rounded-xl shadow-xs transition-colors cursor-pointer ring-2 ring-emerald-300/40"
-            title="Generar y Enviar Pauta Semanal para WhatsApp / PDF a la familia"
+            onClick={() => setShowWhatsAppModal(true)}
+            className="flex items-center gap-1.5 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs sm:text-sm font-black rounded-xl shadow-xs transition-colors cursor-pointer ring-2 ring-emerald-300/40"
+            title="Compartir informe formateado por WhatsApp a la familia"
           >
-            <Phone className="w-4 h-4 text-emerald-100" />
-            <span>📲 Pauta Semanal (WhatsApp / PDF)</span>
+            <Phone className="w-4 h-4" />
+            <span>Compartir por WhatsApp</span>
           </button>
 
-          {/* Download WORD button */}
-          <button
-            onClick={handleDownloadWord}
-            className="flex items-center gap-1.5 px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl shadow-xs transition-colors cursor-pointer"
-            title="Descargar archivo editable en Microsoft Word (.doc)"
-          >
-            <Download className="w-4 h-4" />
-            <span>Descargar en Word (.doc)</span>
-          </button>
-
-          {/* Download / Print PDF button */}
+          {/* Descargar / Imprimir PDF */}
           <button
             onClick={handlePrintPDF}
-            className="flex items-center gap-1.5 px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl shadow-xs transition-colors cursor-pointer"
-            title="Imprimir o Guardar como PDF"
+            className="flex items-center gap-1.5 px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-xs sm:text-sm font-bold rounded-xl shadow-xs transition-colors cursor-pointer"
+            title="Descargar PDF con gráficos y tablas incluidos"
           >
             <Printer className="w-4 h-4" />
             <span>Descargar en PDF / Imprimir</span>
           </button>
+
+          {/* Descargar Word (.doc) */}
+          <button
+            onClick={handleDownloadWord}
+            className="flex items-center gap-1.5 px-3.5 py-2.5 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs sm:text-sm font-semibold rounded-xl transition-colors cursor-pointer border border-blue-200"
+            title="Descargar en Microsoft Word editable"
+          >
+            <Download className="w-4 h-4" />
+            <span className="hidden sm:inline">Word</span>
+          </button>
         </div>
       </div>
 
-      {/* Official Formatted Clinical Report Sheet (Styled for Screen & Printing) */}
-      <div className="bg-white border border-slate-300 rounded-2xl p-8 sm:p-12 shadow-sm max-w-4xl mx-auto space-y-8 text-slate-900 font-sans print:shadow-none print:border-none print:p-0">
+      {/* 2. OFFICIAL KINESFERA REPORT SHEET (Styled for Screen & Crisp PDF Print) */}
+      <div className="bg-white border border-slate-300 rounded-3xl p-6 sm:p-10 md:p-12 shadow-sm max-w-4xl mx-auto space-y-8 text-slate-900 font-sans print:shadow-none print:border-none print:p-0 print:m-0 print:space-y-6">
         
-        {/* Official Company Document Header with Logo Option */}
+        {/* ENCABEZADO INSTITUCIONAL KINESFERA */}
         <CompanyDocumentHeader
-          documentTitle="Informe de Evaluación Neuropsicomotriz Integral"
-          documentSubtitle={`${report.institution} · Kinesiología Pediátrica · Neurorehabilitación`}
+          documentTitle="INFORME DE EVALUACIÓN KINESIOLÓGICA"
+          documentSubtitle="Creando Sentido Al Juego · Kinesiología Pediátrica · Psicomotricidad"
           emissionDate={report.dateGenerated}
           recordNumber={report.medicalRecordNumber}
         />
 
-        {/* 1. Identificación del Paciente y Antecedentes Generales */}
-        <div className="space-y-3">
-          <h2 className="text-xs font-extrabold text-blue-800 uppercase tracking-wider border-b border-blue-200 pb-1 flex items-center gap-1.5">
-            <UserIcon className="w-3.5 h-3.5" />
-            <span>1. Identificación del Paciente y Antecedentes Generales</span>
-          </h2>
+        {/* =========================================================================
+            SECCIÓN 1: ANTECEDENTES PERSONALES
+           ========================================================================= */}
+        <section className="space-y-2.5">
+          <h3 className="text-xs sm:text-sm font-black text-cyan-900 uppercase tracking-wider border-b-2 border-cyan-500 pb-1 flex items-center gap-1.5">
+            <UserIcon className="w-4 h-4 text-cyan-700" />
+            <span>1. Antecedentes Personales</span>
+          </h3>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs bg-slate-50 p-4 rounded-xl border border-slate-200">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs sm:text-sm bg-slate-50/80 p-4 sm:p-5 rounded-2xl border border-slate-200">
             <div>
-              <span className="text-slate-500 block text-[11px]">Nombre y Apellidos:</span>
-              <strong className="text-slate-900 text-sm">{report.patientName}</strong>
+              <span className="text-slate-500 font-semibold block text-[11px] sm:text-xs">
+                Nombre del Paciente:
+              </span>
+              <strong className="text-slate-900 text-sm sm:text-base">
+                {report.patientName}
+              </strong>
             </div>
+
             <div>
-              <span className="text-slate-500 block text-[11px]">R.U.T. Paciente:</span>
-              <span className="font-mono font-bold text-slate-800">{report.patientRut}</span>
+              <span className="text-slate-500 font-semibold block text-[11px] sm:text-xs">
+                Fecha de Nacimiento:
+              </span>
+              <span className="font-medium text-slate-800">
+                {report.patientBirthDate}
+              </span>
             </div>
+
             <div>
-              <span className="text-slate-500 block text-[11px]">Fecha de Nacimiento:</span>
-              <span>{report.patientBirthDate}</span>
+              <span className="text-slate-500 font-semibold block text-[11px] sm:text-xs">
+                Edad Cronológica:
+              </span>
+              <strong className="text-cyan-950 font-bold">
+                {ageInfo.detailedChronologicalAge || ageInfo.ageText}
+              </strong>
             </div>
+
             <div>
-              <span className="text-slate-500 block text-[11px]">Colegio / Curso / Jardín:</span>
-              <span>{anamnesis?.schoolOrCenter || 'No informado'} ({anamnesis?.educationalLevel || '-'})</span>
+              <span className="text-slate-500 font-semibold block text-[11px] sm:text-xs">
+                Fecha de Emisión del Informe:
+              </span>
+              <span className="font-medium text-slate-800">
+                {report.dateGenerated}
+              </span>
             </div>
+
             <div className="sm:col-span-2">
-              <span className="text-slate-500 block text-[11px]">Personas que conviven en el hogar:</span>
-              <span className="text-slate-800 font-medium">{anamnesis?.householdMembers || 'No informado'}</span>
+              <span className="text-slate-500 font-semibold block text-[11px] sm:text-xs">
+                Diagnóstico Clínico / Derivación:
+              </span>
+              <strong className="text-slate-900 text-sm font-black">
+                {evalData?.functionalDiagnosisCIF ? evalData.functionalDiagnosisCIF.split('.')[0] : (anam?.medicalDiagnoses || anam?.consultationReason || 'Déficit de Atención')}
+              </strong>
             </div>
-            <div>
-              <span className="text-slate-500 block text-[11px]">Apoderado / Tutor:</span>
-              <span>{anamnesis?.caregiverName || 'No informado'}</span>
-            </div>
-            <div>
-              <span className="text-slate-500 block text-[11px]">Teléfono de Contacto:</span>
-              <span className="font-mono">{anamnesis?.caregiverPhone || '-'}</span>
-            </div>
-            <div className="sm:col-span-2">
-              <span className="text-slate-500 block text-[11px]">Motivo de Consulta:</span>
-              <span className="text-slate-900 font-bold">{anamnesis?.consultationReason || '-'}</span>
-            </div>
-            <div>
-              <span className="text-slate-500 block text-[11px]">¿Cuándo lo notaron?:</span>
-              <span>{anamnesis?.problemNoticedWhen || '-'}</span>
-            </div>
-            <div>
-              <span className="text-slate-500 block text-[11px]">Especialistas Consultados:</span>
-              <span>{anamnesis?.specialistsVisited || '-'}</span>
-            </div>
-            <div className="sm:col-span-2">
-              <span className="text-slate-500 block text-[11px]">Tratamientos Previos:</span>
-              <span>{anamnesis?.previousTreatments || '-'}</span>
-            </div>
-            <div className="sm:col-span-2">
-              <span className="text-slate-500 block text-[11px]">Expectativas Familiares:</span>
-              <span>{anamnesis?.familyExpectations || '-'}</span>
+
+            <div className="sm:col-span-2 pt-1 border-t border-slate-200/60">
+              <span className="text-slate-500 font-semibold block text-[11px] sm:text-xs">
+                Instrumento de Evaluación Aplicado:
+              </span>
+              <span className="text-slate-700 font-medium leading-relaxed">
+                {evaluationInstrumentsText}
+              </span>
             </div>
           </div>
-        </div>
+        </section>
 
-        {/* 2. Antecedentes del Embarazo y Parto */}
-        <div className="space-y-3">
-          <h2 className="text-xs font-extrabold text-blue-800 uppercase tracking-wider border-b border-blue-200 pb-1 flex items-center gap-1.5">
-            <Heart className="w-3.5 h-3.5" />
-            <span>2. Antecedentes del Embarazo, Parto y Perinatal</span>
-          </h2>
+        {/* =========================================================================
+            SECCIÓN 2: OBJETIVOS DE LA INTERVENCIÓN
+           ========================================================================= */}
+        <section className="space-y-2.5">
+          <h3 className="text-xs sm:text-sm font-black text-cyan-900 uppercase tracking-wider border-b-2 border-cyan-500 pb-1 flex items-center gap-1.5">
+            <Target className="w-4 h-4 text-cyan-700" />
+            <span>2. Objetivos de la Intervención</span>
+          </h3>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs bg-slate-50 p-4 rounded-xl border border-slate-200">
-            <div className="sm:col-span-2">
-              <span className="text-slate-500 block text-[11px]">Historia Gestacional:</span>
-              <span className="text-slate-800">{anamnesis?.pregnancyHistory || 'Embarazo controlado sin complicaciones'}</span>
-            </div>
-            <div>
-              <span className="text-slate-500 block text-[11px]">Edad Gestacional & Tipo de Parto:</span>
-              <strong>{anamnesis?.gestationalAgeWeeks || '-'}</strong> · {anamnesis?.birthType || '-'}
-            </div>
-            <div>
-              <span className="text-slate-500 block text-[11px]">Presentación al nacer:</span>
-              <span>{anamnesis?.birthPresentation || '-'}</span>
-            </div>
-            <div>
-              <span className="text-slate-500 block text-[11px]">Somatometría de Nacimiento:</span>
-              <span>Peso: <strong>{anamnesis?.birthWeightGrams || '-'}</strong> | Talla: {anamnesis?.birthLengthCm || '-'}</span>
-            </div>
-            <div>
-              <span className="text-slate-500 block text-[11px]">Score APGAR:</span>
-              <strong>{anamnesis?.apgarScore || '-'}</strong>
-            </div>
-            <div>
-              <span className="text-slate-500 block text-[11px]">Alimentación y Lactancia:</span>
-              <span>{anamnesis?.feedingType || '-'}</span>
-            </div>
-            <div>
-              <span className="text-slate-500 block text-[11px]">Cólicos:</span>
-              <span>{anamnesis?.colic || '-'}</span>
-            </div>
-            <div className="sm:col-span-2">
-              <span className="text-slate-500 block text-[11px]">Patrón de Sueño:</span>
-              <span>{anamnesis?.sleepPattern || '-'}</span>
-            </div>
+          <div className="bg-cyan-50/40 border border-cyan-200/80 rounded-2xl p-4 sm:p-5">
+            <ul className="space-y-2 text-xs sm:text-sm text-slate-800">
+              {interventionGoalsList.map((goal, i) => (
+                <li key={i} className="flex items-start gap-2.5">
+                  <span className="w-2 h-2 rounded-full bg-cyan-600 mt-1.5 shrink-0"></span>
+                  <span className="leading-relaxed">{goal}</span>
+                </li>
+              ))}
+            </ul>
           </div>
-        </div>
+        </section>
 
-        {/* 3. Hitos del Desarrollo Psicomotor y del Lenguaje */}
-        <div className="space-y-3">
-          <h2 className="text-xs font-extrabold text-blue-800 uppercase tracking-wider border-b border-blue-200 pb-1 flex items-center gap-1.5">
-            <Activity className="w-3.5 h-3.5" />
-            <span>3. Hitos del Desarrollo Psicomotor y del Lenguaje</span>
-          </h2>
+        {/* =========================================================================
+            SECCIÓN 3: ANAMNESIS
+           ========================================================================= */}
+        <section className="space-y-2.5">
+          <h3 className="text-xs sm:text-sm font-black text-cyan-900 uppercase tracking-wider border-b-2 border-cyan-500 pb-1 flex items-center gap-1.5">
+            <Heart className="w-4 h-4 text-cyan-700" />
+            <span>3. Anamnesis Inicial</span>
+          </h3>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 text-xs">
-            <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg">
-              <span className="text-[10px] text-slate-400 uppercase font-bold block">Control Cefálico</span>
-              <strong className="text-slate-900">{anamnesis?.headControlMonths || '-'}</strong>
-            </div>
-            <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg">
-              <span className="text-[10px] text-slate-400 uppercase font-bold block">Sedente Autónomo</span>
-              <strong className="text-slate-900">{anamnesis?.independentSittingMonths || '-'}</strong>
-            </div>
-            <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg">
-              <span className="text-[10px] text-slate-400 uppercase font-bold block">Gateo</span>
-              <strong className="text-slate-900">{anamnesis?.crawlingMonths || '-'}</strong>
-            </div>
-            <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg">
-              <span className="text-[10px] text-slate-400 uppercase font-bold block">Bipedestación</span>
-              <strong className="text-slate-900">{anamnesis?.standingMonths || '-'}</strong>
-            </div>
-            <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg">
-              <span className="text-[10px] text-slate-400 uppercase font-bold block">Marcha</span>
-              <strong className="text-slate-900">{anamnesis?.walkingMonths || '-'}</strong>
-            </div>
-            <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg">
-              <span className="text-[10px] text-slate-400 uppercase font-bold block">Primeras Palabras</span>
-              <strong className="text-slate-900">{anamnesis?.firstWords || '-'}</strong>
-            </div>
-          </div>
-          <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs">
-            <span className="text-slate-500 font-bold">Estado motor actual: </span>
-            <span className="text-slate-800">{anamnesis?.currentMotorStatus || '-'}</span>
-          </div>
-        </div>
-
-        {/* 4. Si corresponde: Protocolo de Asimetrías Craneales con Mediciones */}
-        {cranial && (
-          <div className="space-y-3">
-            <h2 className="text-xs font-extrabold text-blue-800 uppercase tracking-wider border-b border-blue-200 pb-1 flex items-center gap-1.5">
-              <Brain className="w-3.5 h-3.5" />
-              <span>4. Protocolo Clínico de Asimetrías Craneales (Craneometría)</span>
-            </h2>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-              
-              {/* Plagiocefalia Card */}
-              <div className="p-4 bg-sky-50/70 border border-sky-200 rounded-xl space-y-2">
-                <h4 className="font-bold text-sky-900 text-xs uppercase tracking-wide">
-                  Protocolo de Plagiocefalia
-                </h4>
-                <div className="grid grid-cols-2 gap-2 text-slate-700">
-                  <div>Diagonal 1 (D1): <strong>{cranial.d1Mm || '-'} mm</strong></div>
-                  <div>Diagonal 2 (D2): <strong>{cranial.d2Mm || '-'} mm</strong></div>
-                  <div>Diferencia (|D1-D2|): <strong className="text-sky-900 font-mono text-sm">{cranial.differenceMm || '-'} mm</strong></div>
-                  <div>Índice CVAI: <strong>{cranial.cvaiPercent ? cranial.cvaiPercent + '%' : '-'}</strong></div>
-                </div>
-                <div className="pt-1">
-                  <span className="text-[11px] text-slate-500 block">Clasificación:</span>
-                  <span className="px-2.5 py-1 bg-sky-600 text-white font-bold rounded-md inline-block mt-0.5 text-xs">
-                    {cranial.plagiocephalySeverity || 'En evaluación'}
-                  </span>
-                </div>
-              </div>
-
-              {/* Braquicefalia Card */}
-              <div className="p-4 bg-blue-50/70 border border-blue-200 rounded-xl space-y-2">
-                <h4 className="font-bold text-blue-900 text-xs uppercase tracking-wide">
-                  Protocolo de Braquicefalia / Dolicocefalia
-                </h4>
-                <div className="grid grid-cols-2 gap-2 text-slate-700">
-                  <div>Diámetro AP: <strong>{cranial.apMm || '-'} mm</strong></div>
-                  <div>Diámetro BP (PP): <strong>{cranial.bpMm || '-'} mm</strong></div>
-                  <div className="col-span-2">
-                    Índice Cefalométrico [(BP/AP)*100]: <strong className="text-blue-900 font-mono text-sm">{cranial.cephalicIndex ? cranial.cephalicIndex + '%' : '-'}</strong>
-                  </div>
-                </div>
-                <div className="pt-1">
-                  <span className="text-[11px] text-slate-500 block">Clasificación:</span>
-                  <span className="px-2.5 py-1 bg-blue-600 text-white font-bold rounded-md inline-block mt-0.5 text-xs">
-                    {cranial.brachycephalyClassification || 'En evaluación'}
-                  </span>
-                </div>
-              </div>
-
-              <div className="sm:col-span-2 p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs">
-                <span className="text-slate-500 font-bold">Indicación Kinésica Craneal: </span>
-                <span className="text-slate-800 font-medium">{cranial.treatmentIndication || 'Pauta de reposicionamiento y seguimiento.'}</span>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* 5. Si corresponde: Conductas Emocionales y Relaciones Interpersonales (>2 años) */}
-        {anamnesis?.followsInstructions && anamnesis?.followsInstructions !== 'No corresponde' && (
-          <div className="space-y-3">
-            <h2 className="text-xs font-extrabold text-blue-800 uppercase tracking-wider border-b border-blue-200 pb-1 flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>5. Conductas Emocionales, Relaciones y Medicamentos</span>
-            </h2>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs bg-slate-50 p-4 rounded-xl border border-slate-200">
-              <div>
-                <span className="text-slate-500 block text-[11px]">¿Sigue instrucciones?:</span>
-                <strong>{anamnesis.followsInstructions}</strong>
-              </div>
-              <div>
-                <span className="text-slate-500 block text-[11px]">¿Se muestra inquieto?:</span>
-                <strong>{anamnesis.isRestless || '-'}</strong>
-              </div>
-              <div>
-                <span className="text-slate-500 block text-[11px]">Juego y autonomía:</span>
-                <span>{anamnesis.playsAloneOrAccompanied || '-'}</span>
-              </div>
-              <div>
-                <span className="text-slate-500 block text-[11px]">Rutina al acostarse:</span>
-                <span>{anamnesis.bedtimeRoutine || '-'}</span>
-              </div>
-              <div>
-                <span className="text-slate-500 block text-[11px]">Miedos y Pesadillas:</span>
-                <span>Miedos: {anamnesis.hasFears || '-'} | Pesadillas: {anamnesis.nightmares || '-'}</span>
-              </div>
-              <div>
-                <span className="text-slate-500 block text-[11px]">Rabietas / Enfados:</span>
-                <span>{anamnesis.tantrums || '-'}</span>
-              </div>
-              <div className="sm:col-span-2">
-                <span className="text-slate-500 block text-[11px]">Relaciones Interpersonales:</span>
-                <span>Familia: {anamnesis.familyRelationships || '-'} | Colegio: {anamnesis.schoolRelationships || '-'}</span>
-              </div>
-              <div className="sm:col-span-2">
-                <span className="text-slate-500 block text-[11px]">Antecedentes Familiares (TEA / TDAH / Asperger):</span>
-                <strong className="text-slate-800">{anamnesis.familyDiagnoses || 'Sin antecedentes reportados'}</strong>
-              </div>
-              <div className="sm:col-span-2">
-                <span className="text-slate-500 block text-[11px]">Farmacología y Suplementación:</span>
-                <strong className="text-blue-900">{anamnesis.pharmacology || 'Sin fármacos'}</strong>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* 6. Pruebas Clínicas Aplicadas (Kinesfera, SPM-2, Da Fonseca) */}
-        <div className="space-y-4">
-          <h2 className="text-xs font-extrabold text-blue-800 uppercase tracking-wider border-b border-blue-200 pb-1 flex items-center gap-1.5">
-            <Scale className="w-3.5 h-3.5" />
-            <span>6. Pruebas Clínicas y Parámetros Psicomotores Aplicados</span>
-          </h2>
-
-          {/* Examen Neurológico de Hammersmith (HINE) para menores de 2 años */}
-          {hine && (
-            <div className="p-4 bg-sky-50/80 rounded-xl border border-sky-200 space-y-3 text-xs">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-sky-200/80 pb-2 gap-2">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-black uppercase tracking-wider bg-sky-700 text-white px-2 py-0.5 rounded-full">
-                      HINE Oficial (v08.02.19)
-                    </span>
-                    <span className="text-[10px] font-bold text-sky-900 bg-white px-2 py-0.5 rounded-full border border-sky-300">
-                      Optimalidad Máx. 78 Pts
-                    </span>
-                  </div>
-                  <h3 className="font-bold text-sky-950 uppercase text-xs mt-1">
-                    Examen Neurológico Infantil de Hammersmith (HINE)
-                  </h3>
-                </div>
-                <div className="text-right shrink-0">
-                  <span className="font-black text-sky-900 text-sm">{hine.totalScore ?? 0} / 78 pts</span>
-                  <span className={`ml-2 font-bold text-[10px] px-2 py-0.5 rounded-full ${
-                    (hine.riskLevel || '').includes('Óptimo') ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' :
-                    (hine.riskLevel || '').includes('Leve') ? 'bg-amber-100 text-amber-800 border border-amber-300' :
-                    'bg-rose-100 text-rose-800 border border-rose-300'
-                  }`}>
-                    {hine.riskLevel || 'Evaluado'}
-                  </span>
-                </div>
-              </div>
-
-              {/* Subtotales por sección */}
-              <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5 text-center text-[11px] font-semibold">
-                <div className="p-1.5 bg-white rounded-lg border border-sky-200">
-                  <span className="text-[10px] text-slate-500 block">Pares Craneales</span>
-                  <strong className="text-sky-950">{hine.cranialNervesSubtotal ?? (
-                    (hine.facialAnimation ?? 0) + (hine.eyeMovements ?? 0) + (hine.visualFollow ?? 0) + (hine.auditoryResponse ?? 0) + (hine.suckSwallow ?? 0)
-                  )}/15</strong>
-                </div>
-                <div className="p-1.5 bg-white rounded-lg border border-sky-200">
-                  <span className="text-[10px] text-slate-500 block">Postura</span>
-                  <strong className="text-sky-950">{hine.postureSubtotal ?? (
-                    (hine.headPosture ?? 0) + (hine.trunkPosture ?? 0) + (hine.armPosture ?? 0) + (hine.handsPosture ?? 0) + (hine.legPosture ?? 0) + (hine.legsSupineProne ?? 0) + (hine.feetPosture ?? 0)
-                  )}/18</strong>
-                </div>
-                <div className="p-1.5 bg-white rounded-lg border border-sky-200">
-                  <span className="text-[10px] text-slate-500 block">Movimientos</span>
-                  <strong className="text-sky-950">{hine.movementsSubtotal ?? (
-                    (hine.movementsQuantity ?? 0) + (hine.movementsQuality ?? 0)
-                  )}/6</strong>
-                </div>
-                <div className="p-1.5 bg-white rounded-lg border border-sky-200">
-                  <span className="text-[10px] text-slate-500 block">Tono Muscular</span>
-                  <strong className="text-sky-950">{hine.toneSubtotal ?? (
-                    (hine.scarfSign ?? 0) + (hine.passiveShoulderElevation ?? 0) + (hine.pronationSupination ?? 0) + (hine.adductorsAngle ?? 0) + (hine.poplitealAngle ?? 0) + (hine.ankleDorsiflexionAngle ?? 0) + (hine.pullToSit ?? 0) + (hine.ventralSuspension ?? 0)
-                  )}/24</strong>
-                </div>
-                <div className="p-1.5 bg-white rounded-lg border border-sky-200 col-span-2 sm:col-span-1">
-                  <span className="text-[10px] text-slate-500 block">Reflejos/Reacc.</span>
-                  <strong className="text-sky-950">{hine.reflexesSubtotal ?? (
-                    (hine.armProtectionReaction ?? 0) + (hine.verticalSuspension ?? 0) + (hine.lateralTilting ?? 0) + (hine.forwardParachute ?? 0) + (hine.tendonReflexes ?? 0)
-                  )}/15</strong>
-                </div>
-              </div>
-
-              {/* Detalle de los 26 Ítems del Examen Neurológico */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 text-slate-700 bg-white/70 p-3 rounded-xl border border-sky-100">
-                <div>• Apariencia facial: <strong>{hine.facialAnimation ?? '-'}/3</strong></div>
-                <div>• Movimientos oculares: <strong>{hine.eyeMovements ?? '-'}/3</strong></div>
-                <div>• Seguimiento visual: <strong>{hine.visualFollow ?? '-'}/3</strong></div>
-                <div>• Respuesta auditiva: <strong>{hine.auditoryResponse ?? '-'}/3</strong></div>
-                <div>• Succión y deglución: <strong>{hine.suckSwallow ?? '-'}/3</strong></div>
-                
-                <div>• Cabeza en sentado: <strong>{hine.headPosture ?? '-'}/3</strong></div>
-                <div>• Tronco en sentado: <strong>{hine.trunkPosture ?? '-'}/3</strong></div>
-                <div>• Brazos en reposo: <strong>{hine.armPosture ?? '-'}/3</strong></div>
-                <div>• Manos (abiertas/puño): <strong>{hine.handsPosture ?? '-'}/3</strong></div>
-                <div>• Piernas en sentado: <strong>{hine.legPosture ?? '-'}/3</strong></div>
-                <div>• Piernas en supino/pie: <strong>{hine.legsSupineProne ?? '-'}/3</strong></div>
-                <div>• Pies (neutro/puntillas): <strong>{hine.feetPosture ?? '-'}/3</strong></div>
-                
-                <div>• Cantidad de movimientos: <strong>{hine.movementsQuantity ?? '-'}/3</strong></div>
-                <div>• Calidad movimientos espontáneos: <strong>{hine.movementsQuality ?? '-'}/3</strong></div>
-
-                <div>• Signo de bufanda / chal: <strong>{hine.scarfSign ?? '-'}/3</strong></div>
-                <div>• Mov. hombro pasivo (elevación): <strong>{hine.passiveShoulderElevation ?? '-'}/3</strong></div>
-                <div>• Pronación / supinación antebrazo: <strong>{hine.pronationSupination ?? '-'}/3</strong></div>
-                <div>• Aductores de cadera: <strong>{hine.adductorsAngle ?? '-'}/3</strong></div>
-                <div>• Ángulo poplíteo: <strong>{hine.poplitealAngle ?? '-'}/3</strong></div>
-                <div>• Dorsiflexión de tobillo: <strong>{hine.ankleDorsiflexionAngle ?? '-'}/3</strong></div>
-                <div>• Tracción al sedente (pull-to-sit): <strong>{hine.pullToSit ?? '-'}/3</strong></div>
-                <div>• Suspensión ventral: <strong>{hine.ventralSuspension ?? '-'}/3</strong></div>
-
-                <div>• Protección de brazos: <strong>{hine.armProtectionReaction ?? '-'}/3</strong></div>
-                <div>• Suspensión vertical (pataleo): <strong>{hine.verticalSuspension ?? '-'}/3</strong></div>
-                <div>• Inclinación lateral (enderezamiento): <strong>{hine.lateralTilting ?? '-'}/3</strong></div>
-                <div>• Paracaídas hacia adelante: <strong>{hine.forwardParachute ?? '-'}/3</strong></div>
-                <div>• Reflejos osteotendinosos: <strong>{hine.tendonReflexes ?? '-'}/3</strong></div>
-              </div>
-
-              {/* Sección 2: Hitos Motores */}
-              {hine.motorMilestones && (
-                <div className="p-3 bg-white/80 rounded-xl border border-sky-200/80 space-y-1.5">
-                  <span className="font-bold text-[11px] text-sky-950 uppercase tracking-wider block">
-                    Sección 2: Hitos Motores Evolutivos (HINE)
-                  </span>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-slate-700">
-                    <div>• Control cabeza: <strong>{hine.motorMilestones.headControl || '-'}</strong></div>
-                    <div>• Sedente: <strong>{hine.motorMilestones.sitting || '-'}</strong></div>
-                    <div>• Agarre voluntario: <strong>{hine.motorMilestones.voluntaryGrasp || '-'}</strong></div>
-                    <div>• Patada en supino: <strong>{hine.motorMilestones.supineKicking || '-'}</strong></div>
-                    <div>• Giros (rodando): <strong>{hine.motorMilestones.rolling || '-'}</strong></div>
-                    <div>• Gateo: <strong>{hine.motorMilestones.crawling || '-'}</strong></div>
-                    <div>• De pie: <strong>{hine.motorMilestones.standing || '-'}</strong></div>
-                    <div>• Caminando: <strong>{hine.motorMilestones.walking || '-'}</strong></div>
-                  </div>
-                </div>
-              )}
-
-              {/* Sección 3: Comportamiento */}
-              {hine.behavior && (
-                <div className="p-3 bg-white/80 rounded-xl border border-sky-200/80 space-y-1.5">
-                  <span className="font-bold text-[11px] text-sky-950 uppercase tracking-wider block">
-                    Sección 3: Comportamiento Durante el Examen (Escala 1 a 6)
-                  </span>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-slate-700">
-                    <div>• Estado Consciente: <strong>{hine.behavior.consciousState ?? '-'}/6</strong></div>
-                    <div>• Estado Emocional: <strong>{hine.behavior.emotionalState ?? '-'}/6</strong></div>
-                    <div>• Orientación Social: <strong>{hine.behavior.socialOrientation ?? '-'}/6</strong></div>
-                  </div>
-                </div>
-              )}
-
-              {hine.clinicalObservations && (
-                <p className="text-slate-600 text-xs italic pt-1 border-t border-sky-200/50">
-                  <strong>Observaciones y Asimetrías:</strong> {hine.clinicalObservations}
-                </p>
-              )}
-            </div>
-          )}
-
-          {/* Pauta de Parámetros Psicomotores de Pilar Arnaiz */}
-          {psychomotor && (
-            <div className="p-4 bg-amber-50/70 rounded-xl border border-amber-200 space-y-2 text-xs">
-              <h3 className="font-bold text-amber-950 uppercase text-xs">
-                Pauta de Observación de Parámetros Psicomotores de Pilar Arnaiz (Juego Libre)
-              </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-slate-700">
-                <div>• Movimientos frecuentes: <strong>{psychomotor.movementsFrequent || '-'}</strong></div>
-                <div>• Calidad de movimientos: <strong>{psychomotor.movementsQuality || '-'}</strong></div>
-                <div>• Grado de movilidad corporal: <strong>{psychomotor.bodyMobilityLevel || '-'}</strong></div>
-                <div>• Posturas habituales y tono: <strong>{psychomotor.posturesFrequent || '-'}</strong></div>
-                <div>• Ocupación del espacio: <strong>{psychomotor.spaceOccupancy || '-'}</strong></div>
-                <div>• Vías y niveles espaciales: <strong>{psychomotor.spaceTrajectory || '-'} {psychomotor.spaceLevels ? `(${psychomotor.spaceLevels})` : ''}</strong></div>
-                <div>• Ritmo y duración: <strong>{psychomotor.rhythmQuality || '-'} {psychomotor.activityDuration ? `(${psychomotor.activityDuration})` : ''}</strong></div>
-                <div>• Uso de objetos: <strong>{psychomotor.objectUsage || '-'}</strong></div>
-                <div>• Relación con compañeros: <strong>{psychomotor.companionsRelation || '-'}</strong></div>
-                <div>• Relación con adulto: <strong>{psychomotor.adultRelation || '-'}</strong></div>
-                {psychomotor.globalSynthesis && (
-                  <div className="sm:col-span-2 pt-1 border-t border-amber-200/80">
-                    <span className="font-bold text-amber-900">• Síntesis psicomotriz global: </span>
-                    <span className="text-slate-800">{psychomotor.globalSynthesis}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Lista de Control de Habilidades de Comunicación Críticas y Funcionales */}
-          {criticalComm && (
-            <div className="p-4 bg-orange-50/70 rounded-xl border border-orange-200 space-y-3 text-xs">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-orange-200/80 pb-2 gap-2">
-                <div>
-                  <span className="text-[10px] font-black uppercase tracking-wider bg-orange-700 text-white px-2 py-0.5 rounded-full">
-                    Comunicación Funcional y Aumentativa (CAA)
-                  </span>
-                  <h3 className="font-bold text-orange-950 uppercase text-xs mt-1 flex items-center gap-1.5">
-                    <MessageSquare className="w-3.5 h-3.5 text-orange-700" />
-                    <span>Lista de Control de las Habilidades de Comunicación Críticas</span>
-                  </h3>
-                  <p className="text-[11px] text-orange-800">
-                    Para niños mayores de 2 años en desarrollo temprano de comunicación o que no siguen órdenes verbales directas.
-                  </p>
-                </div>
-              </div>
-
-              <div className="space-y-2.5 text-slate-700">
-                {/* 1. Reforzadores */}
-                <div className="bg-white/80 p-2.5 rounded-lg border border-orange-200/60">
-                  <strong className="text-orange-900 block text-[11px] mb-1">
-                    1. Pedir Reforzadores (¿Apropiado?: {criticalComm.reinforcersAppropriate || '-'})
-                  </strong>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                    <div>• Comestibles: <strong>{criticalComm.reinforcersFood || '-'}</strong></div>
-                    <div>• Juguetes: <strong>{criticalComm.reinforcersToys || '-'}</strong></div>
-                    <div>• Actividades: <strong>{criticalComm.reinforcersActivities || '-'}</strong></div>
-                  </div>
-                </div>
-
-                {/* 2 a 7: Habilidades Básicas */}
-                <div className="bg-white/80 p-2.5 rounded-lg border border-orange-200/60">
-                  <strong className="text-orange-900 block text-[11px] mb-1">
-                    Habilidades de Comunicación Funcional (2 al 7)
-                  </strong>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    <div>• Pedir ayuda: <strong>{criticalComm.askHelpAppropriate || '-'}</strong> {criticalComm.askHelpExample ? `(${criticalComm.askHelpExample})` : ''}</div>
-                    <div>• Pedir descansos: <strong>{criticalComm.askBreaksAppropriate || '-'}</strong> {criticalComm.askBreaksExample ? `(${criticalComm.askBreaksExample})` : ''}</div>
-                    <div>• Rechazar (No): <strong>{criticalComm.rejectAppropriate || '-'}</strong> {criticalComm.rejectExample ? `(${criticalComm.rejectExample})` : ''}</div>
-                    <div>• Aceptar (Sí): <strong>{criticalComm.affirmAcceptAppropriate || '-'}</strong> {criticalComm.affirmAcceptExample ? `(${criticalComm.affirmAcceptExample})` : ''}</div>
-                    <div>• Responder a espera: <strong>{criticalComm.respondWaitAppropriate || '-'}</strong> {criticalComm.respondWaitExample ? `(${criticalComm.respondWaitExample})` : ''}</div>
-                    <div>• Transición actividades: <strong>{criticalComm.transitionActivitiesAppropriate || '-'}</strong> {criticalComm.transitionActivitiesExample ? `(${criticalComm.transitionActivitiesExample})` : ''}</div>
-                  </div>
-                </div>
-
-                {/* 8. Responder a instrucciones */}
-                <div className="bg-white/80 p-2.5 rounded-lg border border-orange-200/60">
-                  <strong className="text-orange-900 block text-[11px] mb-1">
-                    8. Responder a Instrucciones (Visuales vs Verbales)
-                  </strong>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <span className="font-bold text-slate-800 text-[10px] uppercase">Apoyo Visual (Gestos / Señalización):</span>
-                      <ul className="list-disc pl-4 space-y-0.5 text-[11px]">
-                        {criticalComm.visualOrientToName && <li>Orientarse al nombre: {criticalComm.visualOrientToName}</li>}
-                        {criticalComm.visualComeHere && <li>"Ven aquí": {criticalComm.visualComeHere}</li>}
-                        {criticalComm.visualStop && <li>"Para": {criticalComm.visualStop}</li>}
-                        {criticalComm.visualSitDown && <li>"Siéntate": {criticalComm.visualSitDown}</li>}
-                        {criticalComm.visualGiveItToMe && <li>"Dámelo": {criticalComm.visualGiveItToMe}</li>}
-                        {criticalComm.visualGoForKnownObject && <li>Ir por objeto: {criticalComm.visualGoForKnownObject}</li>}
-                        {criticalComm.visualGoToKnownPlace && <li>Ir a lugar: {criticalComm.visualGoToKnownPlace}</li>}
-                        {criticalComm.visualLeaveOnPlace && <li>Dejar en su sitio: {criticalComm.visualLeaveOnPlace}</li>}
-                        {criticalComm.visualComeWithMe && <li>"Ven conmigo": {criticalComm.visualComeWithMe}</li>}
-                      </ul>
-                    </div>
-                    <div className="space-y-1">
-                      <span className="font-bold text-slate-800 text-[10px] uppercase">Instrucción Verbal (Solo voz):</span>
-                      <ul className="list-disc pl-4 space-y-0.5 text-[11px]">
-                        {criticalComm.verbalOrientToName && <li>Orientarse al nombre: {criticalComm.verbalOrientToName}</li>}
-                        {criticalComm.verbalComeHere && <li>"Ven aquí": {criticalComm.verbalComeHere}</li>}
-                        {criticalComm.verbalStop && <li>"Para": {criticalComm.verbalStop}</li>}
-                        {criticalComm.verbalSitDown && <li>"Siéntate": {criticalComm.verbalSitDown}</li>}
-                        {criticalComm.verbalGiveItToMe && <li>"Dámelo": {criticalComm.verbalGiveItToMe}</li>}
-                        {criticalComm.verbalGoForKnownObject && <li>Ir por objeto: {criticalComm.verbalGoForKnownObject}</li>}
-                        {criticalComm.verbalGoToKnownPlace && <li>Ir a lugar: {criticalComm.verbalGoToKnownPlace}</li>}
-                        {criticalComm.verbalLeaveOnPlace && <li>Dejar en su sitio: {criticalComm.verbalLeaveOnPlace}</li>}
-                        {criticalComm.verbalComeWithMe && <li>"Ven conmigo": {criticalComm.verbalComeWithMe}</li>}
-                      </ul>
-                    </div>
-                  </div>
-                </div>
-
-                {/* 9. Horario visual y observaciones */}
-                <div className="bg-white/80 p-2.5 rounded-lg border border-orange-200/60">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    <div>• Sigue horario visual: <strong>{criticalComm.followsVisualSchedule || '-'}</strong> {criticalComm.visualScheduleNotes ? `(${criticalComm.visualScheduleNotes})` : ''}</div>
-                    <div>• Observaciones: <strong>{criticalComm.generalObservations || '-'}</strong></div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* SPM-2 Sensory Table */}
-          {spm && (
-            <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3 text-xs">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-200 pb-1.5 gap-2">
-                <div className="flex items-center gap-2">
-                  <h3 className="font-bold text-slate-900 uppercase text-xs">
-                    Medida de Procesamiento Sensorial (SPM)
-                  </h3>
-                  <span className="text-[10px] font-bold bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-full">
-                    {spm.targetAgeGroup === '2_a_5_anos' ? '2 a 5 años (Preschool)' : 'Mayor a 5 años (Escolar)'}
-                  </span>
-                  <span className="text-[10px] font-bold bg-sky-100 text-sky-800 px-2 py-0.5 rounded-full">
-                    {spm.questionnaireType === 'escuela' ? 'Cuestionario Escolar' : 'Cuestionario para Padres'}
-                  </span>
-                </div>
-                <span className="text-[11px] text-slate-500 font-medium">
-                  {spm.applicationMethod ? `Modalidad: ${spm.applicationMethod.replace('_', ' ')}` : 'Aplicación Presencial'}
-                  {spm.respondentName ? ` · Respondido por: ${spm.respondentName}` : ''}
-                </span>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="border-b border-slate-200 text-slate-500 font-bold text-[11px]">
-                      <th className="py-1.5 px-2">Escala Sensorial</th>
-                      <th className="py-1.5 px-2">Puntaje</th>
-                      <th className="py-1.5 px-2">Rango Interpretativo</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 text-xs">
-                    <tr><td className="py-1 px-2">Participación Social (SOC)</td><td className="py-1 px-2 font-mono">{spm.socialParticipationScore}</td><td className="py-1 px-2 font-bold">{spm.socialParticipationRange}</td></tr>
-                    <tr><td className="py-1 px-2">Visión (VIS)</td><td className="py-1 px-2 font-mono">{spm.visionScore}</td><td className="py-1 px-2 font-bold">{spm.visionRange}</td></tr>
-                    <tr><td className="py-1 px-2">Audición (HEA)</td><td className="py-1 px-2 font-mono">{spm.hearingScore}</td><td className="py-1 px-2 font-bold">{spm.hearingRange}</td></tr>
-                    <tr><td className="py-1 px-2">Tacto (TOU)</td><td className="py-1 px-2 font-mono">{spm.touchScore}</td><td className="py-1 px-2 font-bold">{spm.touchRange}</td></tr>
-                    <tr><td className="py-1 px-2">Gusto y Olfato (T&S)</td><td className="py-1 px-2 font-mono">{spm.tasteSmellScore}</td><td className="py-1 px-2 font-bold">{spm.tasteSmellRange}</td></tr>
-                    <tr><td className="py-1 px-2">Conciencia Corporal / Propiocepción (BOD)</td><td className="py-1 px-2 font-mono">{spm.bodyAwarenessScore}</td><td className="py-1 px-2 font-bold">{spm.bodyAwarenessRange}</td></tr>
-                    <tr><td className="py-1 px-2">Equilibrio y Movimiento / Vestibular (BAL)</td><td className="py-1 px-2 font-mono">{spm.balanceMotionScore}</td><td className="py-1 px-2 font-bold">{spm.balanceMotionRange}</td></tr>
-                    <tr><td className="py-1 px-2">Planificación e Ideas / Praxis (PLN)</td><td className="py-1 px-2 font-mono">{spm.planningIdeasScore}</td><td className="py-1 px-2 font-bold">{spm.planningIdeasRange}</td></tr>
-                    <tr className="bg-blue-50/80 font-bold"><td className="py-1.5 px-2 text-blue-900">TOTAL SENSORIAL (ST)</td><td className="py-1.5 px-2 font-mono">{spm.totalSensoryScore}</td><td className="py-1.5 px-2 text-blue-800">{spm.totalSensoryRange}</td></tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
-          {/* BPM Da Fonseca */}
-          {bpm && (
-            <div className="p-4 bg-emerald-50/70 rounded-xl border border-emerald-200 space-y-2 text-xs">
-              <h3 className="font-bold text-emerald-950 uppercase text-xs">
-                Batería Psicomotora (BPM) de Vítor da Fonseca
-              </h3>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-slate-700">
-                <div>Tonicidad: <strong>{bpm.tonicityScore}/4</strong></div>
-                <div>Equilibrio: <strong>{bpm.equilibriumScore}/4</strong></div>
-                <div>Lateralidad: <strong>{bpm.lateralityScore}/4</strong></div>
-                <div>Noción Cuerpo: <strong>{bpm.bodyNotionScore}/4</strong></div>
-                <div>Espacio-Tiempo: <strong>{bpm.spatialTemporalScore}/4</strong></div>
-                <div>Praxia Global: <strong>{bpm.globalPraxiaScore}/4</strong></div>
-                <div>Praxia Fina: <strong>{bpm.finePraxiaScore}/4</strong></div>
-                <div>Total: <strong className="text-emerald-900 font-mono text-sm">{bpm.totalScore}/28</strong></div>
-              </div>
-              <div className="pt-1 border-t border-emerald-200/60 mt-1">
-                <span className="text-[11px] text-slate-500 block">Perfil Psicomotor:</span>
-                <span className="px-2.5 py-1 bg-emerald-700 text-white font-bold rounded-md inline-block text-xs mt-0.5">
-                  {bpm.profileResult}
-                </span>
-                {bpm.conclusions && <p className="text-slate-600 text-xs mt-1 italic">{bpm.conclusions}</p>}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* 7. Síntesis Diagnóstica Kinésica (C.I.F.) y Objetivos */}
-        <div className="space-y-3">
-          <h2 className="text-xs font-extrabold text-blue-800 uppercase tracking-wider border-b border-blue-200 pb-1">
-            7. Síntesis Diagnóstica Kinésica (C.I.F.) y Objetivos Terapéuticos
-          </h2>
-          <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 text-xs leading-relaxed">
-            <span className="font-bold text-slate-700 block mb-1">Diagnóstico Funcional CIF:</span>
-            <p className="text-slate-900 font-medium">
-              {evaluations?.functionalDiagnosisCIF || report.clinicalSummary}
+          <div className="bg-slate-50/80 border border-slate-200 rounded-2xl p-4 sm:p-5 text-xs sm:text-sm text-slate-800 leading-relaxed space-y-3">
+            <p>
+              {anam?.consultationReason || `${patientFirstName} asiste a consulta derivado/a por su especialista para evaluación y apoyo en el neurodesarrollo psicomotor y sensorial.`}
             </p>
-          </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-            <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl">
-              <span className="font-bold text-slate-700 block mb-1">Objetivos a Corto Plazo:</span>
-              <p className="text-slate-800">{evaluations?.therapeuticGoalsShortTerm || '-'}</p>
-            </div>
-            <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl">
-              <span className="font-bold text-slate-700 block mb-1">Objetivos a Largo Plazo:</span>
-              <p className="text-slate-800">{evaluations?.therapeuticGoalsLongTerm || '-'}</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-slate-200/60 text-xs">
+              <div>
+                <span className="text-slate-500 font-bold block">Antecedentes de Gestación y Parto:</span>
+                <span>{anam?.pregnancyHistory || `Nacido/a a las ${anam?.gestationalAgeWeeks || '37'} semanas, ${anam?.birthType || 'parto cesárea'}, APGAR ${anam?.apgarScore || '9/10'}.`}</span>
+              </div>
+              <div>
+                <span className="text-slate-500 font-bold block">Rutinas de Sueño y Pantallas:</span>
+                <span>{anam?.sleepPattern || 'Sin despertares nocturnos.'} {anam?.isRestless ? `Uso de pantallas: ${anam.isRestless}.` : ''}</span>
+              </div>
+              <div>
+                <span className="text-slate-500 font-bold block">Escolaridad / Centro:</span>
+                <span>{anam?.schoolOrCenter || 'Colegio'} ({anam?.educationalLevel || '1° básico'})</span>
+              </div>
+              <div>
+                <span className="text-slate-500 font-bold block">Farmacología / Suplementación:</span>
+                <span>{anam?.pharmacology || 'Sin medicamentos permanentes; suplementación con Omega 3.'}</span>
+              </div>
             </div>
           </div>
-        </div>
+        </section>
 
-        {/* 8. Plan de Tratamiento e Indicaciones */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between border-b border-blue-200 pb-1">
-            <h2 className="text-xs font-extrabold text-blue-800 uppercase tracking-wider">
-              8. Plan de Tratamiento e Indicaciones al Hogar y Colegio
-            </h2>
-            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-              ageInfo.isOlderThanThree ? 'bg-blue-100 text-blue-800' : 'bg-emerald-100 text-emerald-800'
-            }`}>
-              {ageInfo.stageBadgeText}
+        {/* =========================================================================
+            SECCIÓN 4: TABLAS CLÍNICAS (Medición | Criterio con Inicial | Intermedia | Final | Cambio ▲▼)
+           ========================================================================= */}
+        <section className="space-y-3">
+          <h3 className="text-xs sm:text-sm font-black text-cyan-900 uppercase tracking-wider border-b-2 border-cyan-500 pb-1 flex items-center gap-1.5">
+            <Scale className="w-4 h-4 text-cyan-700" />
+            <span>4. Tablas Clínicas (Medición | Criterio)</span>
+          </h3>
+          <p className="text-xs text-slate-500">
+            Comparativa de mediciones clínicas registradas con evolución Inicial, Intermedia, Final y Cambio (▲/▼).
+          </p>
+
+          <KinesferaClinicalTables
+            cranial={cranial}
+            anamnesis={anam}
+            evaluations={evalData}
+            patientName={report.patientName}
+          />
+
+          {/* CUADRO RESUMEN: LISTA DE CONTROL DE HABILIDADES DE COMUNICACIÓN CRÍTICAS Y FUNCIONALES */}
+          <div className="pt-4 border-t border-slate-200">
+            <CriticalCommunicationTable
+              patientId={report.patientId}
+              patientName={report.patientName}
+              onGoToLibrary={onGoToLibrary}
+            />
+          </div>
+        </section>
+
+        {/* =========================================================================
+            SECCIÓN 5: GRÁFICOS (Máx. 4, colores Kinesfera, con "¿Qué significa esto?")
+           ========================================================================= */}
+        <section className="space-y-4">
+          <div className="flex items-center justify-between border-b-2 border-cyan-500 pb-1">
+            <h3 className="text-xs sm:text-sm font-black text-cyan-900 uppercase tracking-wider flex items-center gap-1.5">
+              <Activity className="w-4 h-4 text-cyan-700" />
+              <span>5. Gráficos de Progreso y Simetría</span>
+            </h3>
+            <span className="text-[11px] font-bold text-slate-500">
+              Máximo 4 gráficos con lenguaje simple para familias
             </span>
           </div>
 
-          <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 text-xs space-y-3 leading-relaxed">
-            <div>
-              <span className="font-bold text-slate-700 block">Plan de Intervención Kinésica:</span>
-              <p className="text-slate-800">{evaluations?.treatmentPlan || report.planAndFollowUp}</p>
-            </div>
+          <div className="space-y-5">
+            {/* Si existen datos craneales (ej. protocolo de plagiocefalia / braquicefalia) */}
+            {cranial && (cranial.d1Mm !== undefined || cranial.differenceMm !== undefined) ? (
+              <>
+                {/* Gráfico 1: Barras agrupadas D1 vs D2 Inicial y Final con línea de simetría */}
+                <CranialSymmetryBarsChart cranial={cranial} />
 
-            <div className="pt-2 border-t border-slate-200">
-              <span className="font-bold text-slate-700 block flex items-center gap-1.5">
-                <Home className="w-3.5 h-3.5 text-emerald-600" />
-                <span>Recomendaciones para el Hogar:</span>
-              </span>
-              <p className="text-slate-800 mt-0.5">
-                {evaluations?.homeRecommendations || evaluations?.homeAndSchoolRecommendations || 'Continuar pauta establecida.'}
-              </p>
-            </div>
+                {/* Gráfico 2: Línea de diferencia craneal en mm por evaluación */}
+                <CranialDifferenceLineChart cranial={cranial} />
 
-            {/* Bloque Específico de Jardín / Escuela (Condicional por Edad > 3 años) */}
-            {ageInfo.isOlderThanThree ? (
-              <div className="pt-2 border-t border-blue-200/80 bg-blue-50/70 p-3 rounded-lg border border-blue-200">
-                <span className="font-extrabold text-blue-900 block flex items-center gap-1.5 text-xs">
-                  <GraduationCap className="w-4 h-4 text-blue-700" />
-                  <span>Recomendaciones para Jardín Infantil / Escuela / Aula PIE (Mayor a 3 años):</span>
-                </span>
-                <p className="text-blue-950 mt-1 whitespace-pre-line text-xs font-medium">
-                  {evaluations?.schoolRecommendations || 'Pautas de adecuación postural y pausas sensoriales activas para el aula escolar.'}
-                </p>
-              </div>
+                {/* Gráfico 3: Proporción craneal / Índice Cefalométrico % */}
+                <CephalicIndexChart cranial={cranial} />
+
+                {/* Gráfico 4: Rangos de movimiento cervical (grados) der vs izq inicial vs final o semáforo */}
+                {cranial.cervicalRomLeftDegInitial !== undefined || cranial.cervicalRomRightDegInitial !== undefined ? (
+                  <CervicalRomBarsChart cranial={cranial} />
+                ) : (
+                  <PsychomotorTrafficLightChart bpm={bpm} spm={evalData?.spmSensoryMeasure} />
+                )}
+              </>
             ) : (
-              <div className="pt-2 border-t border-emerald-200/80 bg-emerald-50/70 p-3 rounded-lg border border-emerald-200">
-                <span className="font-extrabold text-emerald-900 block flex items-center gap-1.5 text-xs">
-                  <Home className="w-4 h-4 text-emerald-700" />
-                  <span>Estimulación Temprana y Rutinas en el Hogar (Menor a 3 años):</span>
-                </span>
-                <p className="text-emerald-950 mt-0.5 text-xs">
-                  Por su edad pediátrica (&lt; 3 años), las pautas terapéuticas se concentran en el hogar y en la vinculación con sus cuidadores primarios (o sala cuna en caso de asistir).
-                </p>
-              </div>
+              <>
+                {/* Para casos de neurodesarrollo / psicomotricidad / estímulos (ej. SPM o da Fonseca) */}
+                <PsychomotorTrafficLightChart bpm={bpm} spm={evalData?.spmSensoryMeasure} />
+
+                {comparativeItems.length > 0 && (
+                  <FamilyComparativeBarChart items={comparativeItems} />
+                )}
+
+                {timelinePoints.length >= 2 && (
+                  <FamilyTimelineProgressChart points={timelinePoints} />
+                )}
+              </>
             )}
 
-            {/* Banner Interactivo para Enviar Pauta Semanal vía WhatsApp (Oculto en impresión) */}
-            <div className="pt-3 border-t border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-3 rounded-xl border border-emerald-200 shadow-2xs print:hidden">
-              <div className="text-xs">
-                <span className="font-extrabold text-emerald-900 flex items-center gap-1.5">
-                  <Phone className="w-4 h-4 text-emerald-600" />
-                  <span>Envío Semanal para la Familia</span>
-                </span>
-                <p className="text-slate-500 text-[11px] mt-0.5">
-                  Genera el texto formateado para WhatsApp o la Ficha PDF para que sigan practicando en casa.
-                </p>
-              </div>
+            {/* SECCIÓN EVALUACIONES SPM POR EDAD (si están activas para incluir en informe) */}
+            {spmEval && spmEval.includeInReport && (
+              <div className="bg-white border border-purple-200 rounded-2xl p-4 sm:p-5 shadow-2xs space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-purple-100 pb-2">
+                  <div>
+                    <span className="text-[11px] font-black uppercase text-purple-700 tracking-wider">
+                      Evaluación Estandarizada
+                    </span>
+                    <h4 className="text-sm font-black text-slate-900">
+                      Resultados {spmEval.formTitle}
+                    </h4>
+                    <p className="text-[11px] text-slate-500">
+                      Evaluador: {spmEval.evaluatorName} ({spmEval.formContext}) · Fecha: {spmEval.evaluationDate}
+                    </p>
+                  </div>
+                  {onGoToSPM && (
+                    <button
+                      onClick={onGoToSPM}
+                      className="text-[11px] font-bold text-purple-700 hover:text-purple-900 bg-purple-50 hover:bg-purple-100 px-2.5 py-1 rounded-lg border border-purple-200 transition-colors print:hidden cursor-pointer"
+                    >
+                      Editar Puntuaciones SPM →
+                    </button>
+                  )}
+                </div>
 
-              <button
-                type="button"
-                onClick={() => setShowWeeklyPracticeModal(true)}
-                className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-xl text-xs flex items-center gap-1.5 cursor-pointer shadow-xs transition-colors shrink-0"
-              >
-                <Send className="w-3.5 h-3.5" />
-                <span>Generar Pauta Semanal WhatsApp</span>
-              </button>
+                {/* Tabla de Resultados SPM */}
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="bg-purple-50/80 text-purple-950 font-bold border-b border-purple-200">
+                        <th className="py-2 px-2.5">Escala / Dimensión</th>
+                        <th className="py-2 px-2 text-center">Puntaje Bruto</th>
+                        <th className="py-2 px-2 text-center">Puntaje T</th>
+                        <th className="py-2 px-2.5">Nivel Interpretativo</th>
+                        <th className="py-2 px-2.5">Observación</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 text-slate-800">
+                      {[
+                        { key: 'vis', code: 'VIS', name: 'Visión' },
+                        { key: 'hea', code: 'HEA', name: 'Audición' },
+                        { key: 'tou', code: 'TOU', name: 'Tacto' },
+                        { key: 'ts', code: 'T&S', name: 'Gusto y Olfato' },
+                        { key: 'bod', code: 'BOD', name: 'Conciencia Corporal' },
+                        { key: 'bal', code: 'BAL', name: 'Equilibrio y Movimiento' },
+                        { key: 'st', code: 'ST', name: 'Puntaje Total Estímulos' },
+                        { key: 'pln', code: 'PLN', name: 'Planificación e Ideas' },
+                        { key: 'soc', code: 'SOC', name: 'Participación Social' }
+                      ].map(item => {
+                        const sc = (spmEval.scales as any)[item.key];
+                        if (!sc) return null;
+                        const isSevere = sc.tScore >= 70;
+                        const isModerate = sc.tScore >= 60 && sc.tScore < 70;
+                        return (
+                          <tr key={item.key} className="hover:bg-slate-50/60">
+                            <td className="py-2 px-2.5 font-bold text-slate-900">
+                              {item.code} - {item.name}
+                            </td>
+                            <td className="py-2 px-2 text-center font-mono font-medium">{sc.raw}</td>
+                            <td className="py-2 px-2 text-center font-mono font-black">
+                              <span className={`px-2 py-0.5 rounded-md ${
+                                isSevere ? 'bg-rose-100 text-rose-800' : isModerate ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'
+                              }`}>
+                                {sc.tScore} T
+                              </span>
+                            </td>
+                            <td className="py-2 px-2.5">
+                              <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                isSevere ? 'bg-rose-50 text-rose-700 border border-rose-200' : isModerate ? 'bg-amber-50 text-amber-700 border border-amber-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                              }`}>
+                                {sc.range}
+                              </span>
+                            </td>
+                            <td className="py-2 px-2.5 text-slate-600 text-[11px]">{sc.interpretation}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Perfil SPM Gráfico de Barras Simple */}
+                <div className="pt-3 border-t border-purple-100 space-y-1.5">
+                  <span className="text-[11px] font-bold text-slate-700 block">
+                    Gráfico de Perfil: Puntajes T (Línea naranja: 60T Moderada · Línea roja: 70T Severa)
+                  </span>
+                  <div className="bg-slate-50/80 p-3 rounded-xl border border-slate-200 space-y-1.5">
+                    {[
+                      { key: 'vis', code: 'VIS' },
+                      { key: 'hea', code: 'HEA' },
+                      { key: 'tou', code: 'TOU' },
+                      { key: 'ts', code: 'T&S' },
+                      { key: 'bod', code: 'BOD' },
+                      { key: 'bal', code: 'BAL' },
+                      { key: 'st', code: 'ST' },
+                      { key: 'pln', code: 'PLN' },
+                      { key: 'soc', code: 'SOC' }
+                    ].map(item => {
+                      const sc = (spmEval.scales as any)[item.key];
+                      if (!sc) return null;
+                      const pct = Math.min(100, Math.max(0, ((sc.tScore - 40) / 40) * 100));
+                      const isSevere = sc.tScore >= 70;
+                      const isModerate = sc.tScore >= 60 && sc.tScore < 70;
+                      return (
+                        <div key={item.key} className="flex items-center gap-2 text-xs">
+                          <span className="w-10 font-mono font-bold text-slate-700 shrink-0 text-[11px]">
+                            {item.code}
+                          </span>
+                          <div className="flex-1 bg-slate-200 rounded-full h-2.5 overflow-hidden relative">
+                            <div className="absolute top-0 bottom-0 left-[50%] w-0.5 bg-amber-500 z-10" />
+                            <div className="absolute top-0 bottom-0 left-[75%] w-0.5 bg-rose-500 z-10" />
+                            <div
+                              className={`h-full rounded-full ${
+                                isSevere ? 'bg-rose-500' : isModerate ? 'bg-amber-500' : 'bg-emerald-500'
+                              }`}
+                              style={{ width: `${pct}%` }}
+                            />
+                          </div>
+                          <span className="w-10 text-right font-mono font-bold text-slate-800 text-[11px]">
+                            {sc.tScore} T
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="bg-purple-50/60 border border-purple-200/60 rounded-xl p-3 text-xs text-purple-950">
+                  <p className="font-semibold">
+                    💡 <strong>¿Qué significa esto para la familia?:</strong> Puntuaciones entre 40T y 59T indican un procesamiento típico para la edad. Puntuaciones sobre 60T indican mayor reactividad o búsqueda de estímulos en el ambiente escolar y hogareño, abordadas mediante adecuaciones motrices y de rutina.
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* =========================================================================
+            SECCIÓN 6: CONCLUSIONES (Parte técnica + Resumen simple en 3 líneas)
+           ========================================================================= */}
+        <section className="space-y-3.5">
+          <h3 className="text-xs sm:text-sm font-black text-cyan-900 uppercase tracking-wider border-b-2 border-cyan-500 pb-1 flex items-center gap-1.5">
+            <Sparkles className="w-4 h-4 text-cyan-700" />
+            <span>6. Conclusiones Clínicas y Síntesis Familiar</span>
+          </h3>
+
+          {/* 6.1 Parte Técnica */}
+          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 sm:p-5 text-xs sm:text-sm text-slate-800 space-y-2">
+            <strong className="text-xs font-black uppercase tracking-wider text-slate-700 block">
+              Conclusión Técnica Profesional:
+            </strong>
+            <p className="leading-relaxed">
+              {evalData?.initialConclusions || evalData?.functionalDiagnosisCIF || report.clinicalSummary}
+            </p>
+            {evalData?.prognosis && (
+              <p className="text-xs text-slate-600 font-medium italic pt-1 border-t border-slate-200/60">
+                <strong>Pronóstico Terapéutico:</strong> {evalData.prognosis}
+              </p>
+            )}
+          </div>
+
+          {/* 6.2 Resumen simple en 3 líneas para la familia */}
+          <div className="bg-gradient-to-br from-emerald-50/70 via-white to-cyan-50/60 border border-emerald-300 rounded-2xl p-4 sm:p-5 space-y-3 shadow-2xs">
+            <div className="flex items-center gap-2 text-emerald-900 font-black text-xs uppercase tracking-wider">
+              <span>🌱 Resumen en 3 Líneas para la Familia:</span>
+            </div>
+
+            <div className="space-y-2.5 text-xs sm:text-sm">
+              <div className="flex items-start gap-2.5">
+                <span className="font-bold text-amber-800 shrink-0">1. Cómo llegó:</span>
+                <span className="text-slate-800">{summary.arrival}</span>
+              </div>
+              <div className="flex items-start gap-2.5 pt-1.5 border-t border-slate-200/60">
+                <span className="font-bold text-blue-800 shrink-0">2. Qué se trabajó:</span>
+                <span className="text-slate-800">{summary.workDone}</span>
+              </div>
+              <div className="flex items-start gap-2.5 pt-1.5 border-t border-slate-200/60">
+                <span className="font-bold text-emerald-800 shrink-0">3. Cómo está hoy:</span>
+                <span className="text-slate-900 font-bold">{summary.currentState}</span>
+              </div>
             </div>
           </div>
-        </div>
+        </section>
 
-        {/* Firma Profesional */}
-        <div className="pt-8 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-6">
-          <div className="text-center w-64 border-t border-dashed border-slate-400 pt-2">
-            <p className="font-bold text-xs text-slate-900">{report.professionalName}</p>
-            <p className="text-[10px] text-slate-500">{report.professionalSpecialty}</p>
-            <p className="text-[9px] font-mono text-slate-400">{report.professionalRegistry}</p>
-            <p className="text-[9px] text-slate-500">{report.institution}</p>
+        {/* =========================================================================
+            SECCIÓN 7: PLAN DE INTERVENCIÓN (Área Motora y Área de Exploración y respuesta a estímulos)
+           ========================================================================= */}
+        <section className="space-y-3">
+          <h3 className="text-xs sm:text-sm font-black text-cyan-900 uppercase tracking-wider border-b-2 border-cyan-500 pb-1 flex items-center gap-1.5">
+            <Activity className="w-4 h-4 text-cyan-700" />
+            <span>7. Plan de Intervención</span>
+          </h3>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs sm:text-sm">
+            {/* Área Motora */}
+            <div className="bg-sky-50/70 border border-sky-200 rounded-2xl p-4 sm:p-5 space-y-2">
+              <h4 className="font-black text-sky-950 uppercase text-xs flex items-center gap-1.5">
+                <Activity className="w-4 h-4 text-sky-600" />
+                <span>Área Motora y Kinesiológica</span>
+              </h4>
+              <ul className="space-y-1.5 text-slate-700 list-disc pl-4 text-xs">
+                <li><strong>Equilibrio y Vestibular:</strong> Actividades en superficies inestables, apoyo unipodal y giros controlados.</li>
+                <li><strong>Noción del Cuerpo:</strong> Reconocimiento somatognósico, cruce de línea media y juegos de imitación.</li>
+                <li><strong>Estructuración Espacio-Temporal:</strong> Circuitos de obstáculos, laberintos motores y secuencias rítmicas.</li>
+                <li><strong>Praxia Global y Fina:</strong> Trepa, saltos coordinados, disociación y grafomotricidad con presión graduada.</li>
+              </ul>
+            </div>
+
+            {/* Área de Exploración y respuesta a estímulos (Renombrado según Requerimiento 1) */}
+            <div className="bg-emerald-50/70 border border-emerald-200 rounded-2xl p-4 sm:p-5 space-y-2">
+              <h4 className="font-black text-emerald-950 uppercase text-xs flex items-center gap-1.5">
+                <Brain className="w-4 h-4 text-emerald-600" />
+                <span>Área de Exploración y respuesta a estímulos</span>
+              </h4>
+              <ul className="space-y-1.5 text-slate-700 list-disc pl-4 text-xs">
+                <li><strong>Conciencia Corporal (Propiocepción):</strong> Ejercicios de carga articular y graduación de fuerza manual.</li>
+                <li><strong>Procesamiento Vestibular:</strong> Juegos de balanceo suave y aceleración lineal para la calma y alerta.</li>
+                <li><strong>Modulación y Regulación del Entorno:</strong> Estrategias para tolerar ruidos del aula y optimizar la atención sostenida.</li>
+                <li><strong>Pausas Activas:</strong> Microdescansos de movimiento cada 15 a 20 minutos durante tareas escolares.</li>
+                {hasInstructionLimitation && (
+                  <li className="text-emerald-950 font-bold bg-emerald-100/70 p-2 rounded-xl border border-emerald-300 list-none mt-2">
+                    🎯 <strong>Seguimiento de Instrucciones:</strong> Lograr que el paciente siga instrucciones a través de la intervención kinésica y psicomotriz mediante consignas estructuradas y refuerzo lúdico.
+                  </li>
+                )}
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        {/* =========================================================================
+            SECCIÓN 8: RECOMENDACIONES PARA EL HOGAR (Máximo 5 pautas concretas)
+           ========================================================================= */}
+        <section className="space-y-3">
+          <h3 className="text-xs sm:text-sm font-black text-cyan-900 uppercase tracking-wider border-b-2 border-cyan-500 pb-1 flex items-center gap-1.5">
+            <Home className="w-4 h-4 text-cyan-700" />
+            <span>8. Educación Familiar y Recomendaciones para el Hogar (Máx. 5)</span>
+          </h3>
+
+          <div className="space-y-2.5">
+            {homeTips.slice(0, 5).map((tip, idx) => (
+              <div
+                key={idx}
+                className="bg-amber-50/40 border border-amber-200/90 rounded-xl p-3.5 sm:p-4 flex items-start gap-3 shadow-2xs"
+              >
+                <span className="w-6 h-6 rounded-lg bg-amber-500 text-white font-bold flex items-center justify-center shrink-0 mt-0.5 text-xs shadow-2xs">
+                  {idx + 1}
+                </span>
+                <div className="space-y-0.5 text-xs sm:text-sm">
+                  <strong className="text-slate-900 block font-bold">
+                    {tip.title}
+                  </strong>
+                  <p className="text-slate-700 leading-relaxed">
+                    {tip.desc}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* =========================================================================
+            SECCIÓN 9: SEGUIMIENTO (Sesiones, Frecuencia, Reevaluación, Derivaciones)
+           ========================================================================= */}
+        <section className="space-y-3">
+          <h3 className="text-xs sm:text-sm font-black text-cyan-900 uppercase tracking-wider border-b-2 border-cyan-500 pb-1 flex items-center gap-1.5">
+            <Clock className="w-4 h-4 text-cyan-700" />
+            <span>9. Seguimiento y Plan de Continuidad</span>
+          </h3>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs sm:text-sm bg-slate-50 p-4 sm:p-5 rounded-2xl border border-slate-200">
+            <div>
+              <span className="text-slate-500 font-bold block text-xs">Sesiones Programadas:</span>
+              <strong className="text-slate-900">{followUpSessions}</strong>
+            </div>
+
+            <div>
+              <span className="text-slate-500 font-bold block text-xs">Frecuencia Semanal:</span>
+              <span className="text-slate-800 font-medium">{followUpFrequency}</span>
+            </div>
+
+            <div>
+              <span className="text-slate-500 font-bold block text-xs">Próxima Reevaluación:</span>
+              <span className="text-cyan-950 font-bold">{followUpNextReeval}</span>
+            </div>
+
+            <div>
+              <span className="text-slate-500 font-bold block text-xs">Derivaciones y Coordinación:</span>
+              <span className="text-slate-800">{followUpReferrals}</span>
+            </div>
+          </div>
+        </section>
+
+        {/* =========================================================================
+            FIRMA PROFESIONAL AL FINAL
+           ========================================================================= */}
+        <div className="pt-8 border-t-2 border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-6 break-inside-avoid">
+          <div className="text-center w-72 pt-3 border-t border-slate-800">
+            <p className="font-black text-base text-slate-900">Aldo Olivares Araya</p>
+            <p className="text-xs text-slate-600 font-bold">Registro SIS: 515956</p>
+            <p className="text-xs text-slate-600">Kinesiólogo, Especialista en Psicomotricidad</p>
+            <p className="text-xs text-cyan-800 font-bold mt-0.5">Centro Clínico Kinesfera · Creando Sentido Al Juego</p>
           </div>
 
-          <div className="flex items-center gap-2 print:hidden">
+          <div className="flex flex-wrap items-center gap-2.5 print:hidden">
             <button
-              onClick={handleDownloadWord}
-              className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl shadow-xs transition-colors cursor-pointer"
+              onClick={() => setShowWhatsAppModal(true)}
+              className="flex items-center gap-1.5 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs sm:text-sm font-bold rounded-xl shadow-xs transition-colors cursor-pointer"
             >
-              <Download className="w-3.5 h-3.5" />
-              <span>Word (.doc)</span>
+              <Phone className="w-4 h-4" />
+              <span>Enviar por WhatsApp</span>
             </button>
+
             <button
               onClick={handlePrintPDF}
-              className="flex items-center gap-1.5 px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl shadow-xs transition-colors cursor-pointer"
+              className="flex items-center gap-1.5 px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-xs sm:text-sm font-bold rounded-xl shadow-xs transition-colors cursor-pointer"
             >
-              <Printer className="w-3.5 h-3.5" />
-              <span>PDF / Imprimir</span>
+              <Printer className="w-4 h-4" />
+              <span>Descargar PDF</span>
             </button>
           </div>
         </div>
 
       </div>
 
-      {/* Weekly Home Practice Modal */}
+      {/* 3. MODAL DE COMPARTIR POR WHATSAPP */}
+      {showWhatsAppModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-4 animate-scaleUp">
+            
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                  <Phone className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-slate-900">
+                    Compartir por WhatsApp
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Enviar informe a la familia de {patientFirstName}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setShowWhatsAppModal(false)}
+                className="w-8 h-8 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 flex items-center justify-center cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Teléfono */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-700 block">
+                Teléfono del apoderado/a (Chile ej: +56 9 8456 1234)
+              </label>
+              <input
+                type="text"
+                value={whatsappPhone}
+                onChange={(e) => setWhatsappPhone(e.target.value)}
+                placeholder="+56 9 1234 5678"
+                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-emerald-500 focus:bg-white outline-hidden"
+              />
+            </div>
+
+            {/* Vista previa del mensaje */}
+            <div className="space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-600">
+                  Vista previa del texto:
+                </span>
+                <button
+                  type="button"
+                  onClick={handleCopyWhatsApp}
+                  className="text-xs font-bold text-emerald-700 hover:text-emerald-800 flex items-center gap-1 cursor-pointer"
+                >
+                  {copiedWhatsApp ? (
+                    <>
+                      <Check className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>¡Copiado!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3.5 h-3.5" />
+                      <span>Copiar texto</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl max-h-48 overflow-y-auto text-xs font-mono text-slate-700 whitespace-pre-wrap leading-relaxed select-all">
+                {formattedWhatsAppText}
+              </div>
+            </div>
+
+            {/* Acciones */}
+            <div className="pt-2 flex items-center justify-end gap-2.5">
+              <button
+                type="button"
+                onClick={() => setShowWhatsAppModal(false)}
+                className="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-100 cursor-pointer"
+              >
+                Cerrar
+              </button>
+
+              <button
+                type="button"
+                onClick={handleSendWhatsApp}
+                className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs sm:text-sm font-black flex items-center gap-2 shadow-xs cursor-pointer"
+              >
+                <Send className="w-4 h-4" />
+                <span>Abrir WhatsApp Ahora</span>
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* 4. MODAL PAUTA SEMANAL (si está activa) */}
       {showWeeklyPracticeModal && (
         <WeeklyHomePracticeModal
           patient={{
@@ -874,7 +938,7 @@ export const ComprehensiveReportViewer: React.FC<ComprehensiveReportViewerProps>
           }}
           anamnesis={report.anamnesis}
           evaluations={report.evaluations}
-          progressNotes={[]}
+          progressNotes={patientNotes}
           clinicianName={report.professionalName}
           clinicianSpecialty={report.professionalSpecialty}
           clinicianInstitution={report.institution}

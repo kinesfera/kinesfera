@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { SensoryProcessingMeasureSPM2 } from '../types';
 import { 
   Send, 
@@ -18,13 +18,15 @@ import {
   getSPMQuestions, 
   calculateSPMScores, 
   SPMQuestion, 
-  SPMScaleId 
+  SPMScaleId,
+  SPMAgeGroupKey
 } from '../data/spmQuestionnaires';
 
 interface SPMOnlineFormModalProps {
   patientId: string;
   patientName: string;
   patientAge?: number; // Optional age in years or months
+  initialAgeGroup?: SPMAgeGroupKey;
   isOpen: boolean;
   onClose: () => void;
   onSubmitResults: (spmData: SensoryProcessingMeasureSPM2) => void;
@@ -32,13 +34,20 @@ interface SPMOnlineFormModalProps {
 
 export const SPMOnlineFormModal: React.FC<SPMOnlineFormModalProps> = ({
   patientName,
+  initialAgeGroup,
   isOpen,
   onClose,
   onSubmitResults
 }) => {
-  // Selector de Grupo de Edad: 2 a 5 años (Preschool) vs Mayor a 5 años (Escolar / Primaria)
-  const [ageGroup, setAgeGroup] = useState<'2_a_5_anos' | 'mayor_5_anos'>('mayor_5_anos');
+  // Selector de Grupo de Edad: Bebés 4-9m, Niños Pequeños 10-30m, 2 a 5 años (Preschool), Mayor a 5 años (Escolar)
+  const [ageGroup, setAgeGroup] = useState<SPMAgeGroupKey>(initialAgeGroup || 'mayor_5_anos');
   
+  useEffect(() => {
+    if (initialAgeGroup) {
+      setAgeGroup(initialAgeGroup);
+    }
+  }, [initialAgeGroup, isOpen]);
+
   // Selector de Destinatario: Hogar (Padres / Cuidadores) vs Escuela (Aula / Educadores)
   const [formType, setFormType] = useState<'hogar' | 'escuela'>('hogar');
 
@@ -48,7 +57,7 @@ export const SPMOnlineFormModal: React.FC<SPMOnlineFormModalProps> = ({
   const [activeTab, setActiveTab] = useState<'link' | 'fill'>('fill');
   const [copiedLink, setCopiedLink] = useState(false);
 
-  // Mapa de respuestas: número de pregunta (1..75) -> valor (1: Nunca, 2: Ocasionalmente, 3: Frecuentemente, 4: Siempre)
+  // Mapa de respuestas: número de pregunta (1..80) -> valor (1: Nunca, 2: Ocasionalmente, 3: Frecuentemente, 4: Siempre)
   const [answers, setAnswers] = useState<Record<number, number>>({});
   const [filterScale, setFilterScale] = useState<string>('todas');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -144,6 +153,15 @@ export const SPMOnlineFormModal: React.FC<SPMOnlineFormModalProps> = ({
     }, 1500);
   };
 
+  const getAgeGroupLabel = (ag: SPMAgeGroupKey) => {
+    switch (ag) {
+      case 'bebes_4_9': return 'Bebés (4 a 9 meses)';
+      case '10_a_30_meses': return 'Niños Pequeños (10 a 30 meses)';
+      case '2_a_5_anos': return 'Preescolar (2 a 5 años)';
+      case 'mayor_5_anos': return 'Escolar (5 a 12 años)';
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto">
       <div className="bg-white rounded-3xl max-w-4xl w-full shadow-2xl border border-slate-200 overflow-hidden my-4 max-h-[92vh] flex flex-col animate-in fade-in zoom-in-95">
@@ -157,14 +175,14 @@ export const SPMOnlineFormModal: React.FC<SPMOnlineFormModalProps> = ({
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-[10px] font-black uppercase tracking-wider bg-white/20 px-2 py-0.5 rounded-full text-sky-100">
-                  SPM · Medida de Procesamiento Sensorial
+                  SPM-2 · {getAgeGroupLabel(ageGroup)}
                 </span>
                 <span className="text-[10px] font-bold text-sky-200 bg-sky-900/60 px-2 py-0.5 rounded-full">
                   {totalQuestions} Preguntas Estandarizadas
                 </span>
               </div>
               <h3 className="text-sm sm:text-base font-extrabold mt-0.5">
-                Cuestionario Sensorial para {formType === 'hogar' ? 'Padres (Hogar)' : 'la Escuela (Aula)'}
+                Cuestionario Oficial SPM-2 ({getAgeGroupLabel(ageGroup)})
               </h3>
               <p className="text-xs text-blue-100">
                 Ficha del Paciente: <strong className="text-white">{patientName || 'Paciente en Evaluación'}</strong>
@@ -179,29 +197,59 @@ export const SPMOnlineFormModal: React.FC<SPMOnlineFormModalProps> = ({
           </button>
         </div>
 
-        {/* SELECTORES DE EDAD Y DESTINATARIO (2 a 5 años vs > 5 años | Padres vs Escuela) */}
+        {/* SELECTORES DE EDAD Y DESTINATARIO (4 a 9 meses | 10 a 30 meses | 2 a 5 años | > 5 años) */}
         <div className="bg-slate-50 border-b border-slate-200 p-4 space-y-3 shrink-0">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
             
-            {/* 1. Selector de Rango de Edad */}
-            <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-xs space-y-1.5">
+            {/* 1. Selector de Rango de Edad (4 opciones completas) */}
+            <div className="lg:col-span-2 bg-white p-3 rounded-2xl border border-slate-200 shadow-xs space-y-1.5">
               <label className="text-[11px] font-black uppercase tracking-wider text-slate-500 block">
-                1. Rango de Edad del Niño(a):
+                1. Formulario SPM según Rango de Edad:
               </label>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAgeGroup('bebes_4_9');
+                    setFormType('hogar');
+                    setAnswers({});
+                  }}
+                  className={`py-2 px-2.5 rounded-xl text-xs font-bold transition-all text-center cursor-pointer ${
+                    ageGroup === 'bebes_4_9'
+                      ? 'bg-purple-600 text-white shadow-xs ring-2 ring-purple-400'
+                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                  }`}
+                >
+                  👶 Bebés (4-9 meses)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAgeGroup('10_a_30_meses');
+                    setFormType('hogar');
+                    setAnswers({});
+                  }}
+                  className={`py-2 px-2.5 rounded-xl text-xs font-bold transition-all text-center cursor-pointer ${
+                    ageGroup === '10_a_30_meses'
+                      ? 'bg-purple-600 text-white shadow-xs ring-2 ring-purple-400'
+                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                  }`}
+                >
+                  🍼 10-30 meses (Toddler)
+                </button>
                 <button
                   type="button"
                   onClick={() => {
                     setAgeGroup('2_a_5_anos');
                     setAnswers({});
                   }}
-                  className={`py-2 px-3 rounded-xl text-xs font-bold transition-all text-center cursor-pointer ${
+                  className={`py-2 px-2.5 rounded-xl text-xs font-bold transition-all text-center cursor-pointer ${
                     ageGroup === '2_a_5_anos'
                       ? 'bg-blue-600 text-white shadow-xs ring-2 ring-blue-400'
                       : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                   }`}
                 >
-                  👶 De 2 a 5 años (Preschool)
+                  🎨 2 a 5 años (Preescolar)
                 </button>
                 <button
                   type="button"
@@ -209,13 +257,13 @@ export const SPMOnlineFormModal: React.FC<SPMOnlineFormModalProps> = ({
                     setAgeGroup('mayor_5_anos');
                     setAnswers({});
                   }}
-                  className={`py-2 px-3 rounded-xl text-xs font-bold transition-all text-center cursor-pointer ${
+                  className={`py-2 px-2.5 rounded-xl text-xs font-bold transition-all text-center cursor-pointer ${
                     ageGroup === 'mayor_5_anos'
                       ? 'bg-blue-600 text-white shadow-xs ring-2 ring-blue-400'
                       : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                   }`}
                 >
-                  🧒 Mayor a 5 años (Escolar)
+                  🧒 5 a 12 años (Escolar)
                 </button>
               </div>
             </div>
@@ -223,7 +271,7 @@ export const SPMOnlineFormModal: React.FC<SPMOnlineFormModalProps> = ({
             {/* 2. Selector de Cuestionario: Padres vs Escuela */}
             <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-xs space-y-1.5">
               <label className="text-[11px] font-black uppercase tracking-wider text-slate-500 block">
-                2. Destinatario del Cuestionario:
+                2. Contexto / Respondiente:
               </label>
               <div className="grid grid-cols-2 gap-2">
                 <button
@@ -233,30 +281,30 @@ export const SPMOnlineFormModal: React.FC<SPMOnlineFormModalProps> = ({
                     setRespondentRelationship('Madre');
                     setAnswers({});
                   }}
-                  className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-bold transition-all text-center cursor-pointer ${
+                  className={`flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl text-xs font-bold transition-all text-center cursor-pointer ${
                     formType === 'hogar'
                       ? 'bg-indigo-600 text-white shadow-xs ring-2 ring-indigo-400'
                       : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                   }`}
                 >
                   <Home className="w-3.5 h-3.5" />
-                  <span>Padres (Hogar - 75 ítems)</span>
+                  <span>Hogar ({totalQuestions} ítems)</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => {
                     setFormType('escuela');
-                    setRespondentRelationship('Profesor Jefe');
+                    setRespondentRelationship('Educadora / Profesor');
                     setAnswers({});
                   }}
-                  className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-bold transition-all text-center cursor-pointer ${
+                  className={`flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl text-xs font-bold transition-all text-center cursor-pointer ${
                     formType === 'escuela'
                       ? 'bg-indigo-600 text-white shadow-xs ring-2 ring-indigo-400'
                       : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                   }`}
                 >
                   <School className="w-3.5 h-3.5" />
-                  <span>Escuela (Aula - {ageGroup === '2_a_5_anos' ? '75 ítems' : '62 ítems'})</span>
+                  <span>Sala Cuna / Aula</span>
                 </button>
               </div>
             </div>

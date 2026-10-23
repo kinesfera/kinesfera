@@ -14,6 +14,8 @@ import { PatientEvaluationForm } from './PatientEvaluationForm';
 import { ComprehensiveReportViewer } from './ComprehensiveReportViewer';
 import { MarketingBusinessHub } from './MarketingBusinessHub';
 import { NicheTrendsAndIntelligenceHub } from './NicheTrendsAndIntelligenceHub';
+import { LibraryManagementView } from './LibraryManagementView';
+import { SPMEvaluationSection } from './SPMEvaluationSection';
 import { clinicalStorage } from '../utils/clinicalStorage';
 import { 
   FileText, 
@@ -34,7 +36,9 @@ import {
   Brain,
   Download,
   Upload,
-  Database
+  Database,
+  BookOpen,
+  ClipboardCheck
 } from 'lucide-react';
 
 interface ClinicalPortalViewProps {
@@ -82,13 +86,15 @@ export const ClinicalPortalView: React.FC<ClinicalPortalViewProps> = ({
   onGenerateComprehensiveReport,
   onClearAllPatients
 }) => {
-  // 5 Primary Tabs:
+  // 7 Primary Tabs:
   // 1) add_patient_eval: Ingreso de paciente, anamnesis y pruebas aplicadas
   // 2) comprehensive_report: Informe consolidado con descarga en PDF y Word
-  // 3) progress_sheet: Plantilla de progreso (seguimiento diario)
-  // 4) niche_trends: Nutrición de datos de la cohorte & Tendencias del nicho en kinesiología y psicomotricidad infantil
-  // 5) marketing_growth: Marketing, ventas éticas, metas mes 1, derivadores Copiapó y CRM
-  const [activeSubTab, setActiveSubTab] = useState<'add_patient_eval' | 'comprehensive_report' | 'progress_sheet' | 'niche_trends' | 'marketing_growth'>('add_patient_eval');
+  // 3) spm_eval: Evaluaciones SPM-2 por rango de edad
+  // 4) library: Biblioteca de documentos y listas de habilidades
+  // 5) progress_sheet: Plantilla de progreso (seguimiento diario)
+  // 6) niche_trends: Nutrición de datos de la cohorte & Tendencias del nicho
+  // 7) marketing_growth: Marketing, ventas éticas, metas mes 1, derivadores Copiapó y CRM
+  const [activeSubTab, setActiveSubTab] = useState<'add_patient_eval' | 'comprehensive_report' | 'spm_eval' | 'library' | 'progress_sheet' | 'niche_trends' | 'marketing_growth'>('add_patient_eval');
   
   // Clinician customizable profile in localStorage (Starts blank or customized by the clinician)
   const [profName, setProfName] = useState(() => {
@@ -453,14 +459,14 @@ export const ClinicalPortalView: React.FC<ClinicalPortalViewProps> = ({
           {/* TAB 1: Ingreso de Paciente & Evaluación (Anamnesis y Pruebas Clínicas) */}
           <button
             onClick={() => setActiveSubTab('add_patient_eval')}
-            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+            className={`flex items-center gap-2 px-3.5 py-2.5 text-xs font-bold rounded-xl transition-all cursor-pointer ${
               activeSubTab === 'add_patient_eval'
                 ? 'bg-blue-600 text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
             <UserPlus className="w-4 h-4 text-blue-200" />
-            <span>1. Ingreso de Paciente & Evaluación (Anamnesis y Pruebas)</span>
+            <span>1. Pacientes & Evaluación</span>
             <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-md bg-white/20 text-white">
               {patients.length}
             </span>
@@ -469,65 +475,91 @@ export const ClinicalPortalView: React.FC<ClinicalPortalViewProps> = ({
           {/* TAB 2: Informe Clínico Consolidado (Descarga en PDF y Word) */}
           <button
             onClick={() => setActiveSubTab('comprehensive_report')}
-            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+            className={`flex items-center gap-2 px-3.5 py-2.5 text-xs font-bold rounded-xl transition-all cursor-pointer ${
               activeSubTab === 'comprehensive_report'
                 ? 'bg-blue-600 text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
             <FileText className="w-4 h-4 text-blue-200" />
-            <span>2. Informe Clínico Consolidado (PDF / Word)</span>
+            <span>2. Informe Consolidado</span>
             <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-md bg-white/20 text-white">
               {comprehensiveReports.length}
             </span>
           </button>
 
-          {/* TAB 3: Plantilla de Progreso (Seguimiento Diario) */}
+          {/* TAB 3: Evaluaciones SPM por Edad */}
+          <button
+            onClick={() => setActiveSubTab('spm_eval')}
+            className={`flex items-center gap-2 px-3.5 py-2.5 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+              activeSubTab === 'spm_eval'
+                ? 'bg-purple-700 text-white shadow-xs'
+                : 'text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200'
+            }`}
+          >
+            <ClipboardCheck className="w-4 h-4 text-purple-300" />
+            <span>3. Evaluaciones SPM</span>
+            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-purple-200/80 text-purple-900 font-mono">
+              Por Edad
+            </span>
+          </button>
+
+          {/* TAB 4: Biblioteca de Documentos y Listas de Habilidades */}
+          <button
+            onClick={() => setActiveSubTab('library')}
+            className={`flex items-center gap-2 px-3.5 py-2.5 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+              activeSubTab === 'library'
+                ? 'bg-indigo-700 text-white shadow-xs'
+                : 'text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200'
+            }`}
+          >
+            <BookOpen className="w-4 h-4 text-indigo-300" />
+            <span>4. Biblioteca</span>
+            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-indigo-200/80 text-indigo-900 font-mono">
+              Archivos & Listas
+            </span>
+          </button>
+
+          {/* TAB 5: Plantilla de Progreso (Seguimiento Diario) */}
           <button
             onClick={() => setActiveSubTab('progress_sheet')}
-            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+            className={`flex items-center gap-2 px-3.5 py-2.5 text-xs font-bold rounded-xl transition-all cursor-pointer ${
               activeSubTab === 'progress_sheet'
-                ? 'bg-blue-600 text-white shadow-xs'
+                ? 'bg-emerald-700 text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
             <ClipboardList className="w-4 h-4 text-emerald-300" />
-            <span>3. Plantilla de Progreso (Seguimiento Diario)</span>
+            <span>5. Progreso Diario</span>
             <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-md bg-white/20 text-white">
               {progressNotes.length}
             </span>
           </button>
 
-          {/* TAB 4: Tendencias e Inteligencia del Nicho (Nutrición de Datos) */}
+          {/* TAB 6: Tendencias e Inteligencia del Nicho (Nutrición de Datos) */}
           <button
             onClick={() => setActiveSubTab('niche_trends')}
-            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+            className={`flex items-center gap-2 px-3.5 py-2.5 text-xs font-bold rounded-xl transition-all cursor-pointer ${
               activeSubTab === 'niche_trends'
                 ? 'bg-teal-700 text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
             <Brain className="w-4 h-4 text-teal-300" />
-            <span>4. Tendencias & Inteligencia del Nicho</span>
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-teal-400 text-teal-950 font-mono shadow-2xs">
-              Nutrición Cohorte
-            </span>
+            <span>6. Inteligencia & Nicho</span>
           </button>
 
-          {/* TAB 5: Marketing, Ventas & Crecimiento del Negocio */}
+          {/* TAB 7: Marketing, Ventas & Crecimiento del Negocio */}
           <button
             onClick={() => setActiveSubTab('marketing_growth')}
-            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+            className={`flex items-center gap-2 px-3.5 py-2.5 text-xs font-bold rounded-xl transition-all cursor-pointer ${
               activeSubTab === 'marketing_growth'
                 ? 'bg-gradient-to-r from-blue-700 to-indigo-700 text-white shadow-xs ring-2 ring-blue-400/50'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
             <TrendingUp className="w-4 h-4 text-amber-300" />
-            <span>5. Marketing, Ventas & Crecimiento</span>
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-400 text-slate-950 font-mono shadow-2xs">
-              Plan Mes 1
-            </span>
+            <span>7. Marketing & Ventas</span>
           </button>
 
         </div>
@@ -596,8 +628,11 @@ export const ClinicalPortalView: React.FC<ClinicalPortalViewProps> = ({
                 professionalRegistry: profRegistry || selectedComprehensiveReport.professionalRegistry,
                 institution: profInstitution || selectedComprehensiveReport.institution
               }}
+              progressNotes={progressNotes.filter(n => n.patientId === selectedComprehensiveReport.patientId)}
               onEditReport={() => setActiveSubTab('add_patient_eval')}
               onSelectAnotherPatient={() => setActiveSubTab('add_patient_eval')}
+              onGoToLibrary={() => setActiveSubTab('library')}
+              onGoToSPM={() => setActiveSubTab('spm_eval')}
             />
           ) : (
             <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center text-slate-500 space-y-3">
@@ -617,6 +652,75 @@ export const ClinicalPortalView: React.FC<ClinicalPortalViewProps> = ({
           )}
 
         </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* VISTA: Evaluaciones SPM por Rango de Edad (SPM-2 Estandarizado)          */}
+      {/* ========================================================================= */}
+      {activeSubTab === 'spm_eval' && (
+        <div className="space-y-6">
+          {/* Patient Selector Bar for SPM */}
+          <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <label className="text-xs font-bold text-slate-700">Seleccionar Paciente:</label>
+              <select
+                value={selectedPatientId}
+                onChange={(e) => setSelectedPatientId(e.target.value)}
+                className="text-xs font-bold text-slate-800 bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 focus:ring-2 focus:ring-purple-500 cursor-pointer"
+              >
+                {patients.length === 0 ? (
+                  <option value="">(Sin pacientes registrados)</option>
+                ) : (
+                  patients.map(p => (
+                    <option key={p.id} value={p.id}>
+                      {p.firstName} {p.lastName} — RUT: {p.rut}
+                    </option>
+                  ))
+                )}
+              </select>
+            </div>
+
+            <div className="flex items-center gap-2 text-xs text-purple-700 font-bold bg-purple-50 px-3 py-1.5 rounded-xl border border-purple-200">
+              <ClipboardCheck className="w-4 h-4 text-purple-600" />
+              <span>Formulario seleccionado automáticamente por edad cronológica</span>
+            </div>
+          </div>
+
+          {selectedPatient ? (
+            <SPMEvaluationSection
+              patient={selectedPatient}
+              onGoToReport={() => setActiveSubTab('comprehensive_report')}
+            />
+          ) : (
+            <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center text-slate-500 space-y-3">
+              <ClipboardCheck className="w-12 h-12 text-slate-300 mx-auto" />
+              <p className="text-sm font-semibold">
+                {patients.length === 0 
+                  ? 'Base de datos limpia: aún no has registrado ningún paciente.' 
+                  : 'Selecciona un paciente para ver su evaluación SPM.'}
+              </p>
+              <button
+                onClick={() => setActiveSubTab('add_patient_eval')}
+                className="px-4 py-2 bg-purple-700 text-white rounded-xl text-xs font-bold shadow-xs hover:bg-purple-600 cursor-pointer"
+              >
+                + Registrar Paciente
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* VISTA: Biblioteca (Documentos, Listas de Comunicación y Formularios)      */}
+      {/* ========================================================================= */}
+      {activeSubTab === 'library' && (
+        <LibraryManagementView
+          patients={patients}
+          selectedPatientId={selectedPatientId}
+          onSelectPatient={setSelectedPatientId}
+          onNavigateToSPM={() => setActiveSubTab('spm_eval')}
+          onNavigateToReport={() => setActiveSubTab('comprehensive_report')}
+        />
       )}
 
       {/* ========================================================================= */}

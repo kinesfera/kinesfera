@@ -2,6 +2,12 @@ import { ComprehensiveReport } from '../types';
 import { calculatePatientAge } from './ageHelper';
 import { getCompanyBranding } from './brandingConfig';
 import { getKinesferaLogoSvgString } from '../components/KinesferaLogo';
+import { 
+  getFamilyThreeLineSummary,
+  getFamilyAchievements,
+  getFamilyNextSteps,
+  getFamilyHomeRecommendations 
+} from './familyReportHelper';
 
 /**
  * Generates and downloads a clean, formatted Microsoft Word (.doc) document
@@ -19,6 +25,11 @@ export function downloadReportAsWord(report: ComprehensiveReport) {
   const bpm = evaluations?.daFonsecaBpm;
   const ageInfo = calculatePatientAge(report.patientBirthDate);
   const branding = getCompanyBranding();
+
+  const summary = getFamilyThreeLineSummary(report);
+  const achievements = getFamilyAchievements(report);
+  const nextSteps = getFamilyNextSteps(report);
+  const homeTips = getFamilyHomeRecommendations(report);
 
   let logoMarkup = '';
   if (branding.showLogo) {
@@ -126,10 +137,42 @@ export function downloadReportAsWord(report: ComprehensiveReport) {
         ${branding.subtext || 'DEPARTAMENTO DE NEUROREHABILITACIÓN PEDIÁTRICA & KINESIOLOGÍA'}
       </div>
 
-      <h1>INFORME CLÍNICO DE EVALUACIÓN NEUROPSICOMOTRIZ</h1>
+      <h1>INFORME DE EVALUACIÓN KINESIOLÓGICA</h1>
       <p style="text-align: center; font-size: 9.5pt; color: #475569;">
         Fecha de Emisión: <strong>${report.dateGenerated}</strong> | Ficha Clínica N°: <strong>${report.medicalRecordNumber}</strong>
       </p>
+
+      <!-- RESUMEN EN 3 LÍNEAS PARA LA FAMILIA -->
+      <div style="background-color: #f0fdf4; border: 1.5pt solid #86efac; padding: 10pt; margin-top: 10pt; margin-bottom: 12pt; border-radius: 6pt;">
+        <h2 style="color: #166534; border: none; margin-top: 0; padding-bottom: 2pt;">A) RESUMEN DEL PROCESO PARA LA FAMILIA</h2>
+        <p><strong>🌱 1. ¿Cómo llegó?:</strong> ${summary.arrival}</p>
+        <p><strong>🎯 2. ¿Qué se trabajó?:</strong> ${summary.workDone}</p>
+        <p><strong>⭐ 3. ¿Cómo está hoy?:</strong> ${summary.currentState}</p>
+      </div>
+
+      <!-- LOGROS -->
+      <div style="background-color: #f0fdfa; border: 1.5pt solid #5eead4; padding: 10pt; margin-bottom: 12pt; border-radius: 6pt;">
+        <h2 style="color: #115e59; border: none; margin-top: 0; padding-bottom: 2pt;">B) LOGROS Y FORTALEZAS OBSERVADAS</h2>
+        <ul style="margin-top: 4pt; margin-bottom: 4pt; padding-left: 18pt;">
+          ${achievements.map(a => `<li><strong>✔</strong> ${a}</li>`).join('')}
+        </ul>
+      </div>
+
+      <!-- QUÉ SIGUE -->
+      <div style="background-color: #eef2ff; border: 1.5pt solid #a5b4fc; padding: 10pt; margin-bottom: 12pt; border-radius: 6pt;">
+        <h2 style="color: #3730a3; border: none; margin-top: 0; padding-bottom: 2pt;">C) ¿QUÉ SIGUE? (PRÓXIMOS PASOS EN TERAPIA)</h2>
+        <ul style="margin-top: 4pt; margin-bottom: 4pt; padding-left: 18pt;">
+          ${nextSteps.map(s => `<li>• ${s}</li>`).join('')}
+        </ul>
+      </div>
+
+      <!-- RECOMENDACIONES HOGAR -->
+      <div style="background-color: #fffbeb; border: 1.5pt solid #fde68a; padding: 10pt; margin-bottom: 12pt; border-radius: 6pt;">
+        <h2 style="color: #92400e; border: none; margin-top: 0; padding-bottom: 2pt;">D) RECOMENDACIONES PARA EL HOGAR (MÁXIMO 5)</h2>
+        <ol style="margin-top: 4pt; margin-bottom: 4pt; padding-left: 18pt;">
+          ${homeTips.slice(0, 5).map(t => `<li><strong>${t.title}:</strong> ${t.desc}</li>`).join('')}
+        </ol>
+      </div>
 
       <h2>1. Identificación del Paciente y Antecedentes Generales</h2>
       <table>
@@ -606,10 +649,10 @@ export function downloadReportAsWord(report: ComprehensiveReport) {
       `}
 
       <div class="signature-box">
-        <strong>${report.professionalName}</strong><br>
-        ${report.professionalSpecialty}<br>
-        ${report.professionalRegistry}<br>
-        ${report.institution}
+        <strong>${report.professionalName || 'Aldo Olivares Araya'}</strong><br>
+        Registro SIS: 515956<br>
+        Kinesiólogo, Especialista en Psicomotricidad<br>
+        ${report.institution || 'Centro Clínico Kinesfera · Creando Sentido Al Juego'}
       </div>
 
     </body>

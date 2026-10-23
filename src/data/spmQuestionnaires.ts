@@ -399,24 +399,235 @@ export const SPM_SCHOOL_2_TO_5_QUESTIONS: SPMQuestion[] = [
   { num: 75, scale: 'PLA', scaleName: 'Planificación e Ideas', text: 'No logra ejecutar acciones de la rutina diaria en la secuencia correcta (guardar materiales, ponerse chaqueta).', vulnerability: 'Planeamiento Motor' }
 ];
 
+// ----------------------------------------------------------------------------
+// 5. SPM-2 BEBÉS (4 A 9 MESES) - CUESTIONARIO OFICIAL EN ESPAÑOL (80 PREGUNTAS)
+// ----------------------------------------------------------------------------
+export const SPM_BEBES_4_TO_9_MESES_QUESTIONS: SPMQuestion[] = [
+  // VISIÓN (VIS) 1-10
+  { num: 1, scale: 'VIS', scaleName: 'Visión', text: 'Se fastidia o cierra los ojos cuando hay una luz fuerte.', vulnerability: 'Hiperreactivo' },
+  { num: 2, scale: 'VIS', scaleName: 'Visión', text: 'Mira fijamente a las luces que parpadean o brillan intermitentemente.', vulnerability: 'Buscador' },
+  { num: 3, scale: 'VIS', scaleName: 'Visión', text: 'Muestra angustia en habitaciones de colores fuertes.', vulnerability: 'Hiperreactivo' },
+  { num: 4, scale: 'VIS', scaleName: 'Visión', text: 'Mira fijamente a las luces brillantes.', vulnerability: 'Buscador' },
+  { num: 5, scale: 'VIS', scaleName: 'Visión', text: 'Mira fijamente a objetos que giran.', vulnerability: 'Buscador' },
+  { num: 6, scale: 'VIS', scaleName: 'Visión', text: 'Tiene problemas para seguir objetos que se mueven con la vista.', vulnerability: 'Ocular-Motor' },
+  { num: 7, scale: 'VIS', scaleName: 'Visión', text: 'Mira a objetos con el rabillo del ojo.', vulnerability: 'Buscador' },
+  { num: 8, scale: 'VIS', scaleName: 'Visión', text: 'Tiene dificultad para encontrar un juguete que esté sobre una alfombra o frazada estampada.', vulnerability: 'Percepción' },
+  { num: 9, scale: 'VIS', scaleName: 'Visión', text: 'Mira fijamente a la gente o a los objetos.', vulnerability: 'Hiporreactivo' },
+  { num: 10, scale: 'VIS', scaleName: 'Visión', text: 'Tiene dificultad para encontrar un juguete favorito que esté entre otros objetos.', vulnerability: 'Percepción' },
+
+  // OÍDO / AUDICIÓN (HEA) 11-20
+  { num: 11, scale: 'HEA', scaleName: 'Audición (Oído)', text: 'Muestra angustia con sonidos hogareños normales como el sonido de la aspiradora o el de jalar la cadena de la taza del baño.', vulnerability: 'Hiperreactivo' },
+  { num: 12, scale: 'HEA', scaleName: 'Audición (Oído)', text: 'No hace caso de los sonidos cotidianos como el repique de juguetes o el timbre del teléfono.', vulnerability: 'Hiporreactivo' },
+  { num: 13, scale: 'HEA', scaleName: 'Audición (Oído)', text: 'No me mira cuando lo/la llamo por su nombre.', vulnerability: 'Hiporreactivo' },
+  { num: 14, scale: 'HEA', scaleName: 'Audición (Oído)', text: 'Tiene dificultad para dormir con ruidos suaves en el fondo como el de pisadas o el del teclado de una computadora.', vulnerability: 'Hiperreactivo' },
+  { num: 15, scale: 'HEA', scaleName: 'Audición (Oído)', text: 'Parece no darse cuenta o confundirse acerca de dónde provienen los sonidos.', vulnerability: 'Percepción' },
+  { num: 16, scale: 'HEA', scaleName: 'Audición (Oído)', text: 'Muestra angustia al oír el bullicio de una fiesta o de una habitación llena de gente.', vulnerability: 'Hiperreactivo' },
+  { num: 17, scale: 'HEA', scaleName: 'Audición (Oído)', text: 'No nota que hay nuevas voces o nuevos sonidos en la habitación.', vulnerability: 'Hiporreactivo' },
+  { num: 18, scale: 'HEA', scaleName: 'Audición (Oído)', text: 'Prefiere los juguetes que hacen bulla a los que son silenciosos.', vulnerability: 'Buscador' },
+  { num: 19, scale: 'HEA', scaleName: 'Audición (Oído)', text: 'No hace caso de los sonidos fuertes como una sirena o truenos.', vulnerability: 'Hiporreactivo' },
+  { num: 20, scale: 'HEA', scaleName: 'Audición (Oído)', text: 'No reconoce mi voz.', vulnerability: 'Percepción' },
+
+  // TACTO (TOU) 21-30
+  { num: 21, scale: 'TOU', scaleName: 'Tacto', text: 'Muestra angustia cuando su piel desnuda toca superficies texturizadas como ciertas ropas, el pasto, la arena, la alfombra, o los juguetes peludos.', vulnerability: 'Hiperreactivo' },
+  { num: 22, scale: 'TOU', scaleName: 'Tacto', text: 'Muestra angustia cuando toca comidas con los dedos.', vulnerability: 'Hiperreactivo' },
+  { num: 23, scale: 'TOU', scaleName: 'Tacto', text: 'Muestra angustia o se aparta cuando lo/la tocan.', vulnerability: 'Hiperreactivo' },
+  { num: 24, scale: 'TOU', scaleName: 'Tacto', text: 'Se fastidia si es que la temperatura de la comida, del agua del baño, o de una toallita húmeda no está precisamente correcta.', vulnerability: 'Hiperreactivo' },
+  { num: 25, scale: 'TOU', scaleName: 'Tacto', text: 'Se fastidia cuando lo/la están vistiendo o le están cambiando el pañal.', vulnerability: 'Hiperreactivo' },
+  { num: 26, scale: 'TOU', scaleName: 'Tacto', text: 'Llora o empuja hacia atrás cuando lo cargan.', vulnerability: 'Hiperreactivo' },
+  { num: 27, scale: 'TOU', scaleName: 'Tacto', text: 'Se frota las manos o la cara con telas o con animales de peluche.', vulnerability: 'Buscador' },
+  { num: 28, scale: 'TOU', scaleName: 'Tacto', text: 'Muestra angustia, hace arcadas, o vomita en reacción a comidas de ciertas texturas como comida blanda o crujiente.', vulnerability: 'Hiperreactivo' },
+  { num: 29, scale: 'TOU', scaleName: 'Tacto', text: 'Jadea o tose cuando come, cuando bebe, cuando toma de la mamadera o cuando mama.', vulnerability: 'Motor Oral' },
+  { num: 30, scale: 'TOU', scaleName: 'Tacto', text: 'Pone sus manos, su cabeza, o su cuerpo contra objetos que vibran como la lavadora de platos o la lavadora de ropa.', vulnerability: 'Buscador' },
+
+  // GUSTO Y OLFATO (TS) 31-40
+  { num: 31, scale: 'TS', scaleName: 'Gusto y Olfato', text: 'Se fastidia cuando hay ciertos olores a su alrededor.', vulnerability: 'Hiperreactivo' },
+  { num: 32, scale: 'TS', scaleName: 'Gusto y Olfato', text: 'Huele la comida antes de comérsela.', vulnerability: 'Hiperreactivo' },
+  { num: 33, scale: 'TS', scaleName: 'Gusto y Olfato', text: 'Evita comidas que tengan olores fuertes.', vulnerability: 'Hiperreactivo' },
+  { num: 34, scale: 'TS', scaleName: 'Gusto y Olfato', text: 'Hace arcadas en reacción a ciertos olores.', vulnerability: 'Hiperreactivo' },
+  { num: 35, scale: 'TS', scaleName: 'Gusto y Olfato', text: 'Huele los juguetes u otros objetos que no son comibles.', vulnerability: 'Buscador' },
+  { num: 36, scale: 'TS', scaleName: 'Gusto y Olfato', text: 'Se fastidia durante una comida si hay cambios entre alimentos que tienen sabores diferentes.', vulnerability: 'Hiperreactivo' },
+  { num: 37, scale: 'TS', scaleName: 'Gusto y Olfato', text: 'No muestra preferir comidas de un cierto sabor a las de otros sabores.', vulnerability: 'Hiporreactivo' },
+  { num: 38, scale: 'TS', scaleName: 'Gusto y Olfato', text: 'Evita comidas que tengan sabores fuertes.', vulnerability: 'Hiperreactivo' },
+  { num: 39, scale: 'TS', scaleName: 'Gusto y Olfato', text: 'Hace arcadas cuando prueba las comidas.', vulnerability: 'Hiperreactivo' },
+  { num: 40, scale: 'TS', scaleName: 'Gusto y Olfato', text: 'Insiste en comer solo la misma marca de ciertos alimentos.', vulnerability: 'Hiperreactivo' },
+
+  // CONCIENCIA DEL CUERPO (BOD) 41-50
+  { num: 41, scale: 'BOD', scaleName: 'Conciencia del Cuerpo', text: 'Juega de manera brusca con objetos, mascotas, u otros niños.', vulnerability: 'Buscador' },
+  { num: 42, scale: 'BOD', scaleName: 'Conciencia del Cuerpo', text: 'Muerde los juguetes, la ropa, u otros objetos repetidamente.', vulnerability: 'Buscador' },
+  { num: 43, scale: 'BOD', scaleName: 'Conciencia del Cuerpo', text: 'Se cansa fácilmente cuando le dan de comer.', vulnerability: 'Control Postural' },
+  { num: 44, scale: 'BOD', scaleName: 'Conciencia del Cuerpo', text: 'Hace movimientos grandes y rápidos con los brazos y las piernas repetidamente.', vulnerability: 'Buscador' },
+  { num: 45, scale: 'BOD', scaleName: 'Conciencia del Cuerpo', text: 'Se golpea la cabeza a propósito contra el suelo, la pared, o contra algún objeto.', vulnerability: 'Buscador' },
+  { num: 46, scale: 'BOD', scaleName: 'Conciencia del Cuerpo', text: 'Pone demasiada comida en su boca.', vulnerability: 'Percepción' },
+  { num: 47, scale: 'BOD', scaleName: 'Conciencia del Cuerpo', text: 'Se mueve despacio o con lentitud.', vulnerability: 'Hiporreactivo' },
+  { num: 48, scale: 'BOD', scaleName: 'Conciencia del Cuerpo', text: 'Mueve su cuerpo de modos raros, sacudiendo los dedos o agitando las muñecas.', vulnerability: 'Buscador' },
+  { num: 49, scale: 'BOD', scaleName: 'Conciencia del Cuerpo', text: 'Afloja el cuerpo cuando un adulto lo/la carga.', vulnerability: 'Tono / Postura' },
+  { num: 50, scale: 'BOD', scaleName: 'Conciencia del Cuerpo', text: 'Se muerde o se golpea.', vulnerability: 'Buscador' },
+
+  // EQUILIBRIO Y MOVIMIENTO (BAL) 51-60
+  { num: 51, scale: 'BAL', scaleName: 'Equilibrio y Movimiento', text: 'Muestra angustia cuando lo mecen o lo mueven de arriba abajo.', vulnerability: 'Hiperreactivo' },
+  { num: 52, scale: 'BAL', scaleName: 'Equilibrio y Movimiento', text: 'Se fastidia cuando yace sobre su estómago.', vulnerability: 'Hiperreactivo' },
+  { num: 53, scale: 'BAL', scaleName: 'Equilibrio y Movimiento', text: 'Trata de zafarse, se pone tieso/a, o se fastidia cuando lo balancean o lo/la levantan en alto.', vulnerability: 'Hiperreactivo' },
+  { num: 54, scale: 'BAL', scaleName: 'Equilibrio y Movimiento', text: 'Se sobresalta o llora cuando lo/la mueven de repente.', vulnerability: 'Hiperreactivo' },
+  { num: 55, scale: 'BAL', scaleName: 'Equilibrio y Movimiento', text: 'Necesita un movimiento intenso para calmarse.', vulnerability: 'Buscador' },
+  { num: 56, scale: 'BAL', scaleName: 'Equilibrio y Movimiento', text: 'Necesita algún movimiento para poder dormirse como ir en un auto o mecerse en un asiento para bebés.', vulnerability: 'Buscador' },
+  { num: 57, scale: 'BAL', scaleName: 'Equilibrio y Movimiento', text: 'Busca movimiento intenso o continuo como balancearse, mecerse, o moverse de arriba abajo.', vulnerability: 'Buscador' },
+  { num: 58, scale: 'BAL', scaleName: 'Equilibrio y Movimiento', text: 'Se fastidia cuando su cabeza está boca abajo.', vulnerability: 'Hiperreactivo' },
+  { num: 59, scale: 'BAL', scaleName: 'Equilibrio y Movimiento', text: 'Muestra angustia cuando lo/la mueven de una posición a otra.', vulnerability: 'Hiperreactivo' },
+  { num: 60, scale: 'BAL', scaleName: 'Equilibrio y Movimiento', text: 'Tiene dificultad para alzar la cabeza cuando lo/la levantan luego de estar echado/a.', vulnerability: 'Control Postural' },
+
+  // PLANIFICACIÓN E IDEAS (PLA) 61-70
+  { num: 61, scale: 'PLA', scaleName: 'Planificación e Ideas', text: 'No explora nuevas maneras de jugar con objetos familiares.', vulnerability: 'Ideación' },
+  { num: 62, scale: 'PLA', scaleName: 'Planificación e Ideas', text: 'No inicia juegos con los juguetes.', vulnerability: 'Ideación' },
+  { num: 63, scale: 'PLA', scaleName: 'Planificación e Ideas', text: 'No explora nuevos ambientes.', vulnerability: 'Ideación' },
+  { num: 64, scale: 'PLA', scaleName: 'Planificación e Ideas', text: 'Tiene dificultad para bajarse de una silla, de un sillón, o de un sitio alto.', vulnerability: 'Planeamiento Motor' },
+  { num: 65, scale: 'PLA', scaleName: 'Planificación e Ideas', text: 'Tiene dificultad para controlar la comida en la boca.', vulnerability: 'Motor Oral' },
+  { num: 66, scale: 'PLA', scaleName: 'Planificación e Ideas', text: 'Tiene dificultad para controlar los líquidos en la boca.', vulnerability: 'Motor Oral' },
+  { num: 67, scale: 'PLA', scaleName: 'Planificación e Ideas', text: 'Tiene dificultad para maniobrar alrededor de obstáculos o bajo o encima de ellos.', vulnerability: 'Planeamiento Motor' },
+  { num: 68, scale: 'PLA', scaleName: 'Planificación e Ideas', text: 'No trata de imitar las acciones de otros como hacer adiós.', vulnerability: 'Planeamiento Motor' },
+  { num: 69, scale: 'PLA', scaleName: 'Planificación e Ideas', text: 'Tiene dificultad imitando sonidos correctamente como haciendo ruido con los labios y la lengua o diciendo "mamá".', vulnerability: 'Planeamiento Motor' },
+  { num: 70, scale: 'PLA', scaleName: 'Planificación e Ideas', text: 'Tiene dificultad imitando expresiones de la cara, o movimientos de la boca o de la lengua correctamente.', vulnerability: 'Planeamiento Motor' },
+
+  // PARTICIPACIÓN SOCIAL (SOC) 71-80 (Ítems positivos invertidos: N=4, O=3, F=2, S=1)
+  { num: 71, scale: 'SOC', scaleName: 'Participación Social', text: 'Responde a mi voz o a mi cara con expresiones vocales o faciales.', isReverseScored: true },
+  { num: 72, scale: 'SOC', scaleName: 'Participación Social', text: 'Sonríe, se ríe, o se une a juegos como "el escondite".', isReverseScored: true },
+  { num: 73, scale: 'SOC', scaleName: 'Participación Social', text: 'Hace sonidos vocales de felicidad cuando juego con él o ella.', isReverseScored: true },
+  { num: 74, scale: 'SOC', scaleName: 'Participación Social', text: 'Me mira a los ojos por más que un vistazo cuando yo le hablo.', isReverseScored: true },
+  { num: 75, scale: 'SOC', scaleName: 'Participación Social', text: 'Mueve sus brazos o sus piernas activamente cuando juega conmigo.', isReverseScored: true },
+  { num: 76, scale: 'SOC', scaleName: 'Participación Social', text: 'Mira a lo que yo estoy mirando.', isReverseScored: true },
+  { num: 77, scale: 'SOC', scaleName: 'Participación Social', text: 'Trata de darles cosas a los adultos o de tomarlas.', isReverseScored: true },
+  { num: 78, scale: 'SOC', scaleName: 'Participación Social', text: 'Se calma fácilmente con un adulto familiar cuando está alterado/a.', isReverseScored: true },
+  { num: 79, scale: 'SOC', scaleName: 'Participación Social', text: 'Expresa una variedad de emociones como alegría, tristeza, y frustración.', isReverseScored: true },
+  { num: 80, scale: 'SOC', scaleName: 'Participación Social', text: 'Se acerca hacia adelante y abre la boca cuando le están dando de comer.', isReverseScored: true }
+];
+
+// ----------------------------------------------------------------------------
+// 6. SPM-2 NIÑOS PEQUEÑOS / TODDLER (10 A 30 MESES) - CUESTIONARIO OFICIAL (80 PREGUNTAS)
+// ----------------------------------------------------------------------------
+export const SPM_TODDLER_10_TO_30_MESES_QUESTIONS: SPMQuestion[] = [
+  // VISIÓN (VIS) 1-10
+  { num: 1, scale: 'VIS', scaleName: 'Visión', text: 'Se fastidia o cierra los ojos cuando hay una luz fuerte.', vulnerability: 'Hiperreactivo' },
+  { num: 2, scale: 'VIS', scaleName: 'Visión', text: 'Tiene dificultad para encontrar un juguete favorito que esté entre otros objetos.', vulnerability: 'Percepción' },
+  { num: 3, scale: 'VIS', scaleName: 'Visión', text: 'Mira fijamente a objetos que giran o a las luces que parpadean o que brillan intermitentemente.', vulnerability: 'Buscador' },
+  { num: 4, scale: 'VIS', scaleName: 'Visión', text: 'Tiene problemas para seguir objetos que se mueven con la vista.', vulnerability: 'Ocular-Motor' },
+  { num: 5, scale: 'VIS', scaleName: 'Visión', text: 'Mira a objetos con el rabillo del ojo.', vulnerability: 'Buscador' },
+  { num: 6, scale: 'VIS', scaleName: 'Visión', text: 'No se fija en juguetes que brillan o tienen muchos colores.', vulnerability: 'Hiporreactivo' },
+  { num: 7, scale: 'VIS', scaleName: 'Visión', text: 'Muestra angustia en habitaciones de colores fuertes.', vulnerability: 'Hiperreactivo' },
+  { num: 8, scale: 'VIS', scaleName: 'Visión', text: 'Tiene dificultad para encontrar un juguete que esté sobre una alfombra o frazada estampada.', vulnerability: 'Percepción' },
+  { num: 9, scale: 'VIS', scaleName: 'Visión', text: 'Mira fijamente a la gente o a los objetos.', vulnerability: 'Hiporreactivo' },
+  { num: 10, scale: 'VIS', scaleName: 'Visión', text: 'Mira fijamente a las luces brillantes.', vulnerability: 'Buscador' },
+
+  // OÍDO / AUDICIÓN (HEA) 11-20
+  { num: 11, scale: 'HEA', scaleName: 'Audición (Oído)', text: 'Muestra angustia con sonidos hogareños normales como el sonido de la aspiradora o el de jalar la cadena de la taza del baño.', vulnerability: 'Hiperreactivo' },
+  { num: 12, scale: 'HEA', scaleName: 'Audición (Oído)', text: 'Toma nota de sonidos sutiles que otros no notan como un avión lejano o el zumbido del refrigerador.', vulnerability: 'Hiperreactivo' },
+  { num: 13, scale: 'HEA', scaleName: 'Audición (Oído)', text: 'No me mira cuando lo/la llamo por su nombre.', vulnerability: 'Hiporreactivo' },
+  { num: 14, scale: 'HEA', scaleName: 'Audición (Oído)', text: 'Muestra angustia cuando hay sonidos inesperados o fuertes.', vulnerability: 'Hiperreactivo' },
+  { num: 15, scale: 'HEA', scaleName: 'Audición (Oído)', text: 'Tiene dificultad para dormir con ruidos suaves en el fondo como el de pisadas o el del teclado de una computadora.', vulnerability: 'Hiperreactivo' },
+  { num: 16, scale: 'HEA', scaleName: 'Audición (Oído)', text: 'Parece no darse cuenta o confundirse acerca de dónde provienen los sonidos.', vulnerability: 'Percepción' },
+  { num: 17, scale: 'HEA', scaleName: 'Audición (Oído)', text: 'Escucha cuidadosamente a los sonidos que hace, ignorando todo los demás.', vulnerability: 'Buscador' },
+  { num: 18, scale: 'HEA', scaleName: 'Audición (Oído)', text: 'Parece disfrutar de sonidos fuertes que irritan a los demás.', vulnerability: 'Buscador' },
+  { num: 19, scale: 'HEA', scaleName: 'Audición (Oído)', text: 'Gusta hacer ciertos sonidos repetidamente como jalar la cadena de la taza del baño.', vulnerability: 'Buscador' },
+  { num: 20, scale: 'HEA', scaleName: 'Audición (Oído)', text: 'Muestra angustia al oír el bullicio de una fiesta o de una habitación llena de gente.', vulnerability: 'Hiperreactivo' },
+
+  // TACTO (TOU) 21-30
+  { num: 21, scale: 'TOU', scaleName: 'Tacto', text: 'Muestra angustia cuando toca comidas con los dedos.', vulnerability: 'Hiperreactivo' },
+  { num: 22, scale: 'TOU', scaleName: 'Tacto', text: 'Se fastidia si es que la temperatura de la comida, del agua del baño, o de una toallita húmeda no está precisamente correcta.', vulnerability: 'Hiperreactivo' },
+  { num: 23, scale: 'TOU', scaleName: 'Tacto', text: 'No hace caso de sensaciones que para otros serían dolorosas.', vulnerability: 'Hiporreactivo' },
+  { num: 24, scale: 'TOU', scaleName: 'Tacto', text: 'Se fastidia cuando lo/la están vistiendo o le están cambiando el pañal.', vulnerability: 'Hiperreactivo' },
+  { num: 25, scale: 'TOU', scaleName: 'Tacto', text: 'No se da cuenta que tiene comida en la boca.', vulnerability: 'Hiporreactivo' },
+  { num: 26, scale: 'TOU', scaleName: 'Tacto', text: 'Busca sensaciones que para otros serían dolorosas como tirándose al suelo.', vulnerability: 'Buscador' },
+  { num: 27, scale: 'TOU', scaleName: 'Tacto', text: 'Trata de estar envuelto/a en frazadas o ropas bien apretadas.', vulnerability: 'Buscador' },
+  { num: 28, scale: 'TOU', scaleName: 'Tacto', text: 'Muestra angustia, hace arcadas, o vomita en reacción a comidas de ciertas texturas, como comida blanda o crujiente.', vulnerability: 'Hiperreactivo' },
+  { num: 29, scale: 'TOU', scaleName: 'Tacto', text: 'Busca meterse en espacios pequeños como bajo un montón de almohadas.', vulnerability: 'Buscador' },
+  { num: 30, scale: 'TOU', scaleName: 'Tacto', text: 'Pone sus manos, su cabeza, o su cuerpo contra objetos que vibran como la lavadora de platos o la lavadora de ropa.', vulnerability: 'Buscador' },
+
+  // GUSTO Y OLFATO (TS) 31-40
+  { num: 31, scale: 'TS', scaleName: 'Gusto y Olfato', text: 'Huele los juguetes u otros objetos que no son comibles.', vulnerability: 'Buscador' },
+  { num: 32, scale: 'TS', scaleName: 'Gusto y Olfato', text: 'Muestra angustia ante el olor del jabón, del perfume, o de las lociones para la piel.', vulnerability: 'Hiperreactivo' },
+  { num: 33, scale: 'TS', scaleName: 'Gusto y Olfato', text: 'No nota olores fuertes o inusuales.', vulnerability: 'Hiporreactivo' },
+  { num: 34, scale: 'TS', scaleName: 'Gusto y Olfato', text: 'Hace arcadas en reacción a ciertos olores.', vulnerability: 'Hiperreactivo' },
+  { num: 35, scale: 'TS', scaleName: 'Gusto y Olfato', text: 'Prefiere comidas que tengan fuertes olores.', vulnerability: 'Buscador' },
+  { num: 36, scale: 'TS', scaleName: 'Gusto y Olfato', text: 'Evita comidas que tengan olores fuertes.', vulnerability: 'Hiperreactivo' },
+  { num: 37, scale: 'TS', scaleName: 'Gusto y Olfato', text: 'No muestra preferir comidas de un cierto sabor a las de otros sabores.', vulnerability: 'Hiporreactivo' },
+  { num: 38, scale: 'TS', scaleName: 'Gusto y Olfato', text: 'Evita comidas que tengan sabores fuertes.', vulnerability: 'Hiperreactivo' },
+  { num: 39, scale: 'TS', scaleName: 'Gusto y Olfato', text: 'Hace arcadas cuando prueba las comidas.', vulnerability: 'Hiperreactivo' },
+  { num: 40, scale: 'TS', scaleName: 'Gusto y Olfato', text: 'Insiste en comer solo la misma marca de ciertos alimentos.', vulnerability: 'Hiperreactivo' },
+
+  // CONCIENCIA DEL CUERPO (BOD) 41-50
+  { num: 41, scale: 'BOD', scaleName: 'Conciencia del Cuerpo', text: 'Juega de manera brusca con objetos, mascotas, u otros niños.', vulnerability: 'Buscador' },
+  { num: 42, scale: 'BOD', scaleName: 'Conciencia del Cuerpo', text: 'Se golpea la cabeza a propósito contra algún objeto o contra la gente.', vulnerability: 'Buscador' },
+  { num: 43, scale: 'BOD', scaleName: 'Conciencia del Cuerpo', text: 'Muerde los juguetes, la ropa, u otros objetos repetidamente.', vulnerability: 'Buscador' },
+  { num: 44, scale: 'BOD', scaleName: 'Conciencia del Cuerpo', text: 'Rompe juguetes al manejarlos con demasiada fuerza.', vulnerability: 'Percepción' },
+  { num: 45, scale: 'BOD', scaleName: 'Conciencia del Cuerpo', text: 'Se mueve despacio o con lentitud.', vulnerability: 'Hiporreactivo' },
+  { num: 46, scale: 'BOD', scaleName: 'Conciencia del Cuerpo', text: 'Camina sobre los dedos del pie.', vulnerability: 'Buscador' },
+  { num: 47, scale: 'BOD', scaleName: 'Conciencia del Cuerpo', text: 'Afloja el cuerpo cuando un adulto lo/la carga.', vulnerability: 'Tono / Postura' },
+  { num: 48, scale: 'BOD', scaleName: 'Conciencia del Cuerpo', text: 'Deja caer un montón de comida cuando come con una cuchara.', vulnerability: 'Percepción' },
+  { num: 49, scale: 'BOD', scaleName: 'Conciencia del Cuerpo', text: 'Se muerde, se golpea, o muerde o golpea a otros.', vulnerability: 'Buscador' },
+  { num: 50, scale: 'BOD', scaleName: 'Conciencia del Cuerpo', text: 'Se cansa fácilmente cuando le dan de comer.', vulnerability: 'Control Postural' },
+
+  // EQUILIBRIO Y MOVIMIENTO (BAL) 51-60
+  { num: 51, scale: 'BAL', scaleName: 'Equilibrio y Movimiento', text: 'Se marea en el automóvil.', vulnerability: 'Hiperreactivo' },
+  { num: 52, scale: 'BAL', scaleName: 'Equilibrio y Movimiento', text: 'Se sienta con los hombros caídos o inclinándose hacia adelante.', vulnerability: 'Control Postural' },
+  { num: 53, scale: 'BAL', scaleName: 'Equilibrio y Movimiento', text: 'Necesita un movimiento intenso para calmarse.', vulnerability: 'Buscador' },
+  { num: 54, scale: 'BAL', scaleName: 'Equilibrio y Movimiento', text: 'No se sujeta cuando se está cayendo.', vulnerability: 'Control Postural' },
+  { num: 55, scale: 'BAL', scaleName: 'Equilibrio y Movimiento', text: 'Necesita algún movimiento para poder dormirse como que lo/la mezan o como ir en un auto.', vulnerability: 'Buscador' },
+  { num: 56, scale: 'BAL', scaleName: 'Equilibrio y Movimiento', text: 'Busca movimiento intenso o continuo como balancearse, mecerse, o moverse de arriba abajo.', vulnerability: 'Buscador' },
+  { num: 57, scale: 'BAL', scaleName: 'Equilibrio y Movimiento', text: 'Se apoya sobre la gente o los muebles para mantenerse erguido/a.', vulnerability: 'Control Postural' },
+  { num: 58, scale: 'BAL', scaleName: 'Equilibrio y Movimiento', text: 'Se fastidia cuando su cabeza está boca abajo.', vulnerability: 'Hiperreactivo' },
+  { num: 59, scale: 'BAL', scaleName: 'Equilibrio y Movimiento', text: 'Puede girar repetidamente sin marearse.', vulnerability: 'Hiporreactivo' },
+  { num: 60, scale: 'BAL', scaleName: 'Equilibrio y Movimiento', text: 'No puede saltar con los dos pies al mismo tiempo.', vulnerability: 'Control Postural' },
+
+  // PLANIFICACIÓN E IDEAS (PLA) 61-70
+  { num: 61, scale: 'PLA', scaleName: 'Planificación e Ideas', text: 'No explora nuevas maneras de jugar con objetos familiares.', vulnerability: 'Ideación' },
+  { num: 62, scale: 'PLA', scaleName: 'Planificación e Ideas', text: 'Sigue el mismo patrón de conducta repetidamente cuando juega con objetos o con juguetes como por ejemplo poniéndolos en fila de la misma manera.', vulnerability: 'Ideación' },
+  { num: 63, scale: 'PLA', scaleName: 'Planificación e Ideas', text: 'No pone un objeto dentro de otro, como un bloque dentro de una taza, cuando está jugando.', vulnerability: 'Planeamiento Motor' },
+  { num: 64, scale: 'PLA', scaleName: 'Planificación e Ideas', text: 'Tiene dificultad para bajarse de una silla, de un sillón, o de un sitio alto.', vulnerability: 'Planeamiento Motor' },
+  { num: 65, scale: 'PLA', scaleName: 'Planificación e Ideas', text: 'Tiene dificultad trepándose a una silla o a un asiento para el auto y dando la vuelta para sentarse.', vulnerability: 'Planeamiento Motor' },
+  { num: 66, scale: 'PLA', scaleName: 'Planificación e Ideas', text: 'Tiene dificultad para controlar la comida o los líquidos en la boca.', vulnerability: 'Motor Oral' },
+  { num: 67, scale: 'PLA', scaleName: 'Planificación e Ideas', text: 'Tiene dificultad para maniobrar alrededor de obstáculos o bajo o encima de ellos.', vulnerability: 'Planeamiento Motor' },
+  { num: 68, scale: 'PLA', scaleName: 'Planificación e Ideas', text: 'Repite la misma actividad una y otra vez sin aumentar su destreza.', vulnerability: 'Ideación' },
+  { num: 69, scale: 'PLA', scaleName: 'Planificación e Ideas', text: 'Tiene dificultad imitando sonidos correctamente como haciendo ruido con los labios y la lengua o diciendo "mamá".', vulnerability: 'Planeamiento Motor' },
+  { num: 70, scale: 'PLA', scaleName: 'Planificación e Ideas', text: 'Tiene dificultad imitando expresiones de la cara, o movimientos de la boca o de la lengua correctamente.', vulnerability: 'Planeamiento Motor' },
+
+  // PARTICIPACIÓN SOCIAL (SOC) 71-80 (Ítems positivos invertidos: N=4, O=3, F=2, S=1)
+  { num: 71, scale: 'SOC', scaleName: 'Participación Social', text: 'Responde a mi voz o a mi cara con expresiones vocales o faciales.', isReverseScored: true },
+  { num: 72, scale: 'SOC', scaleName: 'Participación Social', text: 'Trata de darles cosas a los adultos o de tomarlas.', isReverseScored: true },
+  { num: 73, scale: 'SOC', scaleName: 'Participación Social', text: 'Señala objetos para enseñárselos a los adultos.', isReverseScored: true },
+  { num: 74, scale: 'SOC', scaleName: 'Participación Social', text: 'Se calma fácilmente con un adulto familiar cuando está alterado/a.', isReverseScored: true },
+  { num: 75, scale: 'SOC', scaleName: 'Participación Social', text: 'Expresa una variedad de emociones como alegría, tristeza, y frustración.', isReverseScored: true },
+  { num: 76, scale: 'SOC', scaleName: 'Participación Social', text: 'Me mira a los ojos por más que un vistazo cuando yo le hablo.', isReverseScored: true },
+  { num: 77, scale: 'SOC', scaleName: 'Participación Social', text: 'Prosigue fácilmente cuando hay un cambio inesperado en su rutina.', isReverseScored: true },
+  { num: 78, scale: 'SOC', scaleName: 'Participación Social', text: 'Duerme sin interrumpir la rutina familiar.', isReverseScored: true },
+  { num: 79, scale: 'SOC', scaleName: 'Participación Social', text: 'Se acerca hacia adelante y abre la boca cuando le están dando de comer.', isReverseScored: true },
+  { num: 80, scale: 'SOC', scaleName: 'Participación Social', text: 'Se asegura que estoy cerca cuando está en un sitio nuevo.', isReverseScored: true }
+];
+
+export type SPMAgeGroupKey = 'bebes_4_9' | '10_a_30_meses' | '2_a_5_anos' | 'mayor_5_anos';
+
 // Helper para obtener las preguntas según edad y contexto
-export function getSPMQuestions(ageGroup: '2_a_5_anos' | 'mayor_5_anos', formType: 'hogar' | 'escuela'): SPMQuestion[] {
+export function getSPMQuestions(
+  ageGroup: SPMAgeGroupKey,
+  formType: 'hogar' | 'escuela' = 'hogar'
+): SPMQuestion[] {
+  if (ageGroup === 'bebes_4_9') {
+    return SPM_BEBES_4_TO_9_MESES_QUESTIONS;
+  }
+  if (ageGroup === '10_a_30_meses') {
+    return SPM_TODDLER_10_TO_30_MESES_QUESTIONS;
+  }
   if (ageGroup === '2_a_5_anos') {
     return formType === 'hogar' ? SPM_HOME_2_TO_5_QUESTIONS : SPM_SCHOOL_2_TO_5_QUESTIONS;
-  } else {
-    return formType === 'hogar' ? SPM_HOME_OVER_5_QUESTIONS : SPM_SCHOOL_OVER_5_QUESTIONS;
   }
+  return formType === 'hogar' ? SPM_HOME_OVER_5_QUESTIONS : SPM_SCHOOL_OVER_5_QUESTIONS;
 }
 
-// Cálculo psicométrico exacto según manual SPM:
+// Cálculo psicométrico exacto según manual SPM / SPM-2:
 // Puntuaciones Likert: N=1, O=2, F=3, S=4
 // (Excepto ítems positivos de Participación Social donde N=4, O=3, F=2, S=1)
-// Devuelve puntuaciones directas y conversión a puntaje T normativo según tablas del manual
 export function calculateSPMScores(
   answers: Record<number, number>,
   questions: SPMQuestion[],
-  ageGroup: '2_a_5_anos' | 'mayor_5_anos',
-  formType: 'hogar' | 'escuela'
+  ageGroup: SPMAgeGroupKey,
+  formType: 'hogar' | 'escuela' = 'hogar'
 ) {
   const scaleRaw: Record<SPMScaleId, number> = {
     SOC: 0,
@@ -446,22 +657,19 @@ export function calculateSPMScores(
     const rawVal = answers[q.num];
     if (rawVal !== undefined && rawVal >= 1 && rawVal <= 4) {
       answeredTotal++;
-      // Score calculation:
       const points = q.isReverseScored ? (5 - rawVal) : rawVal;
       scaleRaw[q.scale] += points;
       scaleCounts[q.scale]++;
     }
   });
 
-  // Cálculo de TOT (Total Sensory Systems) = VIS + HEA + TOU + BOD + BAL + TS
+  // Cálculo de TOT / ST (Total Sensory Systems) = VIS + HEA + TOU + BOD + BAL + TS
   const totRaw = scaleRaw.VIS + scaleRaw.HEA + scaleRaw.TOU + scaleRaw.BOD + scaleRaw.BAL + scaleRaw.TS;
 
-  // Conversión aproximada a Puntaje T (Media = 50, DE = 10) según Tablas B1 y B2 del manual
-  // Sin dificultades: 40-59 | Dificultades moderadas: 60-69 | Con dificultades: 70-80
+  // Conversión a Puntaje T (Media = 50, DE = 10) según Tablas del manual SPM / SPM-2
   const convertToT = (raw: number, maxPossible: number, minPossible: number) => {
     if (raw === 0) return 50;
     const ratio = (raw - minPossible) / Math.max(1, maxPossible - minPossible);
-    // Distribución sesgada hacia la izquierda en población típica
     const tScore = Math.round(40 + ratio * 38);
     return Math.min(80, Math.max(40, tScore));
   };
@@ -472,15 +680,19 @@ export function calculateSPMScores(
     return 'Disfunción Severa (70-80)';
   };
 
-  const socT = convertToT(scaleRaw.SOC, (scaleCounts.SOC || 10) * 4, (scaleCounts.SOC || 10) * 1);
-  const visT = convertToT(scaleRaw.VIS, (scaleCounts.VIS || 11) * 4, (scaleCounts.VIS || 11) * 1);
-  const heaT = convertToT(scaleRaw.HEA, (scaleCounts.HEA || 8) * 4, (scaleCounts.HEA || 8) * 1);
-  const touT = convertToT(scaleRaw.TOU, Math.max(56, (scaleCounts.TOU || 14) * 4), (scaleCounts.TOU || 11) * 1);
-  const tsT = convertToT(scaleRaw.TS, (scaleCounts.TS || 5) * 4, (scaleCounts.TS || 5) * 1);
+  const isInfantOrToddler = ageGroup === 'bebes_4_9' || ageGroup === '10_a_30_meses';
+  const defaultScaleLen = isInfantOrToddler ? 10 : 10;
+
+  const socT = convertToT(scaleRaw.SOC, (scaleCounts.SOC || defaultScaleLen) * 4, (scaleCounts.SOC || defaultScaleLen) * 1);
+  const visT = convertToT(scaleRaw.VIS, (scaleCounts.VIS || defaultScaleLen) * 4, (scaleCounts.VIS || defaultScaleLen) * 1);
+  const heaT = convertToT(scaleRaw.HEA, (scaleCounts.HEA || (isInfantOrToddler ? 10 : 8)) * 4, (scaleCounts.HEA || (isInfantOrToddler ? 10 : 8)) * 1);
+  const touT = convertToT(scaleRaw.TOU, (scaleCounts.TOU || (isInfantOrToddler ? 10 : 11)) * 4, (scaleCounts.TOU || (isInfantOrToddler ? 10 : 11)) * 1);
+  const tsT = convertToT(scaleRaw.TS, (scaleCounts.TS || (isInfantOrToddler ? 10 : 5)) * 4, (scaleCounts.TS || (isInfantOrToddler ? 10 : 5)) * 1);
   const bodT = convertToT(scaleRaw.BOD, (scaleCounts.BOD || 10) * 4, (scaleCounts.BOD || 10) * 1);
-  const balT = convertToT(scaleRaw.BAL, (scaleCounts.BAL || 11) * 4, (scaleCounts.BAL || 11) * 1);
-  const plaT = convertToT(scaleRaw.PLA, (scaleCounts.PLA || 9) * 4, (scaleCounts.PLA || 9) * 1);
-  const totT = convertToT(totRaw, 56 * 4, 56 * 1);
+  const balT = convertToT(scaleRaw.BAL, (scaleCounts.BAL || (isInfantOrToddler ? 10 : 11)) * 4, (scaleCounts.BAL || (isInfantOrToddler ? 10 : 11)) * 1);
+  const plaT = convertToT(scaleRaw.PLA, (scaleCounts.PLA || (isInfantOrToddler ? 10 : 9)) * 4, (scaleCounts.PLA || (isInfantOrToddler ? 10 : 9)) * 1);
+  const totMaxItems = isInfantOrToddler ? 60 : 56;
+  const totT = convertToT(totRaw, totMaxItems * 4, totMaxItems * 1);
 
   return {
     answeredTotal,
@@ -500,3 +712,4 @@ export function calculateSPMScores(
     }
   };
 }
+

@@ -110,6 +110,7 @@ export const PatientEvaluationForm: React.FC<PatientEvaluationFormProps> = ({
   
   const [isCreatingNew, setIsCreatingNew] = useState(patients.length === 0);
   const [showSPMLinkModal, setShowSPMLinkModal] = useState(false);
+  const [modalSpmAgeGroup, setModalSpmAgeGroup] = useState<'bebes_4_9' | '10_a_30_meses' | '2_a_5_anos' | 'mayor_5_anos'>('bebes_4_9');
   const [savedSuccessAlert, setSavedSuccessAlert] = useState<string | null>(null);
   
   // Unsaved changes state & last saved time
@@ -4462,23 +4463,24 @@ export const PatientEvaluationForm: React.FC<PatientEvaluationFormProps> = ({
           )}
 
           {/* ========================================================================= */}
-          {/* SUB-SECCIÓN 6: PERFIL SENSORIAL SPM (75 PREGUNTAS: HOGAR / ESCUELA)        */}
+          {/* ========================================================================= */}
+          {/* SUB-SECCIÓN 6: PERFIL SENSORIAL SPM-2 (4-9m, 10-30m, 2-5a, >5a)            */}
           {/* ========================================================================= */}
           {activeSection === 'spm2' && (
             <div className="space-y-6 animate-in fade-in">
               <div className="bg-gradient-to-r from-indigo-50 via-sky-50 to-blue-50 border border-indigo-200 rounded-2xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xs">
                 <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-black uppercase tracking-wider bg-indigo-600 text-white px-2 py-0.5 rounded-full">
-                      SPM Estandarizado (75 Preguntas)
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-[10px] font-black uppercase tracking-wider bg-indigo-600 text-white px-2.5 py-0.5 rounded-full">
+                      SPM-2 Estandarizado por Rango de Edad
                     </span>
                     <span className="text-[11px] font-bold text-indigo-900 bg-white px-2.5 py-0.5 rounded-full border border-indigo-200">
-                      {ageDecision === 'menor_2_anos' ? 'Preescolar (2 a 5 años)' : 'Mayor a 5 años (Escolar)'}
+                      Bebés (4-9m) · Niños Pequeños (10-30m) · Preescolar (2-5a) · Escolar (5-12a)
                     </span>
                   </div>
                   <h3 className="font-extrabold text-base text-indigo-950 flex items-center gap-2">
                     <Sparkles className="w-4 h-4 text-indigo-600" />
-                    <span>Medida de Procesamiento Sensorial (SPM / SPM-P)</span>
+                    <span>Medida de Procesamiento Sensorial (SPM-2 / SPM-P / SPM)</span>
                   </h3>
                   <p className="text-xs text-indigo-800">
                     Modalidad: <strong className="capitalize">{spmApplicationMethod.replace('_', ' ')}</strong> {spmRespondentName ? `· Respondido por: ${spmRespondentName}` : ''}
@@ -4488,57 +4490,171 @@ export const PatientEvaluationForm: React.FC<PatientEvaluationFormProps> = ({
                 <div className="flex flex-wrap items-center gap-2 shrink-0">
                   <button
                     type="button"
-                    onClick={() => setShowSPMLinkModal(true)}
+                    onClick={() => {
+                      const pAge = calculatePatientAge(currentPatient?.birthDate || '');
+                      const months = (pAge.years * 12) + pAge.months;
+                      if (months <= 9) setModalSpmAgeGroup('bebes_4_9');
+                      else if (months <= 30) setModalSpmAgeGroup('10_a_30_meses');
+                      else if (months <= 60) setModalSpmAgeGroup('2_a_5_anos');
+                      else setModalSpmAgeGroup('mayor_5_anos');
+                      setShowSPMLinkModal(true);
+                    }}
                     className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl shadow-md transition-all cursor-pointer hover:scale-105"
                   >
                     <FileText className="w-4 h-4" />
-                    <span>Abrir Cuestionario Completo (75 Preguntas)</span>
+                    <span>Abrir Cuestionario Completo por Edad</span>
                   </button>
                 </div>
               </div>
 
-              {/* Tarjetas informativas de los dos Cuestionarios SPM */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="p-4 bg-white border border-slate-200 rounded-2xl shadow-xs space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="font-black text-xs text-slate-800 flex items-center gap-1.5">
-                      🏡 Cuestionario para Padres (Hogar)
-                    </span>
-                    <span className="text-[10px] font-bold bg-sky-100 text-sky-800 px-2 py-0.5 rounded-md">
-                      75 Ítems
-                    </span>
+              {/* Tarjetas de los 4 Cuestionarios SPM por Rango de Edad (Incluyendo Bebés 4-9m y 10-30m) */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+                {/* 1. Bebés 4 a 9 meses */}
+                <div className="p-4 bg-purple-50/70 border border-purple-200 rounded-2xl shadow-xs space-y-2 flex flex-col justify-between">
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="font-black text-xs text-purple-950 flex items-center gap-1.5">
+                        👶 SPM-2 Bebés (4-9 meses)
+                      </span>
+                      <span className="text-[10px] font-bold bg-purple-200 text-purple-900 px-2 py-0.5 rounded-md">
+                        80 Ítems
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-600 leading-relaxed">
+                      Formulario oficial para lactantes de 4 a 9 meses (estratos 4-6m y 7-9m): visión, oído, tacto, gusto/olfato, cuerpo, equilibrio, ideas y participación social.
+                    </p>
                   </div>
-                  <p className="text-xs text-slate-600 leading-relaxed">
-                    Evalúa la respuesta e integración del niño en su entorno cotidiano, comidas, higiene, rutinas de sueño y salidas familiares.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => setShowSPMLinkModal(true)}
-                    className="text-xs font-bold text-blue-600 hover:text-blue-800 underline cursor-pointer"
-                  >
-                    Responder o Compartir Enlace Hogar →
-                  </button>
+                  <div className="pt-2 flex flex-col gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setModalSpmAgeGroup('bebes_4_9');
+                        setShowSPMLinkModal(true);
+                      }}
+                      className="w-full py-1.5 px-2.5 bg-purple-700 hover:bg-purple-600 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer text-center"
+                    >
+                      Abrir SPM-2 Bebés (4-9m) →
+                    </button>
+                    <a
+                      href="/assets/aistudio/ilide.info-spm-2-bebes-4-a-9-meses-pr_604339aa0daad77c6d3025399d0c5995_3843a8f7.pdf"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-[11px] font-bold text-purple-800 hover:underline text-center"
+                    >
+                      📄 Ver PDF Oficial 4-9 meses
+                    </a>
+                  </div>
                 </div>
 
-                <div className="p-4 bg-white border border-slate-200 rounded-2xl shadow-xs space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="font-black text-xs text-slate-800 flex items-center gap-1.5">
-                      🏫 Cuestionario Escolar (Aula)
-                    </span>
-                    <span className="text-[10px] font-bold bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-md">
-                      {ageDecision === 'menor_2_anos' ? '75 Ítems (Preescolar)' : '62 Ítems (Escolar)'}
-                    </span>
+                {/* 2. Niños Pequeños 10 a 30 meses */}
+                <div className="p-4 bg-purple-50/70 border border-purple-200 rounded-2xl shadow-xs space-y-2 flex flex-col justify-between">
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="font-black text-xs text-purple-950 flex items-center gap-1.5">
+                        🍼 SPM-2 (10-30 meses)
+                      </span>
+                      <span className="text-[10px] font-bold bg-purple-200 text-purple-900 px-2 py-0.5 rounded-md">
+                        80 Ítems
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-600 leading-relaxed">
+                      Formulario oficial Toddler para niños pequeños de 10 a 30 meses: respuestas sensoriales, exploración motriz, alimentación y rutinas.
+                    </p>
                   </div>
-                  <p className="text-xs text-slate-600 leading-relaxed">
-                    Completado por el profesor jefe, educadora diferencial o equipo PIE para registrar atención, tolerancia a ruidos y motricidad en clase.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => setShowSPMLinkModal(true)}
-                    className="text-xs font-bold text-indigo-600 hover:text-indigo-800 underline cursor-pointer"
-                  >
-                    Responder o Compartir Enlace Escuela →
-                  </button>
+                  <div className="pt-2 flex flex-col gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setModalSpmAgeGroup('10_a_30_meses');
+                        setShowSPMLinkModal(true);
+                      }}
+                      className="w-full py-1.5 px-2.5 bg-purple-700 hover:bg-purple-600 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer text-center"
+                    >
+                      Abrir SPM-2 (10-30m) →
+                    </button>
+                    <a
+                      href="/assets/aistudio/SPM_10-30_meses_5312c45e.pdf"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-[11px] font-bold text-purple-800 hover:underline text-center"
+                    >
+                      📄 Ver PDF Oficial 10-30 meses
+                    </a>
+                  </div>
+                </div>
+
+                {/* 3. Preescolar 2 a 5 años */}
+                <div className="p-4 bg-white border border-slate-200 rounded-2xl shadow-xs space-y-2 flex flex-col justify-between">
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="font-black text-xs text-slate-800 flex items-center gap-1.5">
+                        🎨 Preescolar (2-5 años)
+                      </span>
+                      <span className="text-[10px] font-bold bg-sky-100 text-sky-800 px-2 py-0.5 rounded-md">
+                        75 Ítems
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-600 leading-relaxed">
+                      Cuestionarios para Padres (Hogar) y Educadoras (Jardín Infantil) de 2 a 5 años.
+                    </p>
+                  </div>
+                  <div className="pt-2 flex flex-col gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setModalSpmAgeGroup('2_a_5_anos');
+                        setShowSPMLinkModal(true);
+                      }}
+                      className="w-full py-1.5 px-2.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer text-center"
+                    >
+                      Abrir SPM Preescolar →
+                    </button>
+                    <a
+                      href="/assets/aistudio/Cuestionario_Padres_Pre_Escolar_ea5af9a8.pdf"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-[11px] font-bold text-blue-700 hover:underline text-center"
+                    >
+                      📄 Ver PDF Preescolar
+                    </a>
+                  </div>
+                </div>
+
+                {/* 4. Escolar 5 a 12 años */}
+                <div className="p-4 bg-white border border-slate-200 rounded-2xl shadow-xs space-y-2 flex flex-col justify-between">
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="font-black text-xs text-slate-800 flex items-center gap-1.5">
+                        🧒 Escolar (5-12 años)
+                      </span>
+                      <span className="text-[10px] font-bold bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-md">
+                        75 / 62 Ítems
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-600 leading-relaxed">
+                      Cuestionarios para Padres (Hogar) y Profesores / PIE (Escuela) de 5 a 12 años.
+                    </p>
+                  </div>
+                  <div className="pt-2 flex flex-col gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setModalSpmAgeGroup('mayor_5_anos');
+                        setShowSPMLinkModal(true);
+                      }}
+                      className="w-full py-1.5 px-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer text-center"
+                    >
+                      Abrir SPM Escolar →
+                    </button>
+                    <a
+                      href="/assets/aistudio/Cuestionario_Padres_Escolares_460ca90f.pdf"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-[11px] font-bold text-indigo-700 hover:underline text-center"
+                    >
+                      📄 Ver PDF Escolar
+                    </a>
+                  </div>
                 </div>
               </div>
 
@@ -5299,6 +5415,7 @@ export const PatientEvaluationForm: React.FC<PatientEvaluationFormProps> = ({
       <SPMOnlineFormModal
         patientId={currentPatient?.id || ''}
         patientName={`${currentPatient?.firstName || ''} ${currentPatient?.lastName || ''}`}
+        initialAgeGroup={modalSpmAgeGroup}
         isOpen={showSPMLinkModal}
         onClose={() => setShowSPMLinkModal(false)}
         onSubmitResults={handleApplySPMOnlineResults}
