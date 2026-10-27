@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   MarketingReferralContact, 
   DigitalInquiryCRM, 
@@ -17,6 +17,8 @@ import {
   CLINICAL_SCRIPTS,
   META_ADS_CONFIG
 } from '../data/marketingData';
+import { auth } from '../services/firebase';
+import { firebaseClinicalService } from '../services/firebaseClinicalService';
 import { 
   TrendingUp, 
   Target, 
@@ -51,7 +53,7 @@ export const MarketingBusinessHub: React.FC = () => {
     'goals_dashboard' | 'referrals' | 'crm_inquiries' | 'tasks_schedule' | 'sales_strategy' | 'meta_ads' | 'group_service' | 'content_plans'
   >('goals_dashboard');
 
-  // 1. Data States (with localStorage persistence)
+  // 1. Data States (Firestore single source of truth when available, with localStorage cache)
   const [referrals, setReferrals] = useState<MarketingReferralContact[]>(() => {
     const saved = localStorage.getItem('kinesfera_referrals');
     return saved ? JSON.parse(saved) : INITIAL_REFERRAL_CONTACTS;
@@ -71,6 +73,47 @@ export const MarketingBusinessHub: React.FC = () => {
     const saved = localStorage.getItem('kinesfera_session_packages');
     return saved ? JSON.parse(saved) : INITIAL_SESSION_PACKAGES;
   });
+
+  // Subscribe to Firestore Marketing Plan for authenticated user
+  useEffect(() => {
+    const uid = auth.currentUser?.uid;
+    if (!uid) return;
+
+    const unsub = firebaseClinicalService.subscribeMarketingHub(uid, (cloudData) => {
+      if (!cloudData) return;
+      if (Array.isArray(cloudData.referrals) && cloudData.referrals.length > 0) {
+        setReferrals(cloudData.referrals);
+        localStorage.setItem('kinesfera_referrals', JSON.stringify(cloudData.referrals));
+      }
+      if (Array.isArray(cloudData.inquiries) && cloudData.inquiries.length > 0) {
+        setInquiries(cloudData.inquiries);
+        localStorage.setItem('kinesfera_crm_inquiries', JSON.stringify(cloudData.inquiries));
+      }
+      if (Array.isArray(cloudData.tasks) && cloudData.tasks.length > 0) {
+        setTasks(cloudData.tasks);
+        localStorage.setItem('kinesfera_business_tasks', JSON.stringify(cloudData.tasks));
+      }
+      if (Array.isArray(cloudData.packages) && cloudData.packages.length > 0) {
+        setPackages(cloudData.packages);
+        localStorage.setItem('kinesfera_session_packages', JSON.stringify(cloudData.packages));
+      }
+    });
+
+    return () => unsub();
+  }, []);
+
+  const persistMarketingToCloud = (patch: Partial<{
+    referrals: MarketingReferralContact[];
+    inquiries: DigitalInquiryCRM[];
+    tasks: MarketingBusinessTask[];
+    packages: SessionPackageOffering[];
+  }>) => {
+    const uid = auth.currentUser?.uid;
+    if (!uid) return;
+    firebaseClinicalService.saveMarketingHub(uid, patch).catch((err) => {
+      console.error('Error guardando Marketing en Firestore:', err);
+    });
+  };
 
   // Copied alert state
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -118,12 +161,14 @@ export const MarketingBusinessHub: React.FC = () => {
     const updated = referrals.map(r => r.id === id ? { ...r, status: newStatus, nextStep: nextStep || r.nextStep } : r);
     setReferrals(updated);
     localStorage.setItem('kinesfera_referrals', JSON.stringify(updated));
+    persistMarketingToCloud({ referrals: updated });
   };
 
   const updateInquiryStatus = (id: string, newStatus: InquiryProcessStatus) => {
     const updated = inquiries.map(i => i.id === id ? { ...i, status: newStatus } : i);
     setInquiries(updated);
     localStorage.setItem('kinesfera_crm_inquiries', JSON.stringify(updated));
+    persistMarketingToCloud({ inquiries: updated });
   };
 
   const updateTaskProgress = (id: string, progress: number) => {
@@ -131,6 +176,7 @@ export const MarketingBusinessHub: React.FC = () => {
     const updated = tasks.map(t => t.id === id ? { ...t, progressPercent: progress, status } : t);
     setTasks(updated);
     localStorage.setItem('kinesfera_business_tasks', JSON.stringify(updated));
+    persistMarketingToCloud({ tasks: updated });
   };
 
   // Add Inquiry Submit
@@ -155,6 +201,7 @@ export const MarketingBusinessHub: React.FC = () => {
     const updated = [newInq, ...inquiries];
     setInquiries(updated);
     localStorage.setItem('kinesfera_crm_inquiries', JSON.stringify(updated));
+    persistMarketingToCloud({ inquiries: updated });
 
     // Reset Form
     setNewInquiryCaregiver('');
@@ -185,6 +232,7 @@ export const MarketingBusinessHub: React.FC = () => {
     const updated = [...tasks, newTask];
     setTasks(updated);
     localStorage.setItem('kinesfera_business_tasks', JSON.stringify(updated));
+    persistMarketingToCloud({ tasks: updated });
 
     setNewTaskDesc('');
     setShowAddTaskModal(false);

@@ -306,14 +306,14 @@ export const libraryStorageService = {
       }
     }
 
-    // 2. Save metadata in Firestore
+    // 2. Save metadata in Firestore with merge: true
     try {
       if (currentUid && currentUid !== 'guest_user') {
         const docRef = doc(db, 'users', currentUid, 'libraryFiles', finalDoc.id);
-        await setDoc(docRef, finalDoc);
+        await setDoc(docRef, finalDoc, { merge: true });
       }
     } catch (fsErr) {
-      console.warn('Could not save file metadata to Firestore, caching locally:', fsErr);
+      console.error('Could not save file metadata to Firestore:', fsErr);
     }
 
     // 3. Save to localStorage cache
@@ -340,15 +340,15 @@ export const libraryStorageService = {
    * Delete a library file from Firestore, Storage, and localStorage
    */
   async deleteLibraryFile(fileId: string, userId?: string): Promise<boolean> {
-    const currentUid = userId || auth.currentUser?.uid || 'guest_user';
+    const currentUid = userId || auth.currentUser?.uid;
     try {
       // 1. Delete from Firestore
-      if (currentUid && currentUid !== 'guest_user') {
+      if (currentUid) {
         const docRef = doc(db, 'users', currentUid, 'libraryFiles', fileId);
         await deleteDoc(docRef);
       }
     } catch (err) {
-      console.warn('Error deleting library file from Firestore:', err);
+      console.error('Error deleting library file from Firestore:', err);
     }
 
     // 2. Remove from localStorage

@@ -18,6 +18,8 @@ import { LibraryManagementView } from './LibraryManagementView';
 import { SPMEvaluationSection } from './SPMEvaluationSection';
 import { clinicalStorage } from '../utils/clinicalStorage';
 import { formatDateDMY } from '../utils/ageHelper';
+import { auth } from '../services/firebase';
+import { firebaseClinicalService } from '../services/firebaseClinicalService';
 import { 
   FileText, 
   UserPlus, 
@@ -39,7 +41,8 @@ import {
   Upload,
   Database,
   BookOpen,
-  ClipboardCheck
+  ClipboardCheck,
+  Loader2
 } from 'lucide-react';
 
 interface ClinicalPortalViewProps {
@@ -176,43 +179,57 @@ export const ClinicalPortalView: React.FC<ClinicalPortalViewProps> = ({
   // Backup modal and state (Regla Permanente 1)
   const [showBackupModal, setShowBackupModal] = useState(false);
   const [backupNotice, setBackupNotice] = useState<string | null>(null);
+  const [isImportingBackup, setIsImportingBackup] = useState(false);
 
-  const handleExportBackup = () => {
+  const handleExportBackup = async () => {
     try {
-      const jsonStr = clinicalStorage.exportFullClinicalBackupJson();
-      const blob = new Blob([jsonStr], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      const today = new Date().toISOString().slice(0, 10);
-      a.href = url;
-      a.download = `respaldo_kinesfera_clinico_${today}.json`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      setBackupNotice('✓ Respaldo completo descargado en formato JSON con éxito.');
-      setTimeout(() => setBackupNotice(null), 5000);
+      const uid = auth.currentUser?.uid || clinician?.id || 'offline';
+      await firebaseClinicalService.exportFullCloudBackup(uid, {
+        patients,
+        anamnesis: anamnesisData,
+        evaluations: evaluationsData,
+        progressNotes,
+        reports: comprehensiveReports
+      });
+      setBackupNotice('✓ Respaldo completo de la nube descargado en formato JSON con éxito.');
+      setTimeout(() => setBackupNotice(null), 6000);
     } catch (err: any) {
-      setBackupNotice(`Error al exportar respaldo: ${err?.message || 'Error desconocido'}`);
+      setBackupNotice(`✗ Error al exportar respaldo: ${err?.message || 'Error desconocido'}`);
     }
   };
 
   const handleImportBackup = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    const uid = auth.currentUser?.uid;
+    if (!uid) {
+      setBackupNotice('✗ Error: Debes haber iniciado sesión en Firebase para importar y guardar datos en la nube.');
+      e.target.value = '';
+      return;
+    }
+
     const reader = new FileReader();
-    reader.onload = (event) => {
+    reader.onload = async (event) => {
       const content = event.target?.result as string;
-      if (content) {
-        const result = clinicalStorage.importFullClinicalBackupJson(content);
+      if (!content) return;
+
+      setIsImportingBackup(true);
+      setBackupNotice('Creando respaldo automático de seguridad de la nube y guardando datos en Firebase Firestore...');
+
+      try {
+        const result = await firebaseClinicalService.importBackupToFirestore(uid, content);
         if (result.success) {
-          setBackupNotice('✓ ' + result.message + ' Recargando datos...');
-          setTimeout(() => {
-            window.location.reload();
-          }, 1200);
+          setBackupNotice(`✓ ${result.message}`);
+          setClearSuccessNotice(`✓ ${result.message}`);
         } else {
-          setBackupNotice('✗ ' + result.message);
+          setBackupNotice(`✗ ${result.message}`);
         }
+      } catch (err: any) {
+        console.error('Error en importación a Firestore:', err);
+        setBackupNotice(`✗ Error de Firebase al importar: ${err?.message || 'No se pudo completar la escritura en Firestore'}`);
+      } finally {
+        setIsImportingBackup(false);
       }
     };
     reader.readAsText(file);
@@ -973,18 +990,32 @@ export const ClinicalPortalView: React.FC<ClinicalPortalViewProps> = ({
               <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-2.5">
                 <strong className="text-slate-800 font-bold flex items-center gap-2">
                   <Upload className="w-4 h-4 text-emerald-600" />
-                  <span>2. Restaurar Respaldo (.json)</span>
+                  <span>2. Restaurar Respaldo en la Nube (.json)</span>
                 </strong>
                 <p className="text-slate-500 leading-relaxed text-[11px]">
-                  Carga un archivo de respaldo previamente exportado. Los registros se fusionarán y actualizarán sin descartar datos previos.
+                  Antes de importar, el sistema realiza un respaldo automático de tus datos actuales en la nube. Luego fusiona y guarda los registros directamente en Firebase Firestore con confirmación en tiempo real.
                 </p>
-                <label className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-white hover:bg-slate-100 border border-slate-300 text-slate-700 font-bold rounded-xl transition-colors cursor-pointer">
-                  <Upload className="w-4 h-4 text-slate-600" />
-                  <span>Seleccionar Archivo JSON para Restaurar</span>
+                <label className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 border font-bold rounded-xl transition-colors ${
+                  isImportingBackup
+                    ? 'bg-slate-100 border-slate-300 text-slate-400 cursor-wait'
+                    : 'bg-white hover:bg-slate-100 border-slate-300 text-slate-700 cursor-pointer'
+                }`}>
+                  {isImportingBackup ? (
+                    <>
+                      <Loader2 className="w-4 h-4 text-indigo-600 animate-spin" />
+                      <span>Guardando y confirmando en Firebase Firestore...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-4 h-4 text-slate-600" />
+                      <span>Seleccionar Archivo JSON para Restaurar en la Nube</span>
+                    </>
+                  )}
                   <input
                     type="file"
                     accept=".json,application/json"
                     onChange={handleImportBackup}
+                    disabled={isImportingBackup}
                     className="hidden"
                   />
                 </label>
@@ -995,6 +1026,7 @@ export const ClinicalPortalView: React.FC<ClinicalPortalViewProps> = ({
               <button
                 type="button"
                 onClick={() => setShowBackupModal(false)}
+                disabled={isImportingBackup}
                 className="px-4 py-2 border border-slate-300 text-slate-700 font-bold rounded-xl text-xs hover:bg-slate-50 cursor-pointer"
               >
                 Cerrar

@@ -11,6 +11,7 @@ import {
   SPMAgeCategory, 
   SPMScaleScore 
 } from '../types';
+import { sanitizeForFirestore, sanitizeDocId, reportFirebaseErrorToUI } from './firebaseClinicalService';
 
 const LOCAL_STORAGE_SPM_KEY = 'kinesfera_spm_evaluations_v1';
 
@@ -158,7 +159,7 @@ export const DEFAULT_SPM_EVALUATIONS: Record<string, SPMEvaluationRecord> = {
 
 export const spmEvaluationService = {
   /**
-   * Load SPM evaluations from Firestore or localStorage
+   * Load SPM evaluations from Firestore (single source of truth when authenticated)
    */
   async loadSPMEvaluations(userId?: string): Promise<Record<string, SPMEvaluationRecord>> {
     try {
@@ -166,83 +167,94 @@ export const spmEvaluationService = {
       if (currentUid) {
         const colRef = collection(db, 'users', currentUid, 'spmEvaluations');
         const snap = await getDocs(colRef);
-        if (!snap.empty) {
-          const result: Record<string, SPMEvaluationRecord> = {};
-          snap.forEach(docSnap => {
-            const data = docSnap.data() as SPMEvaluationRecord;
-            result[data.patientId] = data;
-          });
-          localStorage.setItem(LOCAL_STORAGE_SPM_KEY, JSON.stringify(result));
-          return result;
-        }
+        const result: Record<string, SPMEvaluationRecord> = {};
+        snap.forEach(docSnap => {
+          const data = docSnap.data() as SPMEvaluationRecord;
+          const pid = data.patientId || docSnap.id;
+          result[pid] = { ...data, patientId: pid };
+        });
+        localStorage.setItem(LOCAL_STORAGE_SPM_KEY, JSON.stringify(result));
+        return result;
       }
 
-      // Check localStorage
       const cached = localStorage.getItem(LOCAL_STORAGE_SPM_KEY);
       if (cached) {
         const parsed = JSON.parse(cached);
         if (parsed && typeof parsed === 'object') {
-          return { ...DEFAULT_SPM_EVALUATIONS, ...parsed };
+          return parsed;
         }
       }
 
-      localStorage.setItem(LOCAL_STORAGE_SPM_KEY, JSON.stringify(DEFAULT_SPM_EVALUATIONS));
-      return DEFAULT_SPM_EVALUATIONS;
-    } catch {
-      return DEFAULT_SPM_EVALUATIONS;
+      return {};
+    } catch (err) {
+      reportFirebaseErrorToUI('Error al cargar evaluaciones SPM desde Firebase Firestore.', err);
+      return {};
     }
   },
 
   /**
-   * Save an SPM evaluation for a patient
+   * Save an SPM evaluation for a patient using setDoc(..., { merge: true })
    */
   async saveSPMEvaluation(
     evaluation: SPMEvaluationRecord,
     userId?: string
   ): Promise<SPMEvaluationRecord> {
-    const currentUid = userId || auth.currentUser?.uid || 'guest_user';
-
-    // 1. Save in Firestore
-    try {
-      if (currentUid && currentUid !== 'guest_user') {
-        const docRef = doc(db, 'users', currentUid, 'spmEvaluations', evaluation.patientId);
-        await setDoc(docRef, evaluation);
-      }
-    } catch (fsErr) {
-      console.warn('Could not save SPM evaluation to Firestore, caching locally:', fsErr);
+    const currentUid = userId || auth.currentUser?.uid;
+    if (!currentUid) {
+      reportFirebaseErrorToUI('No se puede guardar la evaluación SPM: usuario no autenticado en Firebase.');
+      throw new Error('Usuario no autenticado en Firebase.');
     }
 
-    // 2. Cache in localStorage
+    const pid = sanitizeDocId(evaluation.patientId, 'patient');
+    const cleanEval = sanitizeForFirestore({
+      ...evaluation,
+      patientId: pid,
+      userId: currentUid,
+      updatedAt: new Date().toISOString()
+    });
+
+    try {
+      const docRef = doc(db, 'users', currentUid, 'spmEvaluations', pid);
+      await setDoc(docRef, cleanEval, { merge: true });
+    } catch (fsErr) {
+      reportFirebaseErrorToUI('Error al guardar evaluación SPM en Firebase Firestore.', fsErr);
+      throw fsErr;
+    }
+
     const current = await this.loadSPMEvaluations(currentUid);
     const updated = {
       ...current,
-      [evaluation.patientId]: evaluation
+      [pid]: cleanEval
     };
     localStorage.setItem(LOCAL_STORAGE_SPM_KEY, JSON.stringify(updated));
 
     if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('kinesfera_spm_updated', { detail: evaluation }));
+      window.dispatchEvent(new CustomEvent('kinesfera_spm_updated', { detail: cleanEval }));
     }
 
-    return evaluation;
+    return cleanEval;
   },
 
   /**
    * Delete an SPM evaluation
    */
   async deleteSPMEvaluation(patientId: string, userId?: string): Promise<boolean> {
-    const currentUid = userId || auth.currentUser?.uid || 'guest_user';
+    const currentUid = userId || auth.currentUser?.uid;
+    if (!currentUid) {
+      reportFirebaseErrorToUI('No se puede eliminar la evaluación SPM: usuario no autenticado.');
+      return false;
+    }
+    const pid = sanitizeDocId(patientId, 'patient');
     try {
-      if (currentUid && currentUid !== 'guest_user') {
-        const docRef = doc(db, 'users', currentUid, 'spmEvaluations', patientId);
-        await deleteDoc(docRef);
-      }
+      const docRef = doc(db, 'users', currentUid, 'spmEvaluations', pid);
+      await deleteDoc(docRef);
     } catch (err) {
-      console.warn('Error deleting SPM evaluation:', err);
+      reportFirebaseErrorToUI('Error al eliminar evaluación SPM en Firestore.', err);
+      return false;
     }
 
     const current = await this.loadSPMEvaluations(currentUid);
-    delete current[patientId];
+    delete current[pid];
     localStorage.setItem(LOCAL_STORAGE_SPM_KEY, JSON.stringify(current));
 
     if (typeof window !== 'undefined') {

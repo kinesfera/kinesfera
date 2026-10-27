@@ -16,7 +16,7 @@ service cloud.firestore {
     }
 
     function isValidId(id) {
-      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+      return id is string && id.size() > 0 && id.size() <= 256;
     }
 
     // User Profile: each authenticated user only accesses their own profile
@@ -82,6 +82,12 @@ service cloud.firestore {
       match /migrationMeta/{metaId} {
         allow list: if isOwner(userId);
         allow get, write: if isOwner(userId) && isValidId(metaId);
+      }
+
+      // Automatic cloud backups subcollection
+      match /backups/{backupId} {
+        allow list: if isOwner(userId);
+        allow get, write: if isOwner(userId) && isValidId(backupId);
       }
     }
   }

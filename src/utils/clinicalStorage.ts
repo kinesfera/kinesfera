@@ -555,25 +555,21 @@ const DEFAULT_FALLBACK_PROGRESS_NOTES: ProgressNote[] = [
   }
 ];
 
+export const DEFAULT_DEMO_PATIENT_IDS = new Set([
+  'patient_mauro_mora',
+  'patient_miranda_coromoto',
+  'patient_wagner_vasquez',
+  'patient_blaz_01'
+]);
+
 export const clinicalStorage = {
   loadPatients(): User[] {
     try {
-      // 1. Try primary new storage key
+      // 1. Try primary storage key
       const raw = localStorage.getItem(STORAGE_KEYS.PATIENTS);
       if (raw) {
         const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          const ids = new Set(parsed.map((p: User) => p.id));
-          let changed = false;
-          DEFAULT_FALLBACK_PATIENTS.forEach(p => {
-            if (!ids.has(p.id)) {
-              parsed.push(p);
-              changed = true;
-            }
-          });
-          if (changed) {
-            this.savePatients(parsed);
-          }
+        if (Array.isArray(parsed)) {
           return parsed;
         }
       }
@@ -582,36 +578,32 @@ export const clinicalStorage = {
       const legacyRaw = localStorage.getItem('kinesfera_saved_patients');
       if (legacyRaw) {
         const parsedLegacy = JSON.parse(legacyRaw);
-        if (Array.isArray(parsedLegacy) && parsedLegacy.length > 0) {
-          // migrate to new key
-          this.savePatients(parsedLegacy);
+        if (Array.isArray(parsedLegacy)) {
           return parsedLegacy;
         }
       }
 
-      // 3. Fallback: return default patients so user always has rich clinical records
-      this.savePatients(DEFAULT_FALLBACK_PATIENTS);
-      return DEFAULT_FALLBACK_PATIENTS;
+      return [];
     } catch (err) {
-      console.warn('Error reading patients from localStorage:', err);
-      return DEFAULT_FALLBACK_PATIENTS;
+      console.error('Error reading patients from localStorage:', err);
+      return [];
     }
   },
 
   savePatients(patients: User[]): void {
     try {
-      // Filter only patients (role Padre/Niño) so staff accounts remain separate
-      const patientUsers = patients.filter(u => u.role === 'Padre/Niño');
+      const STAFF_ROLES = new Set(['Profesionales Clínicos', 'Educadores', 'Administrador (Neuronexin)']);
+      // Keep all non-staff patient users, ensuring role is set to 'Padre/Niño' so UI filters never hide them
+      const patientUsers = patients
+        .filter(u => u && u.id && !STAFF_ROLES.has(u.role as string))
+        .map(u => ({
+          ...u,
+          role: 'Padre/Niño' as const
+        }));
       
-      // Deduplicate patient users by id, preserving existing entries
+      // Deduplicate patient users by id, preserving latest entry
       const uniqueMap = new Map<string, User>();
       patientUsers.forEach(p => uniqueMap.set(p.id, p));
-      
-      // Ensure Blaz is never accidentally lost from the roster
-      const hasBlaz = Array.from(uniqueMap.values()).some(p => p.id === 'patient_blaz_01' || p.firstName.toLowerCase() === 'blaz');
-      if (!hasBlaz) {
-        DEFAULT_FALLBACK_PATIENTS.forEach(p => uniqueMap.set(p.id, p));
-      }
       const safePatientUsers = Array.from(uniqueMap.values());
 
       localStorage.setItem(STORAGE_KEYS.PATIENTS, JSON.stringify(safePatientUsers));
@@ -622,7 +614,7 @@ export const clinicalStorage = {
         try {
           localStorage.setItem(`kinesfera_patient_backup_${p.id}`, JSON.stringify(p));
         } catch {
-          // ignore
+          // ignore quota warnings on single-item backup
         }
       });
 
@@ -634,18 +626,22 @@ export const clinicalStorage = {
 
   saveSinglePatient(patient: User): void {
     try {
+      const normalizedPatient: User = {
+        ...patient,
+        role: 'Padre/Niño'
+      };
       const current = this.loadPatients();
-      const existingIdx = current.findIndex(p => p.id === patient.id);
+      const existingIdx = current.findIndex(p => p.id === normalizedPatient.id);
       let updated: User[];
       if (existingIdx >= 0) {
         updated = [...current];
-        updated[existingIdx] = patient;
+        updated[existingIdx] = normalizedPatient;
       } else {
-        updated = [...current, patient];
+        updated = [...current, normalizedPatient];
       }
       this.savePatients(updated);
-      this.saveSelectedPatientId(patient.id);
-      localStorage.setItem(`kinesfera_patient_backup_${patient.id}`, JSON.stringify(patient));
+      this.saveSelectedPatientId(normalizedPatient.id);
+      localStorage.setItem(`kinesfera_patient_backup_${normalizedPatient.id}`, JSON.stringify(normalizedPatient));
     } catch (err) {
       console.error('Error saving single patient:', err);
     }
@@ -668,7 +664,6 @@ export const clinicalStorage = {
         curEval[patient.id] = evaluations;
         this.saveEvaluations(curEval);
       }
-      // Write a dedicated full clinical snapshot
       const snapshot = {
         patient,
         anamnesis,
@@ -688,14 +683,6 @@ export const clinicalStorage = {
       if (raw) {
         const parsed = JSON.parse(raw);
         if (parsed && typeof parsed === 'object') {
-          let changed = false;
-          Object.keys(DEFAULT_FALLBACK_ANAMNESIS).forEach(key => {
-            if (!parsed[key]) {
-              parsed[key] = DEFAULT_FALLBACK_ANAMNESIS[key];
-              changed = true;
-            }
-          });
-          if (changed) this.saveAnamnesis(parsed);
           return parsed;
         }
       }
@@ -704,15 +691,14 @@ export const clinicalStorage = {
       if (legacy) {
         const parsedLegacy = JSON.parse(legacy);
         if (parsedLegacy && typeof parsedLegacy === 'object') {
-          this.saveAnamnesis(parsedLegacy);
           return parsedLegacy;
         }
       }
 
-      this.saveAnamnesis(DEFAULT_FALLBACK_ANAMNESIS);
-      return DEFAULT_FALLBACK_ANAMNESIS;
-    } catch {
-      return DEFAULT_FALLBACK_ANAMNESIS;
+      return {};
+    } catch (err) {
+      console.error('Error reading anamnesis from localStorage:', err);
+      return {};
     }
   },
 
@@ -732,14 +718,6 @@ export const clinicalStorage = {
       if (raw) {
         const parsed = JSON.parse(raw);
         if (parsed && typeof parsed === 'object') {
-          let changed = false;
-          Object.keys(DEFAULT_FALLBACK_EVALUATIONS).forEach(key => {
-            if (!parsed[key]) {
-              parsed[key] = DEFAULT_FALLBACK_EVALUATIONS[key];
-              changed = true;
-            }
-          });
-          if (changed) this.saveEvaluations(parsed);
           return parsed;
         }
       }
@@ -748,15 +726,14 @@ export const clinicalStorage = {
       if (legacy) {
         const parsedLegacy = JSON.parse(legacy);
         if (parsedLegacy && typeof parsedLegacy === 'object') {
-          this.saveEvaluations(parsedLegacy);
           return parsedLegacy;
         }
       }
 
-      this.saveEvaluations(DEFAULT_FALLBACK_EVALUATIONS);
-      return DEFAULT_FALLBACK_EVALUATIONS;
-    } catch {
-      return DEFAULT_FALLBACK_EVALUATIONS;
+      return {};
+    } catch (err) {
+      console.error('Error reading evaluations from localStorage:', err);
+      return {};
     }
   },
 
@@ -782,15 +759,14 @@ export const clinicalStorage = {
       if (legacy) {
         const parsedLegacy = JSON.parse(legacy);
         if (Array.isArray(parsedLegacy)) {
-          this.saveProgressNotes(parsedLegacy);
           return parsedLegacy;
         }
       }
 
-      this.saveProgressNotes(DEFAULT_FALLBACK_PROGRESS_NOTES);
-      return DEFAULT_FALLBACK_PROGRESS_NOTES;
-    } catch {
-      return DEFAULT_FALLBACK_PROGRESS_NOTES;
+      return [];
+    } catch (err) {
+      console.error('Error reading progress notes from localStorage:', err);
+      return [];
     }
   },
 
@@ -812,7 +788,8 @@ export const clinicalStorage = {
         if (Array.isArray(parsed)) return parsed;
       }
       return [];
-    } catch {
+    } catch (err) {
+      console.error('Error reading reports from localStorage:', err);
       return [];
     }
   },
@@ -924,7 +901,7 @@ export const clinicalStorage = {
         {
           id: 'case_default_3',
           timestamp: new Date(Date.now() - 86400000 * 12).toISOString(),
-          pathologyOrReason: 'Dificultades en integración sensorial (SPM-2: reactividad táctil y búsqueda propioceptiva)',
+          pathologyOrReason: 'Dificultades en desarrollo psicomotor (SPM-2: reactividad táctil y búsqueda propioceptiva)',
           ageCategory: 'mayor_2_anos',
           observedProgress: 'Mejor tolerancia a texturas y autorregulación en aula escolar PIE',
           treatmentApproach: 'Dieta sensoriomotriz Kinesfera, juego de arrastre con resistencia y presión profunda',
@@ -940,7 +917,7 @@ export const clinicalStorage = {
 
   exportFullClinicalBackupJson(): string {
     const backupData = {
-      version: '2.0.0',
+      version: '2.1.0-cloud',
       exportDate: new Date().toISOString(),
       institution: 'Centro Clínico Kinesfera Copiapó',
       patients: this.loadPatients(),
@@ -984,7 +961,7 @@ export const clinicalStorage = {
       }
 
       this.triggerStorageEvent();
-      return { success: true, message: 'Respaldo clínico restaurado con éxito. Toda la información ha sido actualizada.' };
+      return { success: true, message: 'Respaldo clínico procesado en caché local.' };
     } catch (err: any) {
       return { success: false, message: `Error al procesar el archivo: ${err?.message || 'Formato inválido'}` };
     }

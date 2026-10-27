@@ -41,129 +41,154 @@ import {
   FirebaseUser,
   testFirestoreConnection
 } from './services/firebase';
-import { firebaseClinicalService } from './services/firebaseClinicalService';
-import { CheckCircle2, X as CloseIcon, Loader2, Cloud } from 'lucide-react';
+import { firebaseClinicalService, reportFirebaseErrorToUI } from './services/firebaseClinicalService';
+import { CheckCircle2, X as CloseIcon, Loader2, Cloud, AlertTriangle } from 'lucide-react';
 
 export default function App() {
   // Authentication & session state
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [authLoading, setAuthLoading] = useState<boolean>(true);
+  const [initialCloudLoaded, setInitialCloudLoaded] = useState<boolean>(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [activeLoggedInUserId, setActiveLoggedInUserId] = useState<string>('');
   const [migrationNotice, setMigrationNotice] = useState<string | null>(null);
-  const [cloudSyncStatus, setCloudSyncStatus] = useState<'synced' | 'syncing' | 'offline'>('synced');
+  const [firebaseErrorNotice, setFirebaseErrorNotice] = useState<string | null>(null);
+  const [cloudSyncStatus, setCloudSyncStatus] = useState<'synced' | 'syncing' | 'offline'>('syncing');
 
-  // Global application states with robust persistent storage
-  const [users, setUsers] = useState<User[]>(() => {
-    const savedPatients = clinicalStorage.loadPatients();
-    const baseStaff = INITIAL_USERS.filter(u => u.role !== 'Padre/Niño');
-    return [...baseStaff, ...savedPatients];
-  });
+  // Global application states: Firestore is the single source of truth (never initialized with mock patients)
+  const [users, setUsers] = useState<User[]>(() => INITIAL_USERS.filter(u => u.role !== 'Padre/Niño'));
   const [exercises, setExercises] = useState<Exercise[]>(INITIAL_EXERCISES);
   const [reports, setReports] = useState<Report[]>(INITIAL_REPORTS);
-  const [sessionHistory, setSessionHistory] = useState<SessionResult[]>(() => clinicalStorage.loadSessionHistory());
+  const [sessionHistory, setSessionHistory] = useState<SessionResult[]>([]);
   const [chats, setChats] = useState(INITIAL_CHATS);
   const [messages, setMessages] = useState(INITIAL_CHAT_MESSAGES);
-  const [progressNotes, setProgressNotes] = useState<ProgressNote[]>(() => clinicalStorage.loadProgressNotes());
-  const [anamnesisData, setAnamnesisData] = useState<Record<string, PatientAnamnesis>>(() => clinicalStorage.loadAnamnesis());
-  const [evaluationsData, setEvaluationsData] = useState<Record<string, ClinicalEvaluations>>(() => clinicalStorage.loadEvaluations());
-  const [comprehensiveReports, setComprehensiveReports] = useState<ComprehensiveReport[]>(() => clinicalStorage.loadReports());
+  const [progressNotes, setProgressNotes] = useState<ProgressNote[]>([]);
+  const [anamnesisData, setAnamnesisData] = useState<Record<string, PatientAnamnesis>>({});
+  const [evaluationsData, setEvaluationsData] = useState<Record<string, ClinicalEvaluations>>({});
+  const [comprehensiveReports, setComprehensiveReports] = useState<ComprehensiveReport[]>([]);
   const [leads, setLeads] = useState<LeadProspect[]>(INITIAL_LEADS);
 
   // Active view & role
   const [currentRole, setCurrentRole] = useState<UserRole>('Profesionales Clínicos');
   const [activeTab, setActiveTab] = useState<'child' | 'clinical' | 'educator' | 'admin'>('clinical');
 
-  // Verify connection to Firestore on initialization (Mandated by Firebase Skill)
+  // Verify connection to Firestore on initialization & listen to real Firebase errors
   useEffect(() => {
     testFirestoreConnection();
+
+    const handleFirebaseError = (event: Event) => {
+      const customEvt = event as CustomEvent<{ message: string; timestamp: string }>;
+      if (customEvt.detail?.message) {
+        setFirebaseErrorNotice(customEvt.detail.message);
+      }
+    };
+    window.addEventListener('kinesfera_firebase_error', handleFirebaseError);
+    return () => {
+      window.removeEventListener('kinesfera_firebase_error', handleFirebaseError);
+    };
   }, []);
 
-  // 1. Listen to Firebase Auth state & safely migrate local data upon login
+  // 1. Listen to Firebase Auth state & safely check migration without overwriting cloud data
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
-      setAuthLoading(false);
       if (user) {
         setFirebaseUser(user);
         setIsLoggedIn(true);
         setActiveLoggedInUserId(user.uid);
+        setAuthLoading(false);
 
-        // Run safe automated migration from localStorage to Firestore
         try {
           setCloudSyncStatus('syncing');
           const migResult = await firebaseClinicalService.migrateLocalStorageToFirestore(user.uid);
           if (migResult.migrated) {
             setMigrationNotice(migResult.message);
           }
-          setCloudSyncStatus('synced');
-        } catch (migErr) {
-          console.warn('Migration completed with notice:', migErr);
-          setCloudSyncStatus('synced');
+        } catch (migErr: any) {
+          const msg = migErr instanceof Error ? migErr.message : String(migErr);
+          console.error('Error en verificación inicial de Firestore:', migErr);
+          setFirebaseErrorNotice(`Error de sincronización inicial en Firebase: ${msg}`);
         }
       } else {
         setFirebaseUser(null);
         setIsLoggedIn(false);
+        setInitialCloudLoaded(false);
         setActiveLoggedInUserId('');
-        // Enforce: "Sin login no se muestra ningún dato"
         setUsers(INITIAL_USERS.filter(u => u.role !== 'Padre/Niño'));
         setProgressNotes([]);
         setAnamnesisData({});
         setEvaluationsData({});
         setComprehensiveReports([]);
+        setAuthLoading(false);
       }
     });
 
     return () => unsubscribeAuth();
   }, []);
 
-  // 2. Real-time Firestore subscriptions for authenticated user
+  // 2. Real-time Firestore subscriptions for authenticated user (Single Source of Truth: users/{uid}/...)
   useEffect(() => {
     if (!firebaseUser?.uid) return;
 
     const uid = firebaseUser.uid;
     setCloudSyncStatus('syncing');
 
-    const unsubPatients = firebaseClinicalService.subscribePatients(uid, (remotePatients) => {
-      if (remotePatients && remotePatients.length > 0) {
-        setUsers(prev => {
-          const staff = prev.filter(u => u.role !== 'Padre/Niño');
-          return [...staff, ...remotePatients];
-        });
-        clinicalStorage.savePatients(remotePatients);
+    const loadedFlags = {
+      patients: false,
+      anamnesis: false,
+      evaluations: false,
+      notes: false,
+      reports: false
+    };
+
+    const checkAllLoaded = () => {
+      if (
+        loadedFlags.patients &&
+        loadedFlags.anamnesis &&
+        loadedFlags.evaluations &&
+        loadedFlags.notes &&
+        loadedFlags.reports
+      ) {
+        setInitialCloudLoaded(true);
+        setCloudSyncStatus('synced');
       }
-      setCloudSyncStatus('synced');
+    };
+
+    const unsubPatients = firebaseClinicalService.subscribePatients(uid, (remotePatients) => {
+      loadedFlags.patients = true;
+      setUsers(prev => {
+        const staff = prev.filter(u => u.role !== 'Padre/Niño');
+        return [...staff, ...remotePatients];
+      });
+      clinicalStorage.savePatients(remotePatients);
+      checkAllLoaded();
     });
 
     const unsubAnamnesis = firebaseClinicalService.subscribeAnamnesis(uid, (remoteAnamnesis) => {
-      if (remoteAnamnesis && Object.keys(remoteAnamnesis).length > 0) {
-        setAnamnesisData(remoteAnamnesis);
-        clinicalStorage.saveAnamnesis(remoteAnamnesis);
-      }
-      setCloudSyncStatus('synced');
+      loadedFlags.anamnesis = true;
+      setAnamnesisData(remoteAnamnesis);
+      clinicalStorage.saveAnamnesis(remoteAnamnesis);
+      checkAllLoaded();
     });
 
     const unsubEvaluations = firebaseClinicalService.subscribeEvaluations(uid, (remoteEvaluations) => {
-      if (remoteEvaluations && Object.keys(remoteEvaluations).length > 0) {
-        setEvaluationsData(remoteEvaluations);
-        clinicalStorage.saveEvaluations(remoteEvaluations);
-      }
-      setCloudSyncStatus('synced');
+      loadedFlags.evaluations = true;
+      setEvaluationsData(remoteEvaluations);
+      clinicalStorage.saveEvaluations(remoteEvaluations);
+      checkAllLoaded();
     });
 
     const unsubNotes = firebaseClinicalService.subscribeProgressNotes(uid, (remoteNotes) => {
-      if (remoteNotes && remoteNotes.length > 0) {
-        setProgressNotes(remoteNotes);
-        clinicalStorage.saveProgressNotes(remoteNotes);
-      }
-      setCloudSyncStatus('synced');
+      loadedFlags.notes = true;
+      setProgressNotes(remoteNotes);
+      clinicalStorage.saveProgressNotes(remoteNotes);
+      checkAllLoaded();
     });
 
     const unsubReports = firebaseClinicalService.subscribeReports(uid, (remoteReports) => {
-      if (remoteReports && remoteReports.length > 0) {
-        setComprehensiveReports(remoteReports);
-        clinicalStorage.saveReports(remoteReports);
-      }
-      setCloudSyncStatus('synced');
+      loadedFlags.reports = true;
+      setComprehensiveReports(remoteReports);
+      clinicalStorage.saveReports(remoteReports);
+      checkAllLoaded();
     });
 
     return () => {
@@ -175,42 +200,42 @@ export default function App() {
     };
   }, [firebaseUser?.uid]);
 
-  // Synchronized persistence to local storage as offline cache
+  // Synchronized persistence to localStorage ONLY AFTER authentication and initial cloud data have loaded
   useEffect(() => {
-    if (isLoggedIn) {
+    if (isLoggedIn && initialCloudLoaded && firebaseUser?.uid) {
       clinicalStorage.savePatients(users);
     }
-  }, [users, isLoggedIn]);
+  }, [users, isLoggedIn, initialCloudLoaded, firebaseUser?.uid]);
 
   useEffect(() => {
-    if (isLoggedIn) {
+    if (isLoggedIn && initialCloudLoaded && firebaseUser?.uid) {
       clinicalStorage.saveProgressNotes(progressNotes);
     }
-  }, [progressNotes, isLoggedIn]);
+  }, [progressNotes, isLoggedIn, initialCloudLoaded, firebaseUser?.uid]);
 
   useEffect(() => {
-    if (isLoggedIn) {
+    if (isLoggedIn && initialCloudLoaded && firebaseUser?.uid) {
       clinicalStorage.saveAnamnesis(anamnesisData);
     }
-  }, [anamnesisData, isLoggedIn]);
+  }, [anamnesisData, isLoggedIn, initialCloudLoaded, firebaseUser?.uid]);
 
   useEffect(() => {
-    if (isLoggedIn) {
+    if (isLoggedIn && initialCloudLoaded && firebaseUser?.uid) {
       clinicalStorage.saveEvaluations(evaluationsData);
     }
-  }, [evaluationsData, isLoggedIn]);
+  }, [evaluationsData, isLoggedIn, initialCloudLoaded, firebaseUser?.uid]);
 
   useEffect(() => {
-    if (isLoggedIn) {
+    if (isLoggedIn && initialCloudLoaded && firebaseUser?.uid) {
       clinicalStorage.saveReports(comprehensiveReports);
     }
-  }, [comprehensiveReports, isLoggedIn]);
+  }, [comprehensiveReports, isLoggedIn, initialCloudLoaded, firebaseUser?.uid]);
 
   useEffect(() => {
-    if (isLoggedIn) {
+    if (isLoggedIn && initialCloudLoaded && firebaseUser?.uid) {
       clinicalStorage.saveSessionHistory(sessionHistory);
     }
-  }, [sessionHistory, isLoggedIn]);
+  }, [sessionHistory, isLoggedIn, initialCloudLoaded, firebaseUser?.uid]);
 
   // Modals
   const [activeExerciseForSession, setActiveExerciseForSession] = useState<{
@@ -347,7 +372,21 @@ export default function App() {
     }));
   };
 
+  const ensureReadyForWrite = (): string | null => {
+    if (!firebaseUser?.uid) {
+      reportFirebaseErrorToUI('No se puede guardar en la nube: el usuario aún no ha iniciado sesión en Firebase.');
+      return null;
+    }
+    if (!initialCloudLoaded) {
+      reportFirebaseErrorToUI('Espera unos segundos: cargando datos iniciales desde Firebase Firestore antes de guardar.');
+      return null;
+    }
+    return firebaseUser.uid;
+  };
+
   const handleAddProgressNote = (newNoteData: Omit<ProgressNote, 'id'>) => {
+    const uid = ensureReadyForWrite();
+    if (!uid) return;
     const newNote: ProgressNote = {
       ...newNoteData,
       id: `pn_${Date.now()}`
@@ -357,96 +396,118 @@ export default function App() {
       clinicalStorage.saveProgressNotes(updated);
       return updated;
     });
-    if (firebaseUser?.uid) {
-      firebaseClinicalService.saveProgressNote(firebaseUser.uid, newNote);
-    }
+    firebaseClinicalService.saveProgressNote(uid, newNote).catch((err) => {
+      console.error('Error guardando nota de progreso en Firestore:', err);
+    });
   };
 
   const handleUpdateProgressNote = (updatedNote: ProgressNote) => {
+    const uid = ensureReadyForWrite();
+    if (!uid) return;
     setProgressNotes(prev => {
       const updated = prev.map(n => n.id === updatedNote.id ? updatedNote : n);
       clinicalStorage.saveProgressNotes(updated);
       return updated;
     });
-    if (firebaseUser?.uid) {
-      firebaseClinicalService.saveProgressNote(firebaseUser.uid, updatedNote);
-    }
+    firebaseClinicalService.saveProgressNote(uid, updatedNote).catch((err) => {
+      console.error('Error actualizando nota de progreso en Firestore:', err);
+    });
   };
 
   const handleDeleteProgressNote = (noteId: string) => {
+    const uid = ensureReadyForWrite();
+    if (!uid) return;
     setProgressNotes(prev => {
       const updated = prev.filter(n => n.id !== noteId);
       clinicalStorage.saveProgressNotes(updated);
       return updated;
     });
-    if (firebaseUser?.uid) {
-      firebaseClinicalService.deleteProgressNote(firebaseUser.uid, noteId);
-    }
+    firebaseClinicalService.deleteProgressNote(uid, noteId).catch((err) => {
+      console.error('Error eliminando nota de progreso en Firestore:', err);
+    });
   };
 
   const handleAddNewPatient = (newPatient: User) => {
+    const uid = ensureReadyForWrite();
+    if (!uid) return;
+    const normalizedPatient: User = {
+      ...newPatient,
+      role: 'Padre/Niño'
+    };
     setUsers(prev => {
-      const filtered = prev.filter(u => u.id !== newPatient.id);
-      const updated = [...filtered, newPatient];
+      const filtered = prev.filter(u => u.id !== normalizedPatient.id);
+      const updated = [...filtered, normalizedPatient];
       clinicalStorage.savePatients(updated);
       return updated;
     });
-    clinicalStorage.saveSelectedPatientId(newPatient.id);
-    if (firebaseUser?.uid) {
-      firebaseClinicalService.savePatient(firebaseUser.uid, newPatient);
-    }
+    clinicalStorage.saveSelectedPatientId(normalizedPatient.id);
+    firebaseClinicalService.savePatient(uid, normalizedPatient).catch((err) => {
+      console.error('Error guardando usuario en Firestore:', err);
+    });
   };
 
   const handleUpdatePatient = (updatedPatient: User) => {
+    const uid = ensureReadyForWrite();
+    if (!uid) return;
+    const normalizedPatient: User = {
+      ...updatedPatient,
+      role: 'Padre/Niño'
+    };
     setUsers(prev => {
-      const exists = prev.some(u => u.id === updatedPatient.id);
+      const exists = prev.some(u => u.id === normalizedPatient.id);
       const updated = exists 
-        ? prev.map(u => u.id === updatedPatient.id ? updatedPatient : u)
-        : [...prev, updatedPatient];
+        ? prev.map(u => u.id === normalizedPatient.id ? normalizedPatient : u)
+        : [...prev, normalizedPatient];
       clinicalStorage.savePatients(updated);
       return updated;
     });
-    clinicalStorage.saveSelectedPatientId(updatedPatient.id);
-    if (firebaseUser?.uid) {
-      firebaseClinicalService.savePatient(firebaseUser.uid, updatedPatient);
-    }
+    clinicalStorage.saveSelectedPatientId(normalizedPatient.id);
+    firebaseClinicalService.savePatient(uid, normalizedPatient).catch((err) => {
+      console.error('Error actualizando usuario en Firestore:', err);
+    });
   };
 
   const handleSaveAnamnesis = (patientId: string, data: PatientAnamnesis) => {
+    const uid = ensureReadyForWrite();
+    if (!uid) return;
     setAnamnesisData(prev => {
       const updated = { ...prev, [patientId]: data };
       clinicalStorage.saveAnamnesis(updated);
       return updated;
     });
-    if (firebaseUser?.uid) {
-      firebaseClinicalService.saveAnamnesis(firebaseUser.uid, patientId, data);
-    }
+    firebaseClinicalService.saveAnamnesis(uid, patientId, data).catch((err) => {
+      console.error('Error guardando anamnesis en Firestore:', err);
+    });
   };
 
   const handleSaveEvaluations = (patientId: string, data: ClinicalEvaluations) => {
+    const uid = ensureReadyForWrite();
+    if (!uid) return;
     setEvaluationsData(prev => {
       const updated = { ...prev, [patientId]: data };
       clinicalStorage.saveEvaluations(updated);
       return updated;
     });
-    if (firebaseUser?.uid) {
-      firebaseClinicalService.saveEvaluations(firebaseUser.uid, patientId, data);
-    }
+    firebaseClinicalService.saveEvaluations(uid, patientId, data).catch((err) => {
+      console.error('Error guardando evaluación en Firestore:', err);
+    });
   };
 
   const handleGenerateComprehensiveReport = (newReport: ComprehensiveReport) => {
+    const uid = ensureReadyForWrite();
+    if (!uid) return;
     setComprehensiveReports(prev => {
       const updated = [newReport, ...prev.filter(r => r.patientId !== newReport.patientId)];
       clinicalStorage.saveReports(updated);
       return updated;
     });
-    if (firebaseUser?.uid) {
-      firebaseClinicalService.saveReport(firebaseUser.uid, newReport);
-    }
+    firebaseClinicalService.saveReport(uid, newReport).catch((err) => {
+      console.error('Error guardando informe consolidado en Firestore:', err);
+    });
   };
 
   const handleClearAllPatients = () => {
-    // Wipe patients, evaluations, anamnesis, progress notes and reports
+    // Wipe local state only when explicitly requested
     setUsers(prev => prev.filter(u => u.role !== 'Padre/Niño'));
     setProgressNotes([]);
     setAnamnesisData({});
@@ -479,6 +540,7 @@ export default function App() {
     }
     setIsLoggedIn(false);
     setFirebaseUser(null);
+    setInitialCloudLoaded(false);
     setActiveLoggedInUserId('');
   };
 
@@ -522,6 +584,23 @@ export default function App() {
         onExportBackup={handleExportBackup}
         cloudSyncStatus={cloudSyncStatus}
       />
+
+      {/* Real Firebase Error Banner (Never hidden) */}
+      {firebaseErrorNotice && (
+        <div className="bg-rose-600 text-white px-6 py-3 shadow-sm flex items-center justify-between gap-4 animate-in slide-in-from-top duration-200">
+          <div className="flex items-center gap-2.5 text-xs sm:text-sm font-semibold">
+            <AlertTriangle className="w-5 h-5 text-rose-200 shrink-0" />
+            <span>{firebaseErrorNotice}</span>
+          </div>
+          <button
+            onClick={() => setFirebaseErrorNotice(null)}
+            className="text-white/80 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
+            title="Cerrar alerta de error de Firebase"
+          >
+            <CloseIcon className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {/* Migration Success / Notice Banner */}
       {migrationNotice && (

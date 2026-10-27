@@ -11,6 +11,7 @@ import {
   CommunicationChecklistItemEvaluation
 } from '../types';
 import { libraryStorageService } from './libraryStorageService';
+import { sanitizeForFirestore, sanitizeDocId, reportFirebaseErrorToUI } from './firebaseClinicalService';
 
 const LOCAL_STORAGE_COMM_KEY = 'kinesfera_communication_evaluations_v1';
 
@@ -182,7 +183,7 @@ export const DEFAULT_COMM_EVALUATIONS: Record<string, PatientCommunicationEvalua
 
 export const communicationSkillsService = {
   /**
-   * Load communication evaluations
+   * Load communication evaluations from Firestore (single source of truth when authenticated)
    */
   async loadCommunicationEvaluations(userId?: string): Promise<Record<string, PatientCommunicationEvaluation>> {
     try {
@@ -190,65 +191,72 @@ export const communicationSkillsService = {
       if (currentUid) {
         const colRef = collection(db, 'users', currentUid, 'communicationSkills');
         const snap = await getDocs(colRef);
-        if (!snap.empty) {
-          const result: Record<string, PatientCommunicationEvaluation> = {};
-          snap.forEach(docSnap => {
-            const data = docSnap.data() as PatientCommunicationEvaluation;
-            result[data.patientId] = data;
-          });
-          localStorage.setItem(LOCAL_STORAGE_COMM_KEY, JSON.stringify(result));
-          return result;
-        }
+        const result: Record<string, PatientCommunicationEvaluation> = {};
+        snap.forEach(docSnap => {
+          const data = docSnap.data() as PatientCommunicationEvaluation;
+          const pid = data.patientId || docSnap.id;
+          result[pid] = { ...data, patientId: pid };
+        });
+        localStorage.setItem(LOCAL_STORAGE_COMM_KEY, JSON.stringify(result));
+        return result;
       }
 
       const cached = localStorage.getItem(LOCAL_STORAGE_COMM_KEY);
       if (cached) {
         const parsed = JSON.parse(cached);
         if (parsed && typeof parsed === 'object') {
-          return { ...DEFAULT_COMM_EVALUATIONS, ...parsed };
+          return parsed;
         }
       }
 
-      localStorage.setItem(LOCAL_STORAGE_COMM_KEY, JSON.stringify(DEFAULT_COMM_EVALUATIONS));
-      return DEFAULT_COMM_EVALUATIONS;
-    } catch {
-      return DEFAULT_COMM_EVALUATIONS;
+      return {};
+    } catch (err) {
+      reportFirebaseErrorToUI('Error al cargar evaluaciones de comunicación desde Firebase Firestore.', err);
+      return {};
     }
   },
 
   /**
-   * Save communication evaluation for patient
+   * Save communication evaluation for patient using setDoc(..., { merge: true })
    */
   async saveCommunicationEvaluation(
     evaluation: PatientCommunicationEvaluation,
     userId?: string
   ): Promise<PatientCommunicationEvaluation> {
-    const currentUid = userId || auth.currentUser?.uid || 'guest_user';
+    const currentUid = userId || auth.currentUser?.uid;
+    if (!currentUid) {
+      reportFirebaseErrorToUI('No se puede guardar la evaluación de comunicación: usuario no autenticado.');
+      throw new Error('Usuario no autenticado en Firebase.');
+    }
 
-    // Check if patient has instruction following limitation
+    const pid = sanitizeDocId(evaluation.patientId, 'patient');
     const instructionItem = evaluation.items.find(i => i.isInstructionFollowing || i.skillName.toLowerCase().includes('instrucc'));
     const limitation = instructionItem 
       ? (instructionItem.statusInitial === 'no' || instructionItem.statusFinal === 'no')
       : evaluation.hasInstructionFollowLimitation;
 
-    const finalEval: PatientCommunicationEvaluation = {
+    const finalEval: PatientCommunicationEvaluation = sanitizeForFirestore({
       ...evaluation,
+      patientId: pid,
       hasInstructionFollowLimitation: limitation
-    };
+    });
 
     try {
-      if (currentUid && currentUid !== 'guest_user') {
-        const docRef = doc(db, 'users', currentUid, 'communicationSkills', finalEval.patientId);
-        await setDoc(docRef, finalEval);
-      }
+      const docRef = doc(db, 'users', currentUid, 'communicationSkills', pid);
+      await setDoc(docRef, {
+        ...finalEval,
+        userId: currentUid,
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
     } catch (fsErr) {
-      console.warn('Could not save communication evaluation to Firestore, caching locally:', fsErr);
+      reportFirebaseErrorToUI('Error al guardar evaluación de comunicación en Firebase Firestore.', fsErr);
+      throw fsErr;
     }
 
     const current = await this.loadCommunicationEvaluations(currentUid);
     const updated = {
       ...current,
-      [finalEval.patientId]: finalEval
+      [pid]: finalEval
     };
     localStorage.setItem(LOCAL_STORAGE_COMM_KEY, JSON.stringify(updated));
 
