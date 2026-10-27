@@ -18,7 +18,7 @@ export const DEFAULT_BRANDING: CompanyBranding = {
   customLogoUrl: '',
   companyName: 'Centro Clínico Kinesfera',
   tagline: 'Creando Sentido Al Juego',
-  subtext: 'Kinesiología Pediátrica · Neurodesarrollo · Integración Sensorial',
+  subtext: 'Kinesiología Pediátrica · Neurodesarrollo · Psicomotricidad',
   phone: '+56 9 8456 1234',
   institution: 'Centro Clínico Kinesfera',
   address: 'Copiapó, Región de Atacama'
@@ -29,7 +29,11 @@ export function getCompanyBranding(): CompanyBranding {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return DEFAULT_BRANDING;
     const parsed = JSON.parse(raw);
-    return { ...DEFAULT_BRANDING, ...parsed };
+    const merged = { ...DEFAULT_BRANDING, ...parsed };
+    if (merged.subtext) {
+      merged.subtext = merged.subtext.replace(/integraci[óo]n sensorial/gi, 'Psicomotricidad');
+    }
+    return merged;
   } catch {
     return DEFAULT_BRANDING;
   }

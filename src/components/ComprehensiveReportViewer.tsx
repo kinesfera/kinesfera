@@ -6,7 +6,7 @@ import {
   SPMEvaluationRecord 
 } from '../types';
 import { downloadReportAsWord } from '../utils/documentExport';
-import { calculatePatientAge } from '../utils/ageHelper';
+import { calculatePatientAge, formatDateDMY } from '../utils/ageHelper';
 import { clinicalStorage } from '../utils/clinicalStorage';
 import { 
   getFamilyThreeLineSummary,
@@ -82,7 +82,7 @@ export const ComprehensiveReportViewer: React.FC<ComprehensiveReportViewerProps>
   onGoToLibrary,
   onGoToSPM
 }) => {
-  // Load notes for this patient if not passed via props
+  // Load notes for this user if not passed via props
   const patientNotes: ProgressNote[] = propNotes && propNotes.length > 0
     ? propNotes.filter(n => n.patientId === report.patientId)
     : clinicalStorage.loadProgressNotes().filter(n => n.patientId === report.patientId);
@@ -99,6 +99,10 @@ export const ComprehensiveReportViewer: React.FC<ComprehensiveReportViewerProps>
   const evalData = report.evaluations;
   const cranial = anam?.cranialMeasurements;
   const bpm = evalData?.daFonsecaBpm;
+  const isBaby = ageInfo.isUnderTwo || anam?.ageCategory === 'bebe_hasta_18_meses';
+
+  const formattedBirthDate = formatDateDMY(report.patientBirthDate);
+  const formattedEmissionDate = formatDateDMY(report.dateGenerated);
 
   // Communication evaluation and SPM evaluation records
   const [commEval, setCommEval] = useState<PatientCommunicationEvaluation | null>(null);
@@ -119,10 +123,12 @@ export const ComprehensiveReportViewer: React.FC<ComprehensiveReportViewerProps>
     return () => { isMounted = false; };
   }, [report.patientId]);
 
-  // Check if patient has limitation following instructions (Requirement 4)
+  // Check if user has limitation following instructions (Requirement 4 — only for non-infants)
   const followsText = typeof anam?.followsInstructions === 'string' ? anam.followsInstructions.toLowerCase() : '';
-  const hasInstructionLimitation = communicationSkillsService.shouldAddInstructionFollowingGoal(commEval) || 
-    (followsText.includes('dificultad') || followsText.includes('no sigue') || followsText.includes('no') || followsText.includes('cuesta') || followsText.includes('parcial'));
+  const hasInstructionLimitation = !isBaby && (
+    communicationSkillsService.shouldAddInstructionFollowingGoal(commEval) || 
+    (followsText.includes('dificultad') || followsText.includes('no sigue') || followsText.includes('no') || followsText.includes('cuesta') || followsText.includes('parcial'))
+  );
 
   // Extract structured, family-friendly clinical data
   const summary = getFamilyThreeLineSummary(report, patientNotes);
@@ -169,15 +175,26 @@ export const ComprehensiveReportViewer: React.FC<ComprehensiveReportViewerProps>
   const patientFirstName = report.patientName.split(' ')[0] || report.patientName;
 
   // Instrument description (No usar "integración sensorial" ni "integración sensorio-motriz")
-  const evaluationInstrumentsText = bpm 
+  const evaluationInstrumentsText = isBaby
+    ? 'Examen Neurológico Infantil de Hammersmith (HINE), Escala Motora Infantil de Alberta (AIMS), Protocolo Clínico de Craneometría (Sant Joan de Déu) y Cuestionario de Exploración y Respuesta a Estímulos (SPM-2 Bebés).'
+    : bpm 
     ? 'Observación de Capacidades Psicomotoras batería de Vítor da Fonseca. Cuestionario de Exploración y Respuesta a Estímulos (SPM-2).'
     : cranial
     ? 'Protocolo Clínico de Craneometría (Sant Joan de Déu) y Valoración del Neurodesarrollo Infantil.'
     : 'Evaluación Neuropsicomotriz Pediátrica y Parámetros Funcionales del Desarrollo.';
 
-  // Intervention goals: sanitized and with automatic instruction-following goal when applicable
+  // Intervention goals: sanitized and age-adapted
   let baseGoals: string[] = evalData?.interventionGoals && evalData.interventionGoals.length > 0
     ? [...evalData.interventionGoals]
+    : isBaby
+    ? [
+        'Favorecer un desarrollo psicomotor óptimo acorde a su edad cronológica y corregida.',
+        'Optimizar la simetría postural cervical y el control cefálico en línea media (supino y prono).',
+        'Estimular las transiciones motoras tempranas: tolerancia al juego en prono, apoyo simétrico de antebrazos y giros coordinados.',
+        'Regular el tono muscular axial y apendicular facilitando reacciones de enderezamiento y equilibrio.',
+        'Acompañar la exploración y respuesta a estímulos táctiles, vestibulares y propioceptivos durante las rutinas de cuidado diario.',
+        'Educar y acompañar a la familia con pautas ergonómicas de posicionamiento y estimulación psicomotriz en el hogar.'
+      ]
     : [
         'Contribuir a favorecer un desarrollo psicomotor óptimo que potencie el aprendizaje y la autorregulación.',
         'Regulación del tono muscular, la fuerza y la energía para una mejor ejecución motora.',
@@ -186,34 +203,73 @@ export const ComprehensiveReportViewer: React.FC<ComprehensiveReportViewerProps>
         'Afianzar la estructuración espacio-temporal para una mejor organización en el espacio y el tiempo (orientación en el papel y rutinas).',
         'Favorecer la planificación motora y la praxia global y fina, con especial énfasis en la grafomotricidad (agarre del lápiz y tijeras).',
         'Desarrollar la atención sostenida y la concentración a través del juego y el movimiento.',
-        'Entregar estrategias de regulación y modulación adaptadas a la familia y a la escuela.'
+        'Entregar estrategias de regulación y modulación adaptadas a la familia y al entorno cotidiano.'
       ];
 
-  // Sanitize according to Requirement 1
-  baseGoals = baseGoals.map(g => 
-    g.replace(/óptima integración sensorio-motriz/gi, 'favorecer un desarrollo psicomotor óptimo')
-     .replace(/integración sensorio-motriz/gi, 'desarrollo psicomotor óptimo')
-     .replace(/integración sensorial/gi, 'exploración y respuesta a estímulos')
-     .replace(/regulación sensorial/gi, 'regulación y modulación motriz')
-  );
+  // Sanitize according to Requirements
+  baseGoals = baseGoals.map(g => {
+    let clean = g
+      .replace(/óptima integración sensorio-motriz/gi, 'favorecer un desarrollo psicomotor óptimo')
+      .replace(/integración sensorio-motriz/gi, 'psicomotricidad')
+      .replace(/integración sensorial/gi, 'psicomotricidad')
+      .replace(/regulación sensorial/gi, 'regulación y modulación psicomotriz')
+      .replace(/\bpacientes\b/gi, 'usuarios')
+      .replace(/\bpaciente\b/gi, 'usuario');
+    if (isBaby) {
+      clean = clean
+        .replace(/y a la escuela/gi, 'en el hogar')
+        .replace(/en la escuela/gi, 'en el hogar')
+        .replace(/contexto escolar/gi, 'entorno familiar')
+        .replace(/aula educacional/gi, 'entorno del hogar')
+        .replace(/actividades lúdicas y escolares/gi, 'actividades sensoriomotoras tempranas y de vínculo en el hogar');
+    }
+    return clean;
+  });
 
-  // Requirement 4: automatic goal if patient does not follow instructions
-  const instructionGoal = 'Lograr que el paciente siga instrucciones a través de la intervención kinésica y psicomotriz';
+  // Requirement 4: automatic goal if user does not follow instructions (only for non-infants)
+  const instructionGoal = 'Lograr que el usuario siga instrucciones a través de la intervención kinésica y psicomotriz';
   if (hasInstructionLimitation) {
     if (!baseGoals.some(g => g.toLowerCase().includes('siga instrucciones'))) {
-      baseGoals = [instructionGoal, ...baseGoals];
+      baseGoals = [...baseGoals, instructionGoal];
     }
   } else {
-    baseGoals = baseGoals.filter(g => !g.toLowerCase().includes('siga instrucciones a través de la intervención kinésica'));
+    baseGoals = baseGoals.filter(g => !g.toLowerCase().includes('siga instrucciones'));
   }
 
   const interventionGoalsList = baseGoals;
+
+  // Sanitize technical conclusion for display (especially for infants or legacy saved strings)
+  const rawConclusion = evalData?.initialConclusions || evalData?.functionalDiagnosisCIF || report.clinicalSummary || '';
+  const sanitizedConclusion = rawConclusion
+    .replace(/óptima integración sensorio-motriz/gi, 'favorecer un desarrollo psicomotor óptimo')
+    .replace(/integración sensorio-motriz/gi, 'psicomotricidad')
+    .replace(/integración sensorial/gi, 'psicomotricidad')
+    .replace(/\bPacientes\b/g, 'Usuarios')
+    .replace(/\bpacientes\b/g, 'usuarios')
+    .replace(/\bPaciente\b/g, 'Usuario')
+    .replace(/\bpaciente\b/g, 'usuario')
+    .replace(isBaby ? /participación en actividades lúdicas y escolares/gi : /$^/, 'adquisición de hitos motores propios de su etapa de lactante e interacción con sus cuidadores')
+    .replace(isBaby ? /en el hogar y aula educacional/gi : /$^/, 'en el hogar y entorno de cuidado familiar')
+    .replace(isBaby ? /contexto escolar/gi : /$^/, 'entorno familiar')
+    .replace(isBaby ? /y escolares/gi : /$^/, 'y del hogar');
 
   // Follow-up information
   const followUpSessions = 'Bloque de 10 sesiones de kinesiología y psicomotricidad';
   const followUpFrequency = '1 a 2 veces por semana (sesiones de 45 minutos)';
   const followUpNextReeval = 'Evaluación intermedia en sesión 5 y reevaluación final en sesión 10';
-  const followUpReferrals = 'Coordinación con equipo de aula y programa PIE del colegio; seguimiento conjunto con Neurología Infantil.';
+  const followUpReferrals = isBaby
+    ? 'Coordinación con Pediatría, Neurología Infantil y acompañamiento continuo a la familia en el hogar.'
+    : 'Coordinación con equipo educativo y seguimiento conjunto con especialistas tratantes.';
+
+  // Check if communication table should be rendered (never for infants < 2 years, and only if evaluated)
+  const hasPerformedCommEval = !isBaby && (
+    (commEval && commEval.items && commEval.items.length > 0) ||
+    Boolean(evalData?.criticalCommunication && (
+      evalData.criticalCommunication.asksForNeeds ||
+      evalData.criticalCommunication.followsInstructions ||
+      evalData.criticalCommunication.communicatesCalmly
+    ))
+  );
 
   return (
     <div className="space-y-6">
@@ -234,7 +290,7 @@ export const ComprehensiveReportViewer: React.FC<ComprehensiveReportViewerProps>
               </span>
             </div>
             <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-              RUT: <strong className="font-mono text-slate-700">{report.patientRut}</strong> · Ficha: {report.medicalRecordNumber} · Emisión: {report.dateGenerated}
+              RUT: <strong className="font-mono text-slate-700">{report.patientRut}</strong> · Ficha: {report.medicalRecordNumber} · Emisión: {formattedEmissionDate}
             </p>
           </div>
         </div>
@@ -290,7 +346,7 @@ export const ComprehensiveReportViewer: React.FC<ComprehensiveReportViewerProps>
         <CompanyDocumentHeader
           documentTitle="INFORME DE EVALUACIÓN KINESIOLÓGICA"
           documentSubtitle="Creando Sentido Al Juego · Kinesiología Pediátrica · Psicomotricidad"
-          emissionDate={report.dateGenerated}
+          emissionDate={formattedEmissionDate}
           recordNumber={report.medicalRecordNumber}
         />
 
@@ -300,13 +356,13 @@ export const ComprehensiveReportViewer: React.FC<ComprehensiveReportViewerProps>
         <section className="space-y-2.5">
           <h3 className="text-xs sm:text-sm font-black text-cyan-900 uppercase tracking-wider border-b-2 border-cyan-500 pb-1 flex items-center gap-1.5">
             <UserIcon className="w-4 h-4 text-cyan-700" />
-            <span>1. Antecedentes Personales</span>
+            <span>1. Antecedentes Personales del Usuario</span>
           </h3>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs sm:text-sm bg-slate-50/80 p-4 sm:p-5 rounded-2xl border border-slate-200">
             <div>
               <span className="text-slate-500 font-semibold block text-[11px] sm:text-xs">
-                Nombre del Paciente:
+                Nombre del Usuario:
               </span>
               <strong className="text-slate-900 text-sm sm:text-base">
                 {report.patientName}
@@ -315,10 +371,10 @@ export const ComprehensiveReportViewer: React.FC<ComprehensiveReportViewerProps>
 
             <div>
               <span className="text-slate-500 font-semibold block text-[11px] sm:text-xs">
-                Fecha de Nacimiento:
+                Fecha de Nacimiento (Día-Mes-Año):
               </span>
               <span className="font-medium text-slate-800">
-                {report.patientBirthDate}
+                {formattedBirthDate}
               </span>
             </div>
 
@@ -336,7 +392,7 @@ export const ComprehensiveReportViewer: React.FC<ComprehensiveReportViewerProps>
                 Fecha de Emisión del Informe:
               </span>
               <span className="font-medium text-slate-800">
-                {report.dateGenerated}
+                {formattedEmissionDate}
               </span>
             </div>
 
@@ -345,7 +401,7 @@ export const ComprehensiveReportViewer: React.FC<ComprehensiveReportViewerProps>
                 Diagnóstico Clínico / Derivación:
               </span>
               <strong className="text-slate-900 text-sm font-black">
-                {evalData?.functionalDiagnosisCIF ? evalData.functionalDiagnosisCIF.split('.')[0] : (anam?.medicalDiagnoses || anam?.consultationReason || 'Déficit de Atención')}
+                {sanitizedConclusion ? sanitizedConclusion.split('.')[0] : (anam?.medicalDiagnoses || anam?.consultationReason || 'Evaluación del Desarrollo Psicomotor')}
               </strong>
             </div>
 
@@ -392,25 +448,43 @@ export const ComprehensiveReportViewer: React.FC<ComprehensiveReportViewerProps>
 
           <div className="bg-slate-50/80 border border-slate-200 rounded-2xl p-4 sm:p-5 text-xs sm:text-sm text-slate-800 leading-relaxed space-y-3">
             <p>
-              {anam?.consultationReason || `${patientFirstName} asiste a consulta derivado/a por su especialista para evaluación y apoyo en el neurodesarrollo psicomotor y sensorial.`}
+              {(anam?.consultationReason || `${patientFirstName} asiste a consulta derivado/a por su especialista para evaluación y apoyo en el desarrollo psicomotor.`)
+                .replace(/integración sensorial/gi, 'psicomotricidad')
+                .replace(/\bpaciente\b/gi, 'usuario')}
             </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-slate-200/60 text-xs">
               <div>
                 <span className="text-slate-500 font-bold block">Antecedentes de Gestación y Parto:</span>
-                <span>{anam?.pregnancyHistory || `Nacido/a a las ${anam?.gestationalAgeWeeks || '37'} semanas, ${anam?.birthType || 'parto cesárea'}, APGAR ${anam?.apgarScore || '9/10'}.`}</span>
+                <span>{anam?.pregnancyHistory || `Nacido/a a las ${anam?.gestationalAgeWeeks || '38'} semanas, ${anam?.birthType || 'parto eutócico'}, APGAR ${anam?.apgarScore || '9/10'}.`}</span>
+              </div>
+              {(isBaby || anam?.hipXrayScreening) && (
+                <div>
+                  <span className="text-slate-500 font-bold block">Radiografía / Ecografía de Caderas (Tamizaje Lactante):</span>
+                  <span className="font-semibold text-cyan-950">
+                    {anam?.hipXrayScreening || 'Pendiente de registro / Control de pelvis 3 meses'}
+                  </span>
+                </div>
+              )}
+              <div>
+                <span className="text-slate-500 font-bold block">Rutinas de Sueño y Regulación:</span>
+                <span>{anam?.sleepPattern || 'Sueño acorde a su etapa.'} {anam?.isRestless && !isBaby ? `Uso de pantallas: ${anam.isRestless}.` : ''}</span>
               </div>
               <div>
-                <span className="text-slate-500 font-bold block">Rutinas de Sueño y Pantallas:</span>
-                <span>{anam?.sleepPattern || 'Sin despertares nocturnos.'} {anam?.isRestless ? `Uso de pantallas: ${anam.isRestless}.` : ''}</span>
-              </div>
-              <div>
-                <span className="text-slate-500 font-bold block">Escolaridad / Centro:</span>
-                <span>{anam?.schoolOrCenter || 'Colegio'} ({anam?.educationalLevel || '1° básico'})</span>
+                <span className="text-slate-500 font-bold block">
+                  {isBaby ? 'Contexto Familiar / Cuidado Diario:' : 'Escolaridad / Centro:'}
+                </span>
+                <span>
+                  {isBaby
+                    ? (anam?.schoolOrCenter && !anam.schoolOrCenter.toLowerCase().includes('colegio')
+                        ? anam.schoolOrCenter
+                        : `Hogar / Cuidado familiar (${anam?.caregiverName || 'Padres'})`)
+                    : `${anam?.schoolOrCenter || 'Establecimiento educativo'} (${anam?.educationalLevel || 'Nivel acorde a edad'})`}
+                </span>
               </div>
               <div>
                 <span className="text-slate-500 font-bold block">Farmacología / Suplementación:</span>
-                <span>{anam?.pharmacology || 'Sin medicamentos permanentes; suplementación con Omega 3.'}</span>
+                <span>{anam?.pharmacology || (isBaby ? 'Vitamina D profiláctica acorde a indicación pediátrica.' : 'Sin medicamentos permanentes.')}</span>
               </div>
             </div>
           </div>
@@ -419,13 +493,18 @@ export const ComprehensiveReportViewer: React.FC<ComprehensiveReportViewerProps>
         {/* =========================================================================
             SECCIÓN 4: TABLAS CLÍNICAS (Medición | Criterio con Inicial | Intermedia | Final | Cambio ▲▼)
            ========================================================================= */}
-        <section className="space-y-3">
-          <h3 className="text-xs sm:text-sm font-black text-cyan-900 uppercase tracking-wider border-b-2 border-cyan-500 pb-1 flex items-center gap-1.5">
-            <Scale className="w-4 h-4 text-cyan-700" />
-            <span>4. Tablas Clínicas (Medición | Criterio)</span>
-          </h3>
+        <section className="space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b-2 border-cyan-500 pb-1">
+            <h3 className="text-xs sm:text-sm font-black text-cyan-900 uppercase tracking-wider flex items-center gap-1.5">
+              <Scale className="w-4 h-4 text-cyan-700" />
+              <span>4. Tablas Clínicas: Desempeño Motor, Postural y Exploración de Estímulos (Medición | Criterio)</span>
+            </h3>
+            <span className="text-[11px] font-bold text-cyan-800 bg-cyan-50 px-2.5 py-0.5 rounded-full border border-cyan-200">
+              Eje Central Kinésico y Psicomotor
+            </span>
+          </div>
           <p className="text-xs text-slate-500">
-            Comparativa de mediciones clínicas registradas con evolución Inicial, Intermedia, Final y Cambio (▲/▼).
+            Valoración prioritaria del control motor, tono muscular, equilibrio vestibular, propiocepción y respuesta a estímulos con evolución Inicial, Intermedia, Final y Cambio (▲/▼).
           </p>
 
           <KinesferaClinicalTables
@@ -433,16 +512,19 @@ export const ComprehensiveReportViewer: React.FC<ComprehensiveReportViewerProps>
             anamnesis={anam}
             evaluations={evalData}
             patientName={report.patientName}
+            isBaby={isBaby}
           />
 
-          {/* CUADRO RESUMEN: LISTA DE CONTROL DE HABILIDADES DE COMUNICACIÓN CRÍTICAS Y FUNCIONALES */}
-          <div className="pt-4 border-t border-slate-200">
-            <CriticalCommunicationTable
-              patientId={report.patientId}
-              patientName={report.patientName}
-              onGoToLibrary={onGoToLibrary}
-            />
-          </div>
+          {/* COMPLEMENTO FUNCIONAL SECUNDARIO: HABILIDADES DE COMUNICACIÓN (Omitido en lactantes y cuando no se ha realizado) */}
+          {hasPerformedCommEval && (
+            <div className="pt-2">
+              <CriticalCommunicationTable
+                patientId={report.patientId}
+                patientName={report.patientName}
+                onGoToLibrary={onGoToLibrary}
+              />
+            </div>
+          )}
         </section>
 
         {/* =========================================================================
@@ -506,7 +588,7 @@ export const ComprehensiveReportViewer: React.FC<ComprehensiveReportViewerProps>
                       Resultados {spmEval.formTitle}
                     </h4>
                     <p className="text-[11px] text-slate-500">
-                      Evaluador: {spmEval.evaluatorName} ({spmEval.formContext}) · Fecha: {spmEval.evaluationDate}
+                      Evaluador: {spmEval.evaluatorName} ({spmEval.formContext}) · Fecha: {formatDateDMY(spmEval.evaluationDate)}
                     </p>
                   </div>
                   {onGoToSPM && (
@@ -623,7 +705,7 @@ export const ComprehensiveReportViewer: React.FC<ComprehensiveReportViewerProps>
 
                 <div className="bg-purple-50/60 border border-purple-200/60 rounded-xl p-3 text-xs text-purple-950">
                   <p className="font-semibold">
-                    💡 <strong>¿Qué significa esto para la familia?:</strong> Puntuaciones entre 40T y 59T indican un procesamiento típico para la edad. Puntuaciones sobre 60T indican mayor reactividad o búsqueda de estímulos en el ambiente escolar y hogareño, abordadas mediante adecuaciones motrices y de rutina.
+                    💡 <strong>¿Qué significa esto para la familia?:</strong> Puntuaciones entre 40T y 59T indican una respuesta típica para la edad. Puntuaciones sobre 60T indican mayor reactividad o búsqueda de estímulos {isBaby ? 'en el hogar y durante las rutinas de cuidado diario' : 'en el ambiente cotidiano y hogareño'}, abordadas mediante adecuaciones psicomotrices y de rutina.
                   </p>
                 </div>
               </div>
@@ -646,11 +728,11 @@ export const ComprehensiveReportViewer: React.FC<ComprehensiveReportViewerProps>
               Conclusión Técnica Profesional:
             </strong>
             <p className="leading-relaxed">
-              {evalData?.initialConclusions || evalData?.functionalDiagnosisCIF || report.clinicalSummary}
+              {sanitizedConclusion}
             </p>
             {evalData?.prognosis && (
               <p className="text-xs text-slate-600 font-medium italic pt-1 border-t border-slate-200/60">
-                <strong>Pronóstico Terapéutico:</strong> {evalData.prognosis}
+                <strong>Pronóstico Terapéutico:</strong> {evalData.prognosis.replace(/integración sensorial/gi, 'psicomotricidad').replace(/\bpaciente\b/gi, 'usuario')}
               </p>
             )}
           </div>
@@ -694,12 +776,21 @@ export const ComprehensiveReportViewer: React.FC<ComprehensiveReportViewerProps>
                 <Activity className="w-4 h-4 text-sky-600" />
                 <span>Área Motora y Kinesiológica</span>
               </h4>
-              <ul className="space-y-1.5 text-slate-700 list-disc pl-4 text-xs">
-                <li><strong>Equilibrio y Vestibular:</strong> Actividades en superficies inestables, apoyo unipodal y giros controlados.</li>
-                <li><strong>Noción del Cuerpo:</strong> Reconocimiento somatognósico, cruce de línea media y juegos de imitación.</li>
-                <li><strong>Estructuración Espacio-Temporal:</strong> Circuitos de obstáculos, laberintos motores y secuencias rítmicas.</li>
-                <li><strong>Praxia Global y Fina:</strong> Trepa, saltos coordinados, disociación y grafomotricidad con presión graduada.</li>
-              </ul>
+              {isBaby ? (
+                <ul className="space-y-1.5 text-slate-700 list-disc pl-4 text-xs">
+                  <li><strong>Control Cefálico y Simetría Cervical:</strong> Facilitación del alineamiento en línea media, seguimiento visual bilateral y elongación suave de musculatura cervical.</li>
+                  <li><strong>Juego en Prono y Apoyo de EESS:</strong> Descarga de peso simétrica en antebrazos y manos para favorecer la estabilidad escapular y extensión axial.</li>
+                  <li><strong>Transiciones y Giros en Suelo:</strong> Facilitación de giros supino-prono, alcance en decúbito lateral y disociación de cinturas.</li>
+                  <li><strong>Hitos del Neurodesarrollo:</strong> Estimulación progresiva de sedestación, reacciones de enderezamiento y desplazamiento autónomo.</li>
+                </ul>
+              ) : (
+                <ul className="space-y-1.5 text-slate-700 list-disc pl-4 text-xs">
+                  <li><strong>Equilibrio y Vestibular:</strong> Actividades en superficies inestables, apoyo unipodal y giros controlados.</li>
+                  <li><strong>Noción del Cuerpo:</strong> Reconocimiento somatognósico, cruce de línea media y juegos de imitación.</li>
+                  <li><strong>Estructuración Espacio-Temporal:</strong> Circuitos de obstáculos, laberintos motores y secuencias rítmicas.</li>
+                  <li><strong>Praxia Global y Fina:</strong> Trepa, saltos coordinados, disociación y grafomotricidad con presión graduada.</li>
+                </ul>
+              )}
             </div>
 
             {/* Área de Exploración y respuesta a estímulos (Renombrado según Requerimiento 1) */}
@@ -708,17 +799,26 @@ export const ComprehensiveReportViewer: React.FC<ComprehensiveReportViewerProps>
                 <Brain className="w-4 h-4 text-emerald-600" />
                 <span>Área de Exploración y respuesta a estímulos</span>
               </h4>
-              <ul className="space-y-1.5 text-slate-700 list-disc pl-4 text-xs">
-                <li><strong>Conciencia Corporal (Propiocepción):</strong> Ejercicios de carga articular y graduación de fuerza manual.</li>
-                <li><strong>Procesamiento Vestibular:</strong> Juegos de balanceo suave y aceleración lineal para la calma y alerta.</li>
-                <li><strong>Modulación y Regulación del Entorno:</strong> Estrategias para tolerar ruidos del aula y optimizar la atención sostenida.</li>
-                <li><strong>Pausas Activas:</strong> Microdescansos de movimiento cada 15 a 20 minutos durante tareas escolares.</li>
-                {hasInstructionLimitation && (
-                  <li className="text-emerald-950 font-bold bg-emerald-100/70 p-2 rounded-xl border border-emerald-300 list-none mt-2">
-                    🎯 <strong>Seguimiento de Instrucciones:</strong> Lograr que el paciente siga instrucciones a través de la intervención kinésica y psicomotriz mediante consignas estructuradas y refuerzo lúdico.
-                  </li>
-                )}
-              </ul>
+              {isBaby ? (
+                <ul className="space-y-1.5 text-slate-700 list-disc pl-4 text-xs">
+                  <li><strong>Conciencia Corporal Temprana (Propiocepción):</strong> Contacto profundo calmante, contención en flexión fisiológica y exploración manos-línea media-pies.</li>
+                  <li><strong>Experiencia Vestibular Suave:</strong> Cambios de posición lentos y predecibles en brazos y superficie firme para favorecer la seguridad postural.</li>
+                  <li><strong>Exploración Táctil y Visual:</strong> Presentación graduada de texturas seguras y juguetes de alto contraste promoviendo el giro activo hacia ambos lados.</li>
+                  <li><strong>Rutinas del Hogar y Vínculo:</strong> Acompañamiento a los cuidadores en el porteo ergonómico, muda activa y regulación sueño-vigilia.</li>
+                </ul>
+              ) : (
+                <ul className="space-y-1.5 text-slate-700 list-disc pl-4 text-xs">
+                  <li><strong>Conciencia Corporal (Propiocepción):</strong> Ejercicios de carga articular y graduación de fuerza manual.</li>
+                  <li><strong>Procesamiento Vestibular:</strong> Juegos de balanceo suave y aceleración lineal para la calma y alerta.</li>
+                  <li><strong>Modulación y Regulación del Entorno:</strong> Estrategias para tolerar estímulos del ambiente cotidiano y optimizar la atención sostenida.</li>
+                  <li><strong>Pausas Activas:</strong> Microdescansos de movimiento estructurado cada 15 a 20 minutos durante actividades de mesa.</li>
+                  {hasInstructionLimitation && (
+                    <li className="text-emerald-950 font-bold bg-emerald-100/70 p-2 rounded-xl border border-emerald-300 list-none mt-2">
+                      🎯 <strong>Seguimiento de Instrucciones:</strong> Lograr que el usuario siga instrucciones a través de la intervención kinésica y psicomotriz mediante consignas estructuradas y refuerzo lúdico.
+                    </li>
+                  )}
+                </ul>
+              )}
             </div>
           </div>
         </section>

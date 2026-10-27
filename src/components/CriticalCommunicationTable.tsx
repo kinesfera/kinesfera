@@ -31,6 +31,7 @@ export const CriticalCommunicationTable: React.FC<CriticalCommunicationTableProp
   const [activeChecklistDoc, setActiveChecklistDoc] = useState<LibraryFileDocument | null>(null);
   const [evaluation, setEvaluation] = useState<PatientCommunicationEvaluation | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -152,74 +153,78 @@ export const CriticalCommunicationTable: React.FC<CriticalCommunicationTableProp
   };
 
   return (
-    <div className={`bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs space-y-0 ${className}`}>
-      {/* Table Header Strip */}
-      <div className="bg-amber-700 px-4 py-2.5 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+    <div className={`bg-slate-50/70 rounded-xl border border-slate-200 overflow-hidden space-y-0 ${className}`}>
+      {/* Compact Secondary Header Strip */}
+      <div className="bg-slate-100 border-b border-slate-200 px-3.5 py-2 text-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <MessageSquare className="w-4 h-4 text-amber-200" />
-          <h4 className="text-xs sm:text-sm font-black uppercase tracking-wider">
-            Cuadro Resumen: Lista de Control de Habilidades de Comunicación Críticas y Funcionales
+          <MessageSquare className="w-3.5 h-3.5 text-slate-500" />
+          <h4 className="text-[11px] sm:text-xs font-bold text-slate-700">
+            Complemento Funcional Secundario: Lista de Control de Comunicación en Sesión Kinésica
           </h4>
         </div>
-        <span className="text-[10px] sm:text-xs font-bold bg-white/20 px-2.5 py-0.5 rounded-full">
-          Fuente: {activeChecklistDoc.name}
-        </span>
-      </div>
-
-      <div className="p-3 bg-amber-50/50 border-b border-amber-100 text-xs text-amber-900 flex items-center justify-between">
-        <span>
-          Semáforo por habilidad funcional evaluada en {patientName} (Verde = Adquirida, Amarillo = En proceso, Rojo = No observada).
-        </span>
-        <div className="flex items-center gap-3 font-bold text-[11px] shrink-0">
-          <span className="flex items-center gap-1 text-emerald-800">
-            <span className="w-2 h-2 rounded-full bg-emerald-500"></span> Sí
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] font-medium text-slate-500 bg-white px-2 py-0.5 rounded-full border border-slate-200">
+            Apoyo al eje motor-sensorial
           </span>
-          <span className="flex items-center gap-1 text-amber-800">
-            <span className="w-2 h-2 rounded-full bg-amber-500"></span> En proceso
-          </span>
-          <span className="flex items-center gap-1 text-rose-800">
-            <span className="w-2 h-2 rounded-full bg-rose-500"></span> No
-          </span>
+          <button
+            type="button"
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="text-[10px] font-bold text-cyan-800 hover:text-cyan-950 bg-cyan-50 hover:bg-cyan-100 px-2.5 py-0.5 rounded-full border border-cyan-200 transition-colors print:hidden cursor-pointer"
+          >
+            {isExpanded ? 'Compactar vista ▲' : `Ver detalle (${items.length} ítems) ▼`}
+          </button>
         </div>
       </div>
 
-      {/* Main Table */}
-      <div className="overflow-x-auto">
-        <table className="w-full text-left border-collapse text-xs">
+      {/* Compact Summary Bar when collapsed on screen (always prints cleanly) */}
+      {!isExpanded && (
+        <div className="p-2.5 px-3.5 text-[11px] text-slate-600 flex flex-wrap items-center justify-between gap-2 print:hidden">
+          <span>
+            Síntesis funcional en sesión para <strong>{patientName}</strong>: se prioriza la respuesta motriz, postural y exploración de estímulos; la comunicación se registra como facilitador de consignas.
+          </span>
+          <div className="flex items-center gap-2.5 font-semibold text-[10px] shrink-0">
+            <span className="flex items-center gap-1 text-emerald-700">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Adquiridas: {items.filter(i => (i.statusFinal || i.statusInitial) === 'si').length}
+            </span>
+            <span className="flex items-center gap-1 text-amber-700">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span> En proceso: {items.filter(i => (i.statusFinal || i.statusInitial) === 'en_proceso').length}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Compact Table (Visible when expanded or in print) */}
+      <div className={`${isExpanded ? 'block' : 'hidden print:block'} overflow-x-auto`}>
+        <table className="w-full text-left border-collapse text-[11px]">
           <thead>
-            <tr className="bg-slate-50 border-b border-slate-200 text-slate-700 font-bold">
-              <th className="py-2.5 px-3 w-1/3">Habilidad de Comunicación</th>
-              <th className="py-2.5 px-3 text-center">Inicial</th>
-              <th className="py-2.5 px-3 text-center">Final</th>
-              <th className="py-2.5 px-3">Observaciones Clínicas</th>
+            <tr className="bg-slate-100/70 border-b border-slate-200 text-slate-600 font-bold">
+              <th className="py-1.5 px-3 w-1/3">Habilidad Funcional</th>
+              <th className="py-1.5 px-2 text-center">Inicial</th>
+              <th className="py-1.5 px-2 text-center">Final</th>
+              <th className="py-1.5 px-3">Observación en Contexto Motor</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100 text-slate-800">
+          <tbody className="divide-y divide-slate-200/60 text-slate-700 bg-white">
             {items.map((item, idx) => {
               const improved = (item.statusInitial === 'no' && (item.statusFinal === 'en_proceso' || item.statusFinal === 'si')) ||
                                (item.statusInitial === 'en_proceso' && item.statusFinal === 'si');
 
               return (
                 <tr key={item.id || idx} className="hover:bg-slate-50/50">
-                  <td className="py-2.5 px-3 font-bold text-slate-900 align-top">
-                    <div className="flex items-start gap-1.5">
-                      {improved && <TrendingUp className="w-3.5 h-3.5 text-emerald-600 mt-0.5 shrink-0" />}
+                  <td className="py-1.5 px-3 font-semibold text-slate-800 align-top">
+                    <div className="flex items-start gap-1">
+                      {improved && <TrendingUp className="w-3 h-3 text-emerald-600 mt-0.5 shrink-0" />}
                       <span>{item.skillName}</span>
                     </div>
                   </td>
-                  <td className="py-2.5 px-3 text-center align-top whitespace-nowrap">
+                  <td className="py-1.5 px-2 text-center align-top whitespace-nowrap">
                     {renderTrafficLightBadge(item.statusInitial)}
                   </td>
-                  <td className="py-2.5 px-3 text-center align-top whitespace-nowrap">
+                  <td className="py-1.5 px-2 text-center align-top whitespace-nowrap">
                     {renderTrafficLightBadge(item.statusFinal || item.statusInitial)}
                   </td>
-                  <td className="py-2.5 px-3 text-slate-700 align-top leading-relaxed text-[11px]">
-                    {item.observations || 'Habilidad funcional observada en interacción lúdica.'}
-                    {item.isInstructionFollowing && item.statusInitial === 'no' && (
-                      <span className="block mt-1 text-[10px] font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
-                        ⚡ Se incorpora objetivo prioritario de seguimiento de instrucciones en plan de intervención.
-                      </span>
-                    )}
+                  <td className="py-1.5 px-3 text-slate-600 align-top leading-snug text-[10px]">
+                    {item.observations || 'Habilidad funcional observada durante el juego psicomotor.'}
                   </td>
                 </tr>
               );

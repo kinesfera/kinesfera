@@ -15,7 +15,7 @@ import {
   SPMQuestion, 
   SPMAgeGroupKey 
 } from '../data/spmQuestionnaires';
-import { calculatePatientAge } from '../utils/ageHelper';
+import { calculatePatientAge, formatDateDMY } from '../utils/ageHelper';
 import { 
   ClipboardCheck, 
   Save, 
@@ -379,6 +379,7 @@ export const SPMEvaluationSection: React.FC<SPMEvaluationSectionProps> = ({
             </span>
             <span className="text-xs font-bold text-slate-500">
               Edad Cronológica: <strong className="text-slate-900">{ageInfo.detailedChronologicalAge || ageInfo.ageText} ({totalMonths} meses)</strong>
+              {patient.birthDate && <span className="ml-2 text-slate-400">· Nac: {formatDateDMY(patient.birthDate)}</span>}
             </span>
           </div>
           <h3 className="text-lg sm:text-xl font-black text-slate-900">
@@ -459,7 +460,7 @@ export const SPMEvaluationSection: React.FC<SPMEvaluationSectionProps> = ({
               >
                 {isAuto && (
                   <span className="absolute -top-2.5 right-2 px-2 py-0.5 rounded-full text-[9px] font-black bg-emerald-600 text-white shadow-2xs">
-                    Edad del Paciente
+                    Edad del Usuario
                   </span>
                 )}
                 <span className="font-black text-xs block">{getCategoryTitle(cat)}</span>

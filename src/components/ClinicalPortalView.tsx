@@ -17,6 +17,7 @@ import { NicheTrendsAndIntelligenceHub } from './NicheTrendsAndIntelligenceHub';
 import { LibraryManagementView } from './LibraryManagementView';
 import { SPMEvaluationSection } from './SPMEvaluationSection';
 import { clinicalStorage } from '../utils/clinicalStorage';
+import { formatDateDMY } from '../utils/ageHelper';
 import { 
   FileText, 
   UserPlus, 
@@ -410,7 +411,7 @@ export const ClinicalPortalView: React.FC<ClinicalPortalViewProps> = ({
             }`}
           >
             <UserPlus className="w-3.5 h-3.5" />
-            <span>+ Ingresar Paciente / Anamnesis</span>
+            <span>+ Ingresar Usuario / Anamnesis</span>
           </button>
         </div>
       </div>
@@ -424,10 +425,10 @@ export const ClinicalPortalView: React.FC<ClinicalPortalViewProps> = ({
             </div>
             <div>
               <h4 className="font-bold text-slate-900 text-sm">
-                Base de datos limpia: 0 pacientes anteriores
+                Base de datos limpia: 0 usuarios anteriores
               </h4>
               <p className="text-xs text-slate-600">
-                Todo listo para comenzar desde 0. Registra a tu primer paciente para iniciar su Ficha Clínica, Anamnesis y Evaluación Neuropsicomotriz.
+                Todo listo para comenzar desde 0. Registra a tu primer usuario para iniciar su Ficha Clínica, Anamnesis y Evaluación Neuropsicomotriz.
               </p>
             </div>
           </div>
@@ -436,7 +437,7 @@ export const ClinicalPortalView: React.FC<ClinicalPortalViewProps> = ({
             className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shrink-0 shadow-xs cursor-pointer"
           >
             <UserPlus className="w-3.5 h-3.5" />
-            <span>+ Ingresar Primer Paciente</span>
+            <span>+ Ingresar Primer Usuario</span>
           </button>
         </div>
       )}
@@ -456,7 +457,7 @@ export const ClinicalPortalView: React.FC<ClinicalPortalViewProps> = ({
       <div className="border-b border-slate-200 pb-2">
         <div className="flex flex-wrap items-center gap-2">
           
-          {/* TAB 1: Ingreso de Paciente & Evaluación (Anamnesis y Pruebas Clínicas) */}
+          {/* TAB 1: Ingreso de Usuario & Evaluación (Anamnesis y Pruebas Clínicas) */}
           <button
             onClick={() => setActiveSubTab('add_patient_eval')}
             className={`flex items-center gap-2 px-3.5 py-2.5 text-xs font-bold rounded-xl transition-all cursor-pointer ${
@@ -466,7 +467,7 @@ export const ClinicalPortalView: React.FC<ClinicalPortalViewProps> = ({
             }`}
           >
             <UserPlus className="w-4 h-4 text-blue-200" />
-            <span>1. Pacientes & Evaluación</span>
+            <span>1. Usuarios & Evaluación</span>
             <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-md bg-white/20 text-white">
               {patients.length}
             </span>
@@ -593,21 +594,21 @@ export const ClinicalPortalView: React.FC<ClinicalPortalViewProps> = ({
       {activeSubTab === 'comprehensive_report' && (
         <div className="space-y-6">
           
-          {/* Patient Selector Bar for Report */}
+          {/* User Selector Bar for Report */}
           <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <label className="text-xs font-bold text-slate-700">Ver Informe del Paciente:</label>
+              <label className="text-xs font-bold text-slate-700">Ver Informe del Usuario:</label>
               <select
                 value={selectedPatientId}
                 onChange={(e) => setSelectedPatientId(e.target.value)}
                 className="text-xs font-bold text-slate-800 bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 focus:ring-2 focus:ring-blue-500 cursor-pointer"
               >
                 {patients.length === 0 ? (
-                  <option value="">(Sin pacientes registrados)</option>
+                  <option value="">(Sin usuarios registrados)</option>
                 ) : (
                   patients.map(p => (
                     <option key={p.id} value={p.id}>
-                      {p.firstName} {p.lastName} — RUT: {p.rut}
+                      {p.firstName} {p.lastName} — RUT: {p.rut} {p.birthDate ? `(Nac: ${formatDateDMY(p.birthDate)})` : ''}
                     </option>
                   ))
                 )}
@@ -639,14 +640,14 @@ export const ClinicalPortalView: React.FC<ClinicalPortalViewProps> = ({
               <FileText className="w-12 h-12 text-slate-300 mx-auto" />
               <p className="text-sm font-semibold">
                 {patients.length === 0 
-                  ? 'Base de datos limpia: aún no has registrado ningún paciente.' 
-                  : 'No se ha generado un informe para este paciente.'}
+                  ? 'Base de datos limpia: aún no has registrado ningún usuario.' 
+                  : 'No se ha generado un informe para este usuario.'}
               </p>
               <button
                 onClick={() => setActiveSubTab('add_patient_eval')}
                 className="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold shadow-xs hover:bg-blue-500 cursor-pointer"
               >
-                {patients.length === 0 ? '+ Registrar Primer Paciente' : 'Ir a Evaluación para Generar Informe'}
+                {patients.length === 0 ? '+ Registrar Primer Usuario' : 'Ir a Evaluación para Generar Informe'}
               </button>
             </div>
           )}
@@ -659,21 +660,21 @@ export const ClinicalPortalView: React.FC<ClinicalPortalViewProps> = ({
       {/* ========================================================================= */}
       {activeSubTab === 'spm_eval' && (
         <div className="space-y-6">
-          {/* Patient Selector Bar for SPM */}
+          {/* User Selector Bar for SPM */}
           <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <label className="text-xs font-bold text-slate-700">Seleccionar Paciente:</label>
+              <label className="text-xs font-bold text-slate-700">Seleccionar Usuario:</label>
               <select
                 value={selectedPatientId}
                 onChange={(e) => setSelectedPatientId(e.target.value)}
                 className="text-xs font-bold text-slate-800 bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 focus:ring-2 focus:ring-purple-500 cursor-pointer"
               >
                 {patients.length === 0 ? (
-                  <option value="">(Sin pacientes registrados)</option>
+                  <option value="">(Sin usuarios registrados)</option>
                 ) : (
                   patients.map(p => (
                     <option key={p.id} value={p.id}>
-                      {p.firstName} {p.lastName} — RUT: {p.rut}
+                      {p.firstName} {p.lastName} — RUT: {p.rut} {p.birthDate ? `(Nac: ${formatDateDMY(p.birthDate)})` : ''}
                     </option>
                   ))
                 )}
@@ -696,14 +697,14 @@ export const ClinicalPortalView: React.FC<ClinicalPortalViewProps> = ({
               <ClipboardCheck className="w-12 h-12 text-slate-300 mx-auto" />
               <p className="text-sm font-semibold">
                 {patients.length === 0 
-                  ? 'Base de datos limpia: aún no has registrado ningún paciente.' 
-                  : 'Selecciona un paciente para ver su evaluación SPM.'}
+                  ? 'Base de datos limpia: aún no has registrado ningún usuario.' 
+                  : 'Selecciona un usuario para ver su evaluación SPM.'}
               </p>
               <button
                 onClick={() => setActiveSubTab('add_patient_eval')}
                 className="px-4 py-2 bg-purple-700 text-white rounded-xl text-xs font-bold shadow-xs hover:bg-purple-600 cursor-pointer"
               >
-                + Registrar Paciente
+                + Registrar Usuario
               </button>
             </div>
           )}

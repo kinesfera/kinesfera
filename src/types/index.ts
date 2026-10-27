@@ -656,6 +656,7 @@ export interface PatientAnamnesis {
   feedingType?: string; // Lactancia materna, fórmula, mixta
   colic?: string;
   sleepPattern?: string; // Despertares, horas de noche, siestas
+  hipXrayScreening?: string; // Radiografía de pelvis / Ecografía de caderas (Tamizaje 3 meses GES en lactantes)
   
   // Psychomotor milestones
   headControlMonths: string;

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { KinesferaLogo } from './KinesferaLogo';
 import { getCompanyBranding, saveCompanyBranding, CompanyBranding } from '../utils/brandingConfig';
+import { formatDateDMY } from '../utils/ageHelper';
 import { Image as ImageIcon, Upload, Check, Settings, Eye, RotateCcw, X } from 'lucide-react';
 
 interface CompanyDocumentHeaderProps {
@@ -14,7 +15,7 @@ interface CompanyDocumentHeaderProps {
 export const CompanyDocumentHeader: React.FC<CompanyDocumentHeaderProps> = ({
   documentTitle,
   documentSubtitle,
-  emissionDate = new Date().toLocaleDateString('es-CL'),
+  emissionDate = formatDateDMY(new Date().toISOString().slice(0, 10)),
   recordNumber,
   className = ''
 }) => {
@@ -86,7 +87,7 @@ export const CompanyDocumentHeader: React.FC<CompanyDocumentHeaderProps> = ({
       customLogoUrl: '',
       companyName: 'Centro Clínico Kinesfera',
       tagline: 'Creando Sentido Al Juego',
-      subtext: 'Kinesiología Pediátrica · Neurodesarrollo · Integración Sensorial',
+      subtext: 'Kinesiología Pediátrica · Neurodesarrollo · Psicomotricidad',
       phone: '+56 9 8456 1234',
       institution: 'Centro Clínico Kinesfera',
       address: 'Copiapó, Región de Atacama'
@@ -179,8 +180,8 @@ export const CompanyDocumentHeader: React.FC<CompanyDocumentHeaderProps> = ({
 
         {/* Right: Emission Date & Record Number */}
         <div className="text-left sm:text-right text-xs shrink-0 self-start sm:self-auto">
-          <span className="text-[10px] font-bold text-slate-400 uppercase block">Fecha de Emisión</span>
-          <span className="font-mono font-bold text-slate-800 text-sm">{emissionDate}</span>
+          <span className="text-[10px] font-bold text-slate-400 uppercase block">Fecha de Emisión (Día-Mes-Año)</span>
+          <span className="font-mono font-bold text-slate-800 text-sm">{formatDateDMY(emissionDate)}</span>
           {recordNumber && (
             <span className="text-[11px] text-slate-500 block font-mono mt-0.5">
               Ficha N°: <strong className="text-slate-800">{recordNumber}</strong>
@@ -363,7 +364,7 @@ export const CompanyDocumentHeader: React.FC<CompanyDocumentHeaderProps> = ({
                     value={tempBranding.subtext}
                     onChange={(e) => setTempBranding(prev => ({ ...prev, subtext: e.target.value }))}
                     className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-hidden"
-                    placeholder="Ej. Kinesiología Pediátrica · Neurodesarrollo · Integración Sensorial"
+                    placeholder="Ej. Kinesiología Pediátrica · Neurodesarrollo · Psicomotricidad"
                   />
                 </div>
               </div>

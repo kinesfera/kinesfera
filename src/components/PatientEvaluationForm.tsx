@@ -49,7 +49,7 @@ import {
   Target,
   ListChecks
 } from 'lucide-react';
-import { calculatePatientAge } from '../utils/ageHelper';
+import { calculatePatientAge, formatDateDMY } from '../utils/ageHelper';
 import {
   CIF_CODES_BANK,
   CIF_QUALIFIERS,
@@ -188,6 +188,7 @@ export const PatientEvaluationForm: React.FC<PatientEvaluationFormProps> = ({
   const [feedingType, setFeedingType] = useState('');
   const [colic, setColic] = useState('');
   const [sleepPattern, setSleepPattern] = useState('');
+  const [hipXrayScreening, setHipXrayScreening] = useState('');
 
   // Motor milestones
   const [headControlMonths, setHeadControlMonths] = useState('');
@@ -521,6 +522,7 @@ export const PatientEvaluationForm: React.FC<PatientEvaluationFormProps> = ({
       setFeedingType(a.feedingType || '');
       setColic(a.colic || '');
       setSleepPattern(a.sleepPattern || '');
+      setHipXrayScreening(a.hipXrayScreening || '');
       setHeadControlMonths(a.headControlMonths || '');
       setIndependentSittingMonths(a.independentSittingMonths || '');
       setCrawlingMonths(a.crawlingMonths || '');
@@ -585,6 +587,7 @@ export const PatientEvaluationForm: React.FC<PatientEvaluationFormProps> = ({
       setFeedingType('');
       setColic('');
       setSleepPattern('');
+      setHipXrayScreening('');
       setHeadControlMonths('');
       setIndependentSittingMonths('');
       setCrawlingMonths('');
@@ -755,6 +758,7 @@ export const PatientEvaluationForm: React.FC<PatientEvaluationFormProps> = ({
     setFeedingType('');
     setColic('');
     setSleepPattern('');
+    setHipXrayScreening('');
     setHeadControlMonths('');
     setIndependentSittingMonths('');
     setCrawlingMonths('');
@@ -822,7 +826,7 @@ export const PatientEvaluationForm: React.FC<PatientEvaluationFormProps> = ({
     saveAnamnesisToState(newPatient.id);
     saveEvaluationsToState(newPatient.id);
 
-    setSavedSuccessAlert(`Paciente ${newPatient.firstName} ${newPatient.lastName} registrado con éxito.`);
+    setSavedSuccessAlert(`Usuario ${newPatient.firstName} ${newPatient.lastName} registrado con éxito.`);
     setTimeout(() => setSavedSuccessAlert(null), 4000);
   };
 
@@ -853,6 +857,7 @@ export const PatientEvaluationForm: React.FC<PatientEvaluationFormProps> = ({
       birthPresentation,
       apgarScore,
       neonatalComplications,
+      hipXrayScreening,
       feedingType,
       colic,
       sleepPattern,
@@ -1124,6 +1129,7 @@ export const PatientEvaluationForm: React.FC<PatientEvaluationFormProps> = ({
       feedingType,
       colic,
       sleepPattern,
+      hipXrayScreening,
       headControlMonths,
       independentSittingMonths,
       crawlingMonths,
@@ -1266,7 +1272,7 @@ export const PatientEvaluationForm: React.FC<PatientEvaluationFormProps> = ({
     ageDecision, followsCommandsDecision, caregiverName, caregiverPhone, schoolOrCenter, educationalLevel, pieSupport,
     householdMembers, consultationReason, problemNoticedWhen, specialistsVisited, previousTreatments, familyExpectations,
     pregnancyHistory, gestationalAgeWeeks, birthWeightGrams, birthLengthCm, birthType, birthPresentation, apgarScore,
-    neonatalComplications, feedingType, colic, sleepPattern, headControlMonths, independentSittingMonths, crawlingMonths,
+    neonatalComplications, feedingType, colic, sleepPattern, hipXrayScreening, headControlMonths, independentSittingMonths, crawlingMonths,
     standingMonths, walkingMonths, firstWords, firstPhrases, languageDifficulties, currentMotorStatus, followsInstructionsText,
     isRestless, playsAloneOrAccompanied, bedtimeRoutine, nightmares, hasFears, strangerReaction, tantrums, appearsSad,
     familyRelationships, schoolRelationships, leisureActivities, familyDiagnoses, pharmacology, cranialD1Mm, cranialD2Mm,
@@ -1432,6 +1438,7 @@ export const PatientEvaluationForm: React.FC<PatientEvaluationFormProps> = ({
         birthPresentation,
         apgarScore,
         neonatalComplications,
+        hipXrayScreening,
         feedingType,
         colic,
         sleepPattern,
@@ -1685,28 +1692,28 @@ export const PatientEvaluationForm: React.FC<PatientEvaluationFormProps> = ({
         </div>
       )}
 
-      {/* Clean database starting from 0 notification if no patients exist */}
+      {/* Clean database starting from 0 notification if no users exist */}
       {patients.length === 0 && (
         <div className="p-4 bg-blue-50 border border-blue-200 rounded-2xl flex items-center justify-between gap-3 text-xs text-blue-900 shadow-2xs animate-in fade-in">
           <div className="flex items-center gap-2.5">
             <Sparkles className="w-5 h-5 text-blue-600 shrink-0" />
             <div>
-              <strong className="block text-sm">Comenzar desde 0: Registra tu primer paciente</strong>
+              <strong className="block text-sm">Comenzar desde 0: Registra tu primer usuario</strong>
               <span className="text-blue-700">Completa los datos básicos a continuación para crear la ficha e iniciar su evaluación completa.</span>
             </div>
           </div>
           <span className="px-2.5 py-1 bg-blue-600 text-white font-bold rounded-lg text-[11px] shrink-0">
-            Paso 1: Nuevo Paciente
+            Paso 1: Nuevo Usuario
           </span>
         </div>
       )}
 
-      {/* Top Patient Selector & Quick Actions Strip */}
+      {/* Top User Selector & Quick Actions Strip */}
       <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         
         <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
           <label className="text-xs font-bold text-slate-700 shrink-0">
-            Paciente a Evaluar:
+            Usuario a Evaluar:
           </label>
           <select
             value={selectedPatientId}
@@ -1717,11 +1724,11 @@ export const PatientEvaluationForm: React.FC<PatientEvaluationFormProps> = ({
             className="text-xs font-bold text-slate-900 bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-hidden flex-1 md:w-64 cursor-pointer"
           >
             {patients.length === 0 ? (
-              <option value="">(Sin pacientes registrados - Crear primero)</option>
+              <option value="">(Sin usuarios registrados - Crear primero)</option>
             ) : (
               patients.map(p => (
                 <option key={p.id} value={p.id}>
-                  {p.firstName} {p.lastName} — RUT: {p.rut}
+                  {p.firstName} {p.lastName} — RUT: {p.rut} {p.birthDate ? `(Nac: ${formatDateDMY(p.birthDate)})` : ''}
                 </option>
               ))
             )}
@@ -1736,7 +1743,7 @@ export const PatientEvaluationForm: React.FC<PatientEvaluationFormProps> = ({
             }`}
           >
             <UserPlus className="w-3.5 h-3.5" />
-            <span>{isCreatingNew ? 'Ver Ficha Seleccionada' : '+ Registrar Nuevo Paciente'}</span>
+            <span>{isCreatingNew ? 'Ver Ficha Seleccionada' : '+ Registrar Nuevo Usuario'}</span>
           </button>
         </div>
 
@@ -1760,7 +1767,7 @@ export const PatientEvaluationForm: React.FC<PatientEvaluationFormProps> = ({
             type="button"
             onClick={handleClearForm}
             className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition-colors cursor-pointer"
-            title="Limpia todos los campos para ingresar un paciente desde cero"
+            title="Limpia todos los campos para ingresar un usuario desde cero"
           >
             <RotateCcw className="w-3.5 h-3.5" />
             <span>Formulario en Blanco</span>
@@ -1779,17 +1786,17 @@ export const PatientEvaluationForm: React.FC<PatientEvaluationFormProps> = ({
 
       </div>
 
-      {/* Sub-mode: CREATE NEW PATIENT FORM (if toggled) */}
+      {/* Sub-mode: CREATE NEW USER FORM (if toggled) */}
       {isCreatingNew && (
         <div className="bg-white border border-blue-200 rounded-2xl p-6 shadow-xs space-y-4 animate-in slide-in-from-top-4">
           <div className="border-b border-slate-100 pb-3 flex items-center justify-between">
             <div>
               <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
                 <UserPlus className="w-4 h-4 text-blue-600" />
-                <span>Registrar Nuevo Paciente para Ficha Clínica</span>
+                <span>Registrar Nuevo Usuario para Ficha Clínica</span>
               </h3>
               <p className="text-xs text-slate-500 mt-0.5">
-                Ingresa los datos personales del niño(a) para comenzar su Anamnesis y Evaluación
+                Ingresa los datos personales del usuario para comenzar su Anamnesis y Evaluación
               </p>
             </div>
           </div>
@@ -1875,7 +1882,7 @@ export const PatientEvaluationForm: React.FC<PatientEvaluationFormProps> = ({
                 type="submit"
                 className="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl shadow-xs cursor-pointer"
               >
-                Registrar Paciente y Abrir Evaluación
+                Registrar Usuario y Abrir Evaluación
               </button>
             </div>
           </form>
@@ -1892,11 +1899,14 @@ export const PatientEvaluationForm: React.FC<PatientEvaluationFormProps> = ({
               Algoritmo de Decisión Clínica
             </span>
             <h2 className="text-sm sm:text-base font-extrabold text-white mt-0.5">
-              Protocolo de Evaluación Adaptado al Paciente
+              Protocolo de Evaluación Adaptado al Usuario
             </h2>
           </div>
           <div className="text-xs text-blue-200">
-            Ficha: <strong className="text-white">{currentPatient?.firstName} {currentPatient?.lastName}</strong>
+            Usuario: <strong className="text-white">{currentPatient?.firstName} {currentPatient?.lastName}</strong>
+            {currentPatient?.birthDate && (
+              <span className="ml-2 text-sky-200">· Nac: {formatDateDMY(currentPatient.birthDate)}</span>
+            )}
           </div>
         </div>
 
@@ -1996,18 +2006,18 @@ export const PatientEvaluationForm: React.FC<PatientEvaluationFormProps> = ({
 
         </div>
 
-        {/* Indicador de Protocolo asignado */}
+        {/* Indicador de Protocolo asignado (Protagonismo Motor-Sensorial) */}
         <div className="pt-2 flex items-center gap-2 text-xs text-sky-100 font-semibold bg-white/5 px-3 py-2 rounded-xl">
           <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
           <span>
             {ageDecision === 'menor_2_anos' && (
-              <>Evaluación indicada: <strong>Examen Neurológico Infantil de Hammersmith (HINE)</strong> + Protocolo de Asimetrías Craneales.</>
+              <>Eje Principal Motor-Sensorial: <strong>Examen Neurológico de Hammersmith (HINE)</strong> + <strong>Protocolo de Asimetrías Craneales</strong> + <strong>Perfil Sensorial SPM-2 (Bebés 4-9m / 10-30m)</strong>.</>
             )}
             {ageDecision === 'mayor_2_anos' && !followsCommandsDecision && (
-              <>Evaluación indicada: <strong>Pauta de Observación de Parámetros Psicomotores de Pilar Arnaiz</strong> (Sesión lúdica libre) + <strong>Lista de Control de Habilidades de Comunicación Críticas y Funcionales</strong>.</>
+              <>Eje Principal Motor-Sensorial: <strong>Observación Psicomotriz de Pilar Arnaiz (Tono, Postura, Equilibrio y Juego)</strong> + <strong>Perfil Sensorial-Motor (SPM-2)</strong> <span className="text-sky-300/80 font-normal">(con apoyo complementario de comunicación funcional)</span>.</>
             )}
             {ageDecision === 'mayor_2_anos' && followsCommandsDecision && (
-              <>Evaluación indicada: <strong>Batería Psicomotora (BPM) de Vítor da Fonseca</strong> (Evaluación motriz estandarizada mediante consignas estructuradas).</>
+              <>Eje Principal Motor-Sensorial: <strong>Batería Psicomotora (BPM) de Vítor da Fonseca (7 Factores Motores)</strong> + <strong>Perfil Sensorial-Motor (SPM-2)</strong>.</>
             )}
           </span>
         </div>
@@ -2022,7 +2032,7 @@ export const PatientEvaluationForm: React.FC<PatientEvaluationFormProps> = ({
           
           <div className="flex flex-wrap items-center gap-1.5">
             
-            {/* 1. Anamnesis */}
+            {/* 1. Anamnesis y Desarrollo Motor */}
             <button
               onClick={() => setActiveSection('anamnesis')}
               className={`px-3.5 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
@@ -2031,10 +2041,10 @@ export const PatientEvaluationForm: React.FC<PatientEvaluationFormProps> = ({
                   : 'text-slate-700 hover:bg-slate-200'
               }`}
             >
-              📋 Anamnesis Pediátrica
+              📋 Anamnesis y Desarrollo Motor
             </button>
 
-            {/* Si es menor de 2 años -> HINE y Asimetrías Craneales */}
+            {/* 2. Evaluaciones Motoras, Posturales y de Tono */}
             {ageDecision === 'menor_2_anos' && (
               <>
                 <button
@@ -2042,11 +2052,11 @@ export const PatientEvaluationForm: React.FC<PatientEvaluationFormProps> = ({
                   className={`flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
                     activeSection === 'hine'
                       ? 'bg-blue-600 text-white shadow-xs'
-                      : 'bg-sky-100 text-sky-800 hover:bg-sky-200'
+                      : 'bg-sky-100 text-sky-900 hover:bg-sky-200 border border-sky-200'
                   }`}
                 >
                   <Activity className="w-3.5 h-3.5" />
-                  <span>Examen de Hammersmith (HINE)</span>
+                  <span>Motor y Tono: Hammersmith (HINE)</span>
                 </button>
 
                 <button
@@ -2054,73 +2064,57 @@ export const PatientEvaluationForm: React.FC<PatientEvaluationFormProps> = ({
                   className={`flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
                     activeSection === 'cranial'
                       ? 'bg-blue-600 text-white shadow-xs'
-                      : 'bg-sky-100 text-sky-800 hover:bg-sky-200'
+                      : 'bg-sky-100 text-sky-900 hover:bg-sky-200 border border-sky-200'
                   }`}
                 >
                   <Brain className="w-3.5 h-3.5" />
-                  <span>Asimetrías Craneales (CVAI)</span>
+                  <span>Asimetrías Craneales y ROM</span>
                 </button>
               </>
             )}
 
-            {/* Si es mayor de 2 años y NO recibe órdenes -> Pilar Arnaiz y Comunicación Crítica */}
-            {ageDecision === 'mayor_2_anos' && !followsCommandsDecision && (
+            {ageDecision === 'mayor_2_anos' && (
               <>
+                <button
+                  onClick={() => setActiveSection('da_fonseca')}
+                  className={`flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+                    activeSection === 'da_fonseca'
+                      ? 'bg-blue-600 text-white shadow-xs'
+                      : 'bg-emerald-100 text-emerald-950 hover:bg-emerald-200 border border-emerald-300'
+                  }`}
+                >
+                  <Scale className="w-3.5 h-3.5 text-emerald-700" />
+                  <span>Batería Motora Da Fonseca (BPM)</span>
+                </button>
+
                 <button
                   onClick={() => setActiveSection('arnaiz')}
                   className={`flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
                     activeSection === 'arnaiz'
                       ? 'bg-blue-600 text-white shadow-xs'
-                      : 'bg-amber-100 text-amber-900 hover:bg-amber-200'
+                      : 'bg-sky-100 text-sky-950 hover:bg-sky-200 border border-sky-200'
                   }`}
                 >
-                  <Activity className="w-3.5 h-3.5" />
-                  <span>Pauta de Pilar Arnaiz (Juego Libre)</span>
-                </button>
-
-                <button
-                  onClick={() => setActiveSection('critical_communication')}
-                  className={`flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
-                    activeSection === 'critical_communication'
-                      ? 'bg-blue-600 text-white shadow-xs'
-                      : 'bg-orange-100 text-orange-950 hover:bg-orange-200'
-                  }`}
-                >
-                  <MessageSquare className="w-3.5 h-3.5 text-orange-700" />
-                  <span>Comunicación Crítica</span>
+                  <Activity className="w-3.5 h-3.5 text-sky-700" />
+                  <span>Psicomotricidad Pilar Arnaiz</span>
                 </button>
               </>
             )}
 
-            {/* Si es mayor de 2 años y SÍ recibe órdenes -> Batería Da Fonseca */}
-            {ageDecision === 'mayor_2_anos' && followsCommandsDecision && (
-              <button
-                onClick={() => setActiveSection('da_fonseca')}
-                className={`flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
-                  activeSection === 'da_fonseca'
-                    ? 'bg-blue-600 text-white shadow-xs'
-                    : 'bg-emerald-100 text-emerald-900 hover:bg-emerald-200'
-                }`}
-              >
-                <Scale className="w-3.5 h-3.5" />
-                <span>Batería Da Fonseca (BPM)</span>
-              </button>
-            )}
-
-            {/* SPM-2 Perfil Sensorial */}
+            {/* 3. SPM-2 Perfil Sensorial-Motor (Destacado como Eje Principal) */}
             <button
               onClick={() => setActiveSection('spm2')}
               className={`flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
                 activeSection === 'spm2'
-                  ? 'bg-blue-600 text-white shadow-xs'
-                  : 'text-slate-700 hover:bg-slate-200'
+                  ? 'bg-indigo-600 text-white shadow-xs ring-2 ring-indigo-300'
+                  : 'bg-indigo-100 text-indigo-950 hover:bg-indigo-200 border border-indigo-300'
               }`}
             >
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>SPM-2 Sensorial</span>
+              <Sparkles className="w-3.5 h-3.5 text-indigo-700" />
+              <span>Perfil Sensorial-Motor (SPM-2)</span>
             </button>
 
-            {/* Diagnóstico CIF y Plan */}
+            {/* 4. Diagnóstico CIF y Plan Kinésico */}
             <button
               onClick={() => setActiveSection('cif_plan')}
               className={`px-3.5 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
@@ -2131,6 +2125,22 @@ export const PatientEvaluationForm: React.FC<PatientEvaluationFormProps> = ({
             >
               🩺 Diagnóstico CIF & Plan
             </button>
+
+            {/* 5. Complemento Funcional Secundario: Comunicación (al final y discreto) */}
+            {ageDecision === 'mayor_2_anos' && !followsCommandsDecision && (
+              <button
+                onClick={() => setActiveSection('critical_communication')}
+                className={`flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-semibold rounded-xl transition-all cursor-pointer ${
+                  activeSection === 'critical_communication'
+                    ? 'bg-slate-700 text-white shadow-xs'
+                    : 'bg-slate-100 text-slate-500 hover:bg-slate-200 border border-slate-200'
+                }`}
+                title="Complemento secundario de comunicación funcional"
+              >
+                <MessageSquare className="w-3 h-3" />
+                <span>Complemento: Comunicación</span>
+              </button>
+            )}
           </div>
 
           {/* Action buttons */}
@@ -2370,6 +2380,55 @@ export const PatientEvaluationForm: React.FC<PatientEvaluationFormProps> = ({
                       onChange={e => setSleepPattern(e.target.value)}
                       placeholder="Horas continuas de noche, siestas diurnas..."
                       className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-hidden"
+                    />
+                  </div>
+
+                  {/* Tamizaje de Caderas en Lactantes (Radiografía / Ecografía de Pelvis) */}
+                  <div className="sm:col-span-2 lg:col-span-3 bg-cyan-50/70 border border-cyan-200 rounded-2xl p-4 space-y-2.5">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div>
+                        <label className="font-extrabold text-cyan-950 text-xs flex items-center gap-1.5">
+                          <Baby className="w-4 h-4 text-cyan-700" />
+                          <span>Radiografía / Ecografía de Caderas en Lactantes (Tamizaje 3 meses GES)</span>
+                        </label>
+                        <p className="text-[11px] text-cyan-800 mt-0.5">
+                          Pregunta obligatoria en lactantes: ¿Se realizó radiografía o ecografía de caderas? ¿Cuál fue el resultado o indicación ortopédica?
+                        </p>
+                      </div>
+                      <span className="text-[10px] font-bold bg-cyan-100 text-cyan-900 px-2.5 py-0.5 rounded-full border border-cyan-300">
+                        Control Ortopédico Lactante
+                      </span>
+                    </div>
+
+                    <div className="flex flex-wrap gap-1.5">
+                      {[
+                        'Normal bilateral (sin displasia luxante de caderas)',
+                        'Pendiente por edad (< 3 meses, orden emitida)',
+                        'Displasia leve / Inmadurez en seguimiento médico',
+                        'En tratamiento con arnés de Pavlik / correa abductora',
+                        'Antecedente de displasia tratada y dada de alta'
+                      ].map((preset, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => setHipXrayScreening(preset)}
+                          className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold border transition-colors cursor-pointer ${
+                            hipXrayScreening === preset
+                              ? 'bg-cyan-700 text-white border-cyan-700'
+                              : 'bg-white hover:bg-cyan-100 text-cyan-900 border-cyan-200'
+                          }`}
+                        >
+                          {preset}
+                        </button>
+                      ))}
+                    </div>
+
+                    <input
+                      type="text"
+                      value={hipXrayScreening}
+                      onChange={e => setHipXrayScreening(e.target.value)}
+                      placeholder="Ej: Radiografía de pelvis AP a los 3 meses normal bilateral, ángulos acetabulares conservados..."
+                      className="w-full px-3 py-2 bg-white border border-cyan-300 rounded-xl focus:ring-2 focus:ring-cyan-500 outline-hidden text-xs font-medium text-slate-800"
                     />
                   </div>
                 </div>
@@ -5236,102 +5295,98 @@ export const PatientEvaluationForm: React.FC<PatientEvaluationFormProps> = ({
                 />
               </div>
 
-              {/* Recomendaciones Detalladas para el Sistema Educativo */}
-              <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 space-y-3 shadow-xs">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 pb-2">
-                  <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center">
-                      <GraduationCap className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h4 className="font-bold text-xs uppercase tracking-wider text-slate-800">
-                          Recomendaciones para el Sistema Educativo (Jardín / Escuela / Aula PIE)
-                        </h4>
-                        {calculatePatientAge(currentPatient?.birthDate).isOlderThanThree ? (
-                          <span className="text-[10px] font-bold text-blue-800 bg-blue-100 px-2 py-0.5 rounded-full">
-                            Paciente &gt; 3 años
-                          </span>
-                        ) : (
-                          <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full">
-                            &lt; 3 años (Sala cuna / Hogar)
-                          </span>
-                        )}
+              {/* Recomendaciones Detalladas para el Sistema Educativo (Solo para mayores de 2 años; los lactantes no asisten a la escuela) */}
+              {ageDecision === 'mayor_2_anos' && !calculatePatientAge(currentPatient?.birthDate).isUnderTwo && (
+                <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 space-y-3 shadow-xs">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 pb-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center">
+                        <GraduationCap className="w-4 h-4" />
                       </div>
-                      <p className="text-[11px] text-slate-500">
-                        Pautas para educadoras de párvulos, profesores de Educación Física y equipo PIE
-                      </p>
-                    </div>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const list = getRecommendedSchoolList(
-                        currentPatient,
-                        evaluationsData[currentPatient?.id || '']
-                      );
-                      const text = list.join('\n');
-                      setSchoolRecommendations(text);
-                      setHomeAndSchoolRecommendations([homeRecommendations, text].filter(Boolean).join('\n\n'));
-                    }}
-                    className="text-[11px] font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-2.5 py-1 rounded-xl transition-colors cursor-pointer flex items-center gap-1 shrink-0"
-                  >
-                    <Sparkles className="w-3 h-3" />
-                    <span>Cargar Banco Educativo</span>
-                  </button>
-                </div>
-
-                {/* Tarjetas Interactivas de Recomendaciones Escuela */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-                  {SCHOOL_RECOMMENDATIONS_BANK.map(item => {
-                    const isAdded = schoolRecommendations.includes(item.title);
-                    return (
-                      <button
-                        key={item.id}
-                        type="button"
-                        onClick={() => {
-                          const snippet = `• ${item.title}: ${item.description}`;
-                          setSchoolRecommendations(prev => {
-                            const updated = prev.includes(item.title) ? prev : prev ? `${prev}\n${snippet}` : snippet;
-                            setHomeAndSchoolRecommendations([homeRecommendations, updated].filter(Boolean).join('\n\n'));
-                            return updated;
-                          });
-                        }}
-                        className={`text-left p-2.5 rounded-xl border text-xs transition-all cursor-pointer ${
-                          isAdded
-                            ? 'bg-blue-50/90 border-blue-300 text-blue-950 font-medium'
-                            : 'bg-slate-50/70 border-slate-200 hover:bg-white hover:border-slate-300 text-slate-800'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between text-[10px] text-slate-400 font-bold mb-0.5">
-                          <span>{item.category}</span>
-                          <span className={isAdded ? 'text-blue-600 font-black' : 'text-slate-400'}>
-                            {isAdded ? '✓ Agregado' : '+ Agregar'}
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-bold text-xs uppercase tracking-wider text-slate-800">
+                            Recomendaciones para el Sistema Educativo (Jardín / Escuela / Aula PIE)
+                          </h4>
+                          <span className="text-[10px] font-bold text-blue-800 bg-blue-100 px-2 py-0.5 rounded-full">
+                            Usuario en etapa preescolar / escolar
                           </span>
                         </div>
-                        <strong className="block text-xs text-slate-900 leading-tight">
-                          {item.title}
-                        </strong>
-                        <p className="text-[11px] text-slate-600 line-clamp-2 mt-0.5 leading-snug">
-                          {item.description}
+                        <p className="text-[11px] text-slate-500">
+                          Pautas para educadoras de párvulos, profesores de Educación Física y equipo PIE
                         </p>
-                      </button>
-                    );
-                  })}
-                </div>
+                      </div>
+                    </div>
 
-                <textarea
-                  rows={4}
-                  value={schoolRecommendations}
-                  onChange={e => {
-                    setSchoolRecommendations(e.target.value);
-                    setHomeAndSchoolRecommendations([homeRecommendations, e.target.value].filter(Boolean).join('\n\n'));
-                  }}
-                  placeholder="• Pausas activas sensoriomotoras cada 25-30 minutos...\n• Ubicación estratégica en la primera fila, centrado a la pizarra...\n• Apoyos propioceptivos en pupitre (elástico en patas de la silla)..."
-                  className="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-xs bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-hidden leading-relaxed"
-                />
-              </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const list = getRecommendedSchoolList(
+                          currentPatient,
+                          evaluationsData[currentPatient?.id || '']
+                        );
+                        const text = list.join('\n');
+                        setSchoolRecommendations(text);
+                        setHomeAndSchoolRecommendations([homeRecommendations, text].filter(Boolean).join('\n\n'));
+                      }}
+                      className="text-[11px] font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-2.5 py-1 rounded-xl transition-colors cursor-pointer flex items-center gap-1 shrink-0"
+                    >
+                      <Sparkles className="w-3 h-3" />
+                      <span>Cargar Banco Educativo</span>
+                    </button>
+                  </div>
+
+                  {/* Tarjetas Interactivas de Recomendaciones Escuela */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                    {SCHOOL_RECOMMENDATIONS_BANK.map(item => {
+                      const isAdded = schoolRecommendations.includes(item.title);
+                      return (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => {
+                            const snippet = `• ${item.title}: ${item.description}`;
+                            setSchoolRecommendations(prev => {
+                              const updated = prev.includes(item.title) ? prev : prev ? `${prev}\n${snippet}` : snippet;
+                              setHomeAndSchoolRecommendations([homeRecommendations, updated].filter(Boolean).join('\n\n'));
+                              return updated;
+                            });
+                          }}
+                          className={`text-left p-2.5 rounded-xl border text-xs transition-all cursor-pointer ${
+                            isAdded
+                              ? 'bg-blue-50/90 border-blue-300 text-blue-950 font-medium'
+                              : 'bg-slate-50/70 border-slate-200 hover:bg-white hover:border-slate-300 text-slate-800'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between text-[10px] text-slate-400 font-bold mb-0.5">
+                            <span>{item.category}</span>
+                            <span className={isAdded ? 'text-blue-600 font-black' : 'text-slate-400'}>
+                              {isAdded ? '✓ Agregado' : '+ Agregar'}
+                            </span>
+                          </div>
+                          <strong className="block text-xs text-slate-900 leading-tight">
+                            {item.title}
+                          </strong>
+                          <p className="text-[11px] text-slate-600 line-clamp-2 mt-0.5 leading-snug">
+                            {item.description}
+                          </p>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <textarea
+                    rows={4}
+                    value={schoolRecommendations}
+                    onChange={e => {
+                      setSchoolRecommendations(e.target.value);
+                      setHomeAndSchoolRecommendations([homeRecommendations, e.target.value].filter(Boolean).join('\n\n'));
+                    }}
+                    placeholder="• Pausas activas psicomotoras cada 25-30 minutos...\n• Ubicación estratégica en la primera fila, centrado a la pizarra...\n• Apoyos propioceptivos en pupitre (elástico en patas de la silla)..."
+                    className="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-xs bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-hidden leading-relaxed"
+                  />
+                </div>
+              )}
 
               {/* Barra Final de Guardado y Consolidación */}
               <div className="pt-4 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-2xl border border-blue-200">

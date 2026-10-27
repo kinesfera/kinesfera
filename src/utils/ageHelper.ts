@@ -15,6 +15,50 @@ export interface PatientAgeInfo {
   stageBadgeText: string;
 }
 
+/**
+ * Formatea cualquier fecha (YYYY-MM-DD, ISO, MM/DD/YYYY o DD-MM-YYYY) a formato día-mes-año (DD-MM-YYYY)
+ */
+export function formatDateDMY(dateStr?: string): string {
+  if (!dateStr || dateStr === 'No registrada' || dateStr.trim() === '') {
+    return 'No registrada';
+  }
+  const clean = dateStr.trim();
+
+  // Already DD-MM-YYYY
+  if (/^\d{2}-\d{2}-\d{4}$/.test(clean)) {
+    return clean;
+  }
+
+  // YYYY-MM-DD or ISO YYYY-MM-DDTHH...
+  const isoMatch = clean.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (isoMatch) {
+    return `${isoMatch[3]}-${isoMatch[2]}-${isoMatch[1]}`;
+  }
+
+  // DD/MM/YYYY or MM/DD/YYYY
+  const slashMatch = clean.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (slashMatch) {
+    const p1 = parseInt(slashMatch[1], 10);
+    const p2 = parseInt(slashMatch[2], 10);
+    const y = slashMatch[3];
+    // If p1 > 12 it is DD/MM/YYYY, if p2 > 12 it is MM/DD/YYYY
+    if (p2 > 12) {
+      return `${String(p2).padStart(2, '0')}-${String(p1).padStart(2, '0')}-${y}`;
+    }
+    return `${String(p1).padStart(2, '0')}-${String(p2).padStart(2, '0')}-${y}`;
+  }
+
+  const parsed = new Date(clean);
+  if (!isNaN(parsed.getTime())) {
+    const d = String(parsed.getDate()).padStart(2, '0');
+    const m = String(parsed.getMonth() + 1).padStart(2, '0');
+    const y = parsed.getFullYear();
+    return `${d}-${m}-${y}`;
+  }
+
+  return clean;
+}
+
 export function calculatePatientAge(birthDateString?: string): PatientAgeInfo {
   if (!birthDateString || birthDateString === 'No registrada' || birthDateString.trim() === '') {
     return {
@@ -30,7 +74,14 @@ export function calculatePatientAge(birthDateString?: string): PatientAgeInfo {
     };
   }
 
-  const birth = new Date(birthDateString);
+  let birth: Date;
+  const dmyMatch = birthDateString.trim().match(/^(\d{2})-(\d{2})-(\d{4})$/);
+  if (dmyMatch) {
+    birth = new Date(Number(dmyMatch[3]), Number(dmyMatch[2]) - 1, Number(dmyMatch[1]));
+  } else {
+    birth = new Date(birthDateString);
+  }
+
   if (isNaN(birth.getTime())) {
     return {
       years: 0,
@@ -52,7 +103,6 @@ export function calculatePatientAge(birthDateString?: string): PatientAgeInfo {
 
   if (days < 0) {
     months--;
-    // Approximate days in previous month
     const prevMonthDays = new Date(today.getFullYear(), today.getMonth(), 0).getDate();
     days += prevMonthDays;
   }
@@ -75,7 +125,6 @@ export function calculatePatientAge(birthDateString?: string): PatientAgeInfo {
     ageText = `${years} años (${months} meses)`;
   }
 
-  // Format detailed chronological age like in medical reports: "7 años, 4 meses y 12 días"
   const parts: string[] = [];
   if (years > 0) parts.push(`${years} año${years > 1 ? 's' : ''}`);
   if (months > 0 || years === 0) parts.push(`${months} mes${months !== 1 ? 'es' : ''}`);

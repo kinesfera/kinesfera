@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { User, ProgressNote, PaymentMethod, PatientAnamnesis, ClinicalEvaluations } from '../types';
 import { WeeklyHomePracticeModal } from './WeeklyHomePracticeModal';
 import { CompanyDocumentHeader } from './CompanyDocumentHeader';
+import { formatDateDMY } from '../utils/ageHelper';
 import { 
   Calendar, 
   CreditCard, 
@@ -68,39 +69,40 @@ export const PatientProgressSheet: React.FC<PatientProgressSheetProps> = ({
   // Form states for new / edit note
   const [formDate, setFormDate] = useState(() => {
     const today = new Date();
-    const mm = String(today.getMonth() + 1).padStart(2, '0');
     const dd = String(today.getDate()).padStart(2, '0');
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
     const yyyy = today.getFullYear();
-    return `${mm}/${dd}/${yyyy}`;
+    return `${dd}-${mm}-${yyyy}`;
   });
   const [formPayment, setFormPayment] = useState<PaymentMethod>('Efectivo');
   const [formPaymentStatus, setFormPaymentStatus] = useState<'Pagado' | 'Pendiente' | 'En convenio'>('Pagado');
   const [formPaymentAmount, setFormPaymentAmount] = useState<number>(25000);
-  const [formPaymentDate, setFormPaymentDate] = useState<string>(() => new Date().toISOString().slice(0, 10));
+  const [formPaymentDate, setFormPaymentDate] = useState<string>(() => formatDateDMY(new Date().toISOString().slice(0, 10)));
   const [formNotes, setFormNotes] = useState('');
 
   const currentPatient = patients.find(p => p.id === selectedPatientId) || patients[0];
 
-  // Notes filtered for current patient
+  // Notes filtered for current user
   const patientNotes = progressNotes.filter(n => n.patientId === currentPatient?.id);
 
   const filteredNotes = patientNotes.filter(n => 
     n.notes.toLowerCase().includes(searchFilter.toLowerCase()) ||
     n.date.includes(searchFilter) ||
+    formatDateDMY(n.date).includes(searchFilter) ||
     n.paymentMethod.toLowerCase().includes(searchFilter.toLowerCase()) ||
     (n.paymentStatus && n.paymentStatus.toLowerCase().includes(searchFilter.toLowerCase()))
   );
 
   const handleOpenAddModal = () => {
     const today = new Date();
-    const mm = String(today.getMonth() + 1).padStart(2, '0');
     const dd = String(today.getDate()).padStart(2, '0');
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
     const yyyy = today.getFullYear();
-    setFormDate(`${mm}/${dd}/${yyyy}`);
+    setFormDate(`${dd}-${mm}-${yyyy}`);
     setFormPayment('Efectivo');
     setFormPaymentStatus('Pagado');
     setFormPaymentAmount(25000);
-    setFormPaymentDate(today.toISOString().slice(0, 10));
+    setFormPaymentDate(`${dd}-${mm}-${yyyy}`);
     setFormNotes('');
     setEditingNote(null);
     setShowAddModal(true);
@@ -275,12 +277,12 @@ export const PatientProgressSheet: React.FC<PatientProgressSheetProps> = ({
         <CompanyDocumentHeader
           documentTitle="Plantilla de Progreso y Seguimiento Clínico Diario"
           documentSubtitle="Ficha y Registro Clínico de Sesiones · Kinesiología Pediátrica"
-          emissionDate={new Date().toLocaleDateString('es-CL')}
+          emissionDate={formatDateDMY(new Date().toISOString().slice(0, 10))}
           recordNumber={currentPatient?.medicalRecordNumber || 'NN-01'}
         />
       </div>
 
-      {/* Top Banner exactly matching the spreadsheet aesthetic: PLANTILLA DE PROGRESO */}
+      {/* Top Banner: PLANTILLA DE PROGRESO */}
       <div className="bg-slate-100/90 border-b border-slate-200 px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <span className="text-[11px] font-black uppercase tracking-widest text-slate-500 block">
@@ -292,27 +294,27 @@ export const PatientProgressSheet: React.FC<PatientProgressSheetProps> = ({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          {/* Button: Export ALL patients CSV consolidated in one single file */}
+          {/* Button: Export ALL users CSV consolidated in one single file */}
           <button
             onClick={handleExportAllCSV}
             className="flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg shadow-xs transition-colors cursor-pointer"
-            title="Descargar la plantilla de progreso de TODOS los pacientes en un solo archivo CSV"
+            title="Descargar la plantilla de progreso de TODOS los usuarios en un solo archivo CSV"
           >
             <FileSpreadsheet className="w-4 h-4" />
-            <span>Descargar CSV Todos los Pacientes</span>
+            <span>Descargar CSV Todos los Usuarios</span>
             <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-md bg-white/20 text-white">
-              {patients.length} pacientes
+              {patients.length} usuarios
             </span>
           </button>
 
-          {/* Button: Export current patient CSV */}
+          {/* Button: Export current user CSV */}
           <button
             onClick={handleExportCSV}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 text-xs font-semibold rounded-lg shadow-2xs transition-colors cursor-pointer"
             title={`Exportar solo sesiones de ${currentPatient?.firstName} ${currentPatient?.lastName}`}
           >
             <Download className="w-3.5 h-3.5 text-slate-500" />
-            <span>CSV Paciente Actual</span>
+            <span>CSV Usuario Actual</span>
           </button>
 
           <button
@@ -360,29 +362,29 @@ export const PatientProgressSheet: React.FC<PatientProgressSheetProps> = ({
         </div>
       )}
 
-      {/* Patient Header Block (Matches: NOMBRE DEL PACIENTE / FECHA DE NACIMIENTO / PROGRESO DEL PACIENTE) */}
+      {/* User Header Block (NOMBRE DEL USUARIO / FECHA DE NACIMIENTO / PROGRESO DEL USUARIO) */}
       <div className="p-6 bg-slate-50/60 border-b border-slate-200 grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
         
-        {/* Left Side: Patient Name and Birthdate Boxes */}
+        {/* Left Side: User Name and Birthdate Boxes */}
         <div className="md:col-span-8 grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="p-3 bg-white border border-slate-200 rounded-xl shadow-2xs">
             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block">
-              NOMBRE DEL PACIENTE
+              NOMBRE DEL USUARIO
             </span>
             <span className="text-base font-extrabold text-slate-900 mt-0.5 block truncate">
-              {currentPatient ? `${currentPatient.firstName} ${currentPatient.lastName}` : 'Sin pacientes registrados'}
+              {currentPatient ? `${currentPatient.firstName} ${currentPatient.lastName}` : 'Sin usuarios registrados'}
             </span>
             <span className="text-[11px] text-slate-500 font-mono">
-              {currentPatient ? `RUT: ${currentPatient.rut} ${currentPatient.medicalRecordNumber ? `· Ficha: ${currentPatient.medicalRecordNumber}` : ''}` : 'Crea tu primer paciente para registrar sesiones'}
+              {currentPatient ? `RUT: ${currentPatient.rut} ${currentPatient.medicalRecordNumber ? `· Ficha: ${currentPatient.medicalRecordNumber}` : ''}` : 'Crea tu primer usuario para registrar sesiones'}
             </span>
           </div>
 
           <div className="p-3 bg-white border border-slate-200 rounded-xl shadow-2xs">
             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block">
-              FECHA DE NACIMIENTO
+              FECHA DE NACIMIENTO (DÍA-MES-AÑO)
             </span>
             <span className="text-base font-extrabold text-slate-900 mt-0.5 block font-mono">
-              {currentPatient?.birthDate || 'No registrada'}
+              {currentPatient?.birthDate ? formatDateDMY(currentPatient.birthDate) : 'No registrada'}
             </span>
             <span className="text-[11px] text-slate-500 truncate block">
               Diagnóstico: {currentPatient?.diagnosis || 'En evaluación clínica'}
@@ -390,10 +392,10 @@ export const PatientProgressSheet: React.FC<PatientProgressSheetProps> = ({
           </div>
         </div>
 
-        {/* Right Side: Section Banner "PROGRESO DEL PACIENTE" */}
+        {/* Right Side: Section Banner "PROGRESO DEL USUARIO" */}
         <div className="md:col-span-4 flex flex-col justify-center items-start md:items-end text-left md:text-right">
           <span className="text-xl sm:text-2xl font-black tracking-tight text-slate-400/90 uppercase">
-            PROGRESO DEL PACIENTE
+            PROGRESO DEL USUARIO
           </span>
           <span className="text-xs text-slate-500 font-medium">
             {patientNotes.length} sesión{patientNotes.length === 1 ? '' : 'es'} registrada{patientNotes.length === 1 ? '' : 's'}
@@ -451,7 +453,7 @@ export const PatientProgressSheet: React.FC<PatientProgressSheetProps> = ({
                   
                   {/* FECHA Column */}
                   <td className="py-4 px-5 font-mono text-slate-700 font-bold border-r border-slate-200 align-top whitespace-nowrap bg-slate-50/40">
-                    {note.date}
+                    {formatDateDMY(note.date)}
                   </td>
 
                   {/* PAGO Column */}
@@ -490,7 +492,7 @@ export const PatientProgressSheet: React.FC<PatientProgressSheetProps> = ({
                         </span>
                         {note.paymentDate && (
                           <span className="text-[10px] text-slate-400">
-                            {note.paymentDate}
+                            {formatDateDMY(note.paymentDate)}
                           </span>
                         )}
                       </div>
@@ -602,7 +604,7 @@ export const PatientProgressSheet: React.FC<PatientProgressSheetProps> = ({
                   <span>{editingNote ? 'Editar Nota de Progreso' : 'Registrar Nueva Nota de Progreso'}</span>
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Paciente: <strong>{currentPatient?.firstName} {currentPatient?.lastName}</strong> ({currentPatient?.rut})
+                  Usuario: <strong>{currentPatient?.firstName} {currentPatient?.lastName}</strong> ({currentPatient?.rut})
                 </p>
               </div>
               <button
@@ -619,18 +621,18 @@ export const PatientProgressSheet: React.FC<PatientProgressSheetProps> = ({
                 {/* FECHA */}
                 <div>
                   <label className="font-bold text-slate-700 block mb-1">
-                    FECHA DE LA SESIÓN
+                    FECHA DE LA SESIÓN (DÍA-MES-AÑO)
                   </label>
                   <input
                     type="text"
                     required
                     value={formDate}
                     onChange={e => setFormDate(e.target.value)}
-                    placeholder="MM/DD/AAAA (ej. 07/28/2026)"
+                    placeholder="DD-MM-AAAA (ej. 28-07-2026)"
                     className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 font-mono outline-hidden"
                   />
                   <span className="text-[10px] text-slate-400 mt-0.5 block">
-                    Formato: MM/DD/AAAA o DD/MM/AAAA
+                    Formato: DD-MM-AAAA
                   </span>
                 </div>
 

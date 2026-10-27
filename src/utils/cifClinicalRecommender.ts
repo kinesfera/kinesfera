@@ -266,12 +266,16 @@ export function generateAutomaticCIFDiagnosis(
   const sStructures: string[] = [];
   const eFactors: string[] = [];
 
-  // Factores Ambientales comunes
-  eFactors.push('e310+3 Familia y cuidadores comprometidos con el plan terapéutico kinésico (Facilitador sustancial)');
-  if (ageInfo.isOlderThanThree || anamnesis?.pieSupport) {
-    eFactors.push('e585+2 Entorno educativo coordinado (Jardín / Escuela / Equipo PIE) (Facilitador moderado)');
+  // Factores Ambientales según etapa del desarrollo
+  eFactors.push('e310+3 Familia y cuidadores comprometidos con el plan terapéutico kinésico y de psicomotricidad (Facilitador sustancial)');
+  if (isBaby) {
+    eFactors.push('e115+2 Adecuaciones ergonómicas y estimulación temprana en el entorno habitual del hogar (colchoneta firme, porteo ergonómico y posicionamiento)');
+  } else {
+    if (ageInfo.isOlderThanThree || anamnesis?.pieSupport) {
+      eFactors.push('e585+2 Entorno educativo coordinado (Jardín / Escuela / Equipo PIE) (Facilitador moderado)');
+    }
+    eFactors.push('e115+2 Apoyos y adaptaciones ergonómicas en el entorno habitual del hogar y aula');
   }
-  eFactors.push('e115+2 Apoyos y adaptaciones ergonómicas en el entorno habitual del hogar y aula');
 
   // Evaluación específica por edad y pruebas
   if (isBaby) {
@@ -292,7 +296,7 @@ export function generateAutomaticCIFDiagnosis(
       if (score < 65) {
         bDeficits.push(`b735.2 Alteración del tono muscular y reacciones posturales tempranas (HINE: ${score}/78, Riesgo)`);
         bDeficits.push('b760.2 Dificultad en control motor antigravitatorio temprano y disociación de cinturas');
-        dLimitations.push('d415.2 Limitación en transiciones posturales (rolado, control de cabeza en prono, sedente asistido)');
+        dLimitations.push('d415.2 Limitación en transiciones posturales en el hogar (rolado, control de cabeza en prono, sedente asistido)');
       } else {
         bDeficits.push(`b730.1 Tono muscular y reflejos dentro de parámetros esperados con requerimiento de estimulación (HINE: ${score}/78)`);
         dLimitations.push('d410.1 Adquisición de hitos del desarrollo motor acorde a edad cronológica y corregida');
@@ -303,7 +307,7 @@ export function generateAutomaticCIFDiagnosis(
     }
   } else {
     // Mayor a 2 años: Da Fonseca o Pilar Arnaiz + SPM-2
-    sStructures.push('s110.1 Estructura encefálica y circuitos de integración sensoriomotriz');
+    sStructures.push('s110.1 Estructura encefálica y circuitos de desarrollo psicomotor');
     sStructures.push('s798.1 Estructuras musculoesqueléticas relacionadas con la postura, equilibrio y marcha');
 
     // BPM Da Fonseca
@@ -320,12 +324,12 @@ export function generateAutomaticCIFDiagnosis(
         dLimitations.push('d450.3 Dificultad para correr, saltar y sortear obstáculos de forma coordinada');
         dLimitations.push('d440.2 Limitación en motricidad fina, prensión de utensilios y grafomotricidad');
       } else if (isDispractor) {
-        bDeficits.push(`b760.2 Inmadurez en integración práxica, ritmo y disociación motora (BPM: ${score}/28, Perfil Dispractor)`);
+        bDeficits.push(`b760.2 Inmadurez en coordinación práxica, ritmo y disociación motora (BPM: ${score}/28, Perfil Dispráxico)`);
         bDeficits.push('b755.2 Desajustes en coordinación dinámica y equilibrio monopodal');
-        dLimitations.push('d455.2 Dificultad en desplazamientos con cambio de ritmo y velocidad en aula/recreo');
+        dLimitations.push('d455.2 Dificultad en desplazamientos con cambio de ritmo y velocidad');
         dLimitations.push('d440.2 Precisión bimanual que requiere modelado y mediación verbal continua');
       } else {
-        bDeficits.push(`b760.1 Perfil psicomotor armónico eutráxico (BPM: ${score}/28) con áreas de optimización`);
+        bDeficits.push(`b760.1 Perfil psicomotor armónico eupráxico (BPM: ${score}/28) con áreas de optimización`);
         dLimitations.push('d450.1 Participación adecuada en juegos motores con requerimiento de resistencia a la fatiga');
       }
     }
@@ -333,7 +337,7 @@ export function generateAutomaticCIFDiagnosis(
     // Pilar Arnaiz
     const arnaiz = evaluations?.psychomotorObservation;
     if (arnaiz) {
-      bDeficits.push('b147.2 Funciones psicomotoras de expresión corporal, modulación tónica y juego sensoriomotor libre');
+      bDeficits.push('b147.2 Funciones psicomotoras de expresión corporal, modulación tónica y juego psicomotor libre');
       dLimitations.push('d710.2 Limitación en permanencia compartida e interacción con pares en el juego estructurado');
     }
 
@@ -360,10 +364,10 @@ export function generateAutomaticCIFDiagnosis(
       }
 
       if (issues.length > 0) {
-        bDeficits.push(`b260.2-b270.2 Dificultades en procesamiento sensorial con afectación en: ${issues.join(', ')}`);
-        dLimitations.push('d815.2 Sobrecarga sensorial que interfiere en la permanencia en sala de clases y rutinas grupales');
+        bDeficits.push(`b260.2-b270.2 Dificultades en exploración y respuesta a estímulos con afectación en: ${issues.join(', ')}`);
+        dLimitations.push('d815.2 Respuesta a estímulos ambientales que interfiere en la permanencia en rutinas diarias y grupales');
       } else {
-        bDeficits.push('b260.0 Perfil sensorial global equilibrado (sin dificultades significativas en modulación)');
+        bDeficits.push('b260.0 Perfil de respuesta a estímulos equilibrado (sin dificultades significativas en modulación)');
       }
     }
   }
@@ -374,9 +378,17 @@ export function generateAutomaticCIFDiagnosis(
     bDeficits.push('b755.2 Coordinación y equilibración dinámica en actividades cotidianas');
   }
   if (dLimitations.length === 0) {
-    dLimitations.push('d450.2 Desplazamientos autónomos y participación activa en juegos de patio y aula');
-    dLimitations.push('d440.2 Destrezas visomotoras y manipulación funcional en actividades de la vida diaria');
+    if (isBaby) {
+      dLimitations.push('d410.1 Adquisición progresiva de giros, control cefálico y transiciones posturales en el hogar');
+    } else {
+      dLimitations.push('d450.2 Desplazamientos autónomos y participación activa en juegos motores');
+      dLimitations.push('d440.2 Destrezas visomotoras y manipulación funcional en actividades de la vida diaria');
+    }
   }
+
+  const synthesisText = isBaby
+    ? `Usuario lactante de ${ageInfo.ageText || 'primera infancia'} que se encuentra en etapa activa de neurodesarrollo motor, control postural antigravitatorio y exploración de estímulos, requiriendo intervención kinésica y de psicomotricidad temprana con enfoque ecológico centrado en la familia y el entorno del hogar.`
+    : `Usuario de ${ageInfo.ageText || 'edad pediátrica'} que presenta desafíos en el desarrollo psicomotor y funciones de control motor voluntario, lo cual genera limitaciones en la coordinación dinámica, praxia y participación en actividades lúdicas${ageInfo.isOlderThanThree ? ' y escolares' : ''}, requiriendo intervención kinésica y de psicomotricidad especializada con enfoque ecológico en el hogar${ageInfo.isOlderThanThree ? ' y aula educacional' : ''}.`;
 
   return `CLASIFICACIÓN DEL DIAGNÓSTICO FUNCIONAL (C.I.F. - OMS):
 
@@ -393,7 +405,7 @@ ${dLimitations.map(d => `• ${d}`).join('\n')}
 ${eFactors.map(e => `• ${e}`).join('\n')}
 
 SÍNTESIS DIAGNÓSTICA KINÉSICA:
-Paciente de ${ageInfo.ageText || 'edad pediátrica'} que presenta compromiso en la modulación sensoriomotriz y funciones de control motor voluntario, lo cual genera limitaciones en la coordinación dinámica, praxia y participación en actividades lúdicas y escolares, requiriendo intervención kinésica especializada con enfoque ecológico en el hogar y aula educacional.`;
+${synthesisText}`;
 }
 
 /**
@@ -614,17 +626,17 @@ export function getRecommendedSchoolList(
   const ageInfo = calculatePatientAge(patient?.birthDate);
   if (!ageInfo.isOlderThanThree) {
     return [
-      '• Por la edad del paciente (< 3 años), las pautas se concentran en el hogar o sala cuna si asiste.',
-      '• En sala cuna: promover libertad de movimiento en el suelo y evitar uso prolongado de andadores o sillas nido.'
+      '• Por la edad del usuario (lactante / primera infancia), las pautas se concentran exclusivamente en el entorno familiar y del hogar.',
+      '• En el hogar: promover libertad de movimiento en colchoneta firme y evitar el uso prolongado de andadores o sillas nido.'
     ];
   }
 
   return [
-    '• Pausas activas sensoriomotoras cada 25-30 minutos (estiramientos en la pared, saltos suaves o repartir materiales de clase).',
+    '• Pausas activas de psicomotricidad cada 25-30 minutos (estiramientos en la pared, saltos suaves o repartir materiales de clase).',
     '• Ubicación preferente en la sala de clases: alejado de ventanas y puertas distractoras, centrado a la educadora.',
     '• Apoyo propioceptivo en el asiento: elástico en patas de la silla para apoyo de pies o cojín de estimulación vestibular.',
     '• Anticipación visual de rutinas y cambios de actividad para reducir estrés en las transiciones escolares.',
     '• Adaptación en Educación Física: consignas cortas, demostración previa y permitir descanso ante fatiga motriz.',
-    '• Coordinación periódica entre el equipo kinésico de KinesFera y el equipo PIE / Educadora diferencial.'
+    '• Coordinación periódica entre el equipo kinésico de Kinesfera y el equipo PIE / Educadora diferencial.'
   ];
 }

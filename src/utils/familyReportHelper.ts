@@ -1,4 +1,5 @@
 import { ComprehensiveReport, ProgressNote } from '../types';
+import { calculatePatientAge, formatDateDMY } from './ageHelper';
 
 export interface FamilyThreeLineSummary {
   arrival: string;
@@ -8,7 +9,7 @@ export interface FamilyThreeLineSummary {
 
 export interface FamilyTrafficLightItem {
   areaName: string;
-  parentExplanation: string; // Explaining clinical terms in 1 short line in parentheses
+  parentExplanation: string;
   status: 'verde' | 'amarillo' | 'rojo';
   statusLabel: string;
   levelPercent: number;
@@ -17,7 +18,7 @@ export interface FamilyTrafficLightItem {
 export interface FamilyComparativeItem {
   areaName: string;
   parentExplanation: string;
-  initialScore: number; // 0 to 100 or 1 to 4
+  initialScore: number;
   currentScore: number;
   maxScore: number;
   unit: string;
@@ -40,21 +41,30 @@ export function getFamilyThreeLineSummary(
   report: ComprehensiveReport,
   notes: ProgressNote[] = []
 ): FamilyThreeLineSummary {
-  const patientFirstName = report.patientName.split(' ')[0] || 'El niño/a';
+  const patientFirstName = report.patientName.split(' ')[0] || 'El usuario';
   const anam = report.anamnesis;
   const evalData = report.evaluations;
+  const ageInfo = calculatePatientAge(report.patientBirthDate);
+  const isBaby = ageInfo.isUnderTwo || anam?.ageCategory === 'bebe_hasta_18_meses';
 
-  // 1. Cómo llegó
+  if (isBaby) {
+    return {
+      arrival: `${patientFirstName} inició su atención kinésica para evaluar y acompañar su desarrollo motor temprano, control postural, tono muscular y simetría craneocervical.`,
+      workDone: `Mediante sesiones de kinesiología y psicomotricidad temprana trabajamos el control de cabeza y tronco, giros activos hacia ambos lados, apoyo en prono (Tummy Time) y reacciones posturales.`,
+      currentState: `Hoy ${patientFirstName} muestra avances favorables en su alineación postural, mayor simetría de movimiento y participación activa junto a su familia en el hogar.`
+    };
+  }
+
+  // 1. Cómo llegó (> 2 años)
   let arrival = '';
   if (anam?.consultationReason) {
     const reason = anam.consultationReason;
     if (reason.toLowerCase().includes('déficit atencional') || reason.toLowerCase().includes('atención') || reason.toLowerCase().includes('concentración')) {
-      arrival = `${patientFirstName} comenzó sus sesiones tras ser derivado/a para apoyar su atención, concentración y rendimiento escolar, buscando fortalecer su seguridad al aprender.`;
+      arrival = `${patientFirstName} comenzó sus sesiones tras ser derivado/a para apoyar su atención, concentración y desarrollo psicomotor, buscando fortalecer su seguridad al aprender.`;
     } else if (reason.toLowerCase().includes('psicomotricidad') || reason.toLowerCase().includes('motor')) {
       arrival = `${patientFirstName} inició sus sesiones para evaluar y potenciar su desarrollo motor, equilibrio y coordinación corporal en sus actividades diarias.`;
     } else {
-      // Clean string
-      arrival = `${patientFirstName} llegó a consulta para recibir apoyo en su desarrollo, motricidad y adaptación a sus actividades escolares y familiares.`;
+      arrival = `${patientFirstName} llegó a consulta para recibir apoyo en su desarrollo psicomotor, motricidad y adaptación a sus actividades cotidianas y familiares.`;
     }
   } else {
     arrival = `${patientFirstName} inició su proceso terapéutico para potenciar su confianza motriz y coordinación en el juego.`;
@@ -63,18 +73,18 @@ export function getFamilyThreeLineSummary(
   // 2. Qué se trabajó
   let workDone = '';
   if (notes.length > 0) {
-    workDone = `A lo largo de las sesiones realizamos juegos activos, circuitos de equilibrio, ejercicios de coordinación mano-ojo y actividades para regular la fuerza del cuerpo.`;
+    workDone = `A lo largo de las sesiones realizamos juegos activos de psicomotricidad, circuitos de equilibrio, ejercicios de coordinación mano-ojo y actividades para regular la fuerza del cuerpo.`;
   } else if (evalData?.treatmentPlan) {
     workDone = `Diseñamos y aplicamos un plan de kinesiología y psicomotricidad a través de juegos con sentido, fortaleciendo el equilibrio, la postura y la coordinación de movimientos.`;
   } else {
-    workDone = `Trabajamos ejercicios lúdicos enfocados en la coordinación de brazos y piernas, el equilibrio dinámico y la precisión en sus manitos.`;
+    workDone = `Trabajamos ejercicios lúdicos enfocados en la coordinación de brazos y piernas, el equilibrio dinámico y la precisión manual.`;
   }
 
   // 3. Cómo está hoy
   let currentState = '';
   const totalBpm = evalData?.daFonsecaBpm?.totalScore;
   if (totalBpm && totalBpm >= 20) {
-    currentState = `Hoy ${patientFirstName} muestra una base motora sólida, gran motivación en cada juego, excelente destreza con sus manos y mayor seguridad corporal para participar en el colegio y el hogar.`;
+    currentState = `Hoy ${patientFirstName} muestra una base motora sólida, gran motivación en cada juego, excelente destreza manual y mayor seguridad corporal en sus rutinas diarias.`;
   } else if (evalData?.daFonsecaBpm?.profileResult) {
     currentState = `Hoy ${patientFirstName} participa con entusiasmo y alegría, logrando avances significativos en su confianza motriz y regulación de energía en las actividades cotidianas.`;
   } else {
@@ -96,76 +106,68 @@ export function getFamilyTrafficLightItems(report: ComprehensiveReport): FamilyT
   const spm = report.evaluations?.spmSensoryMeasure;
   const items: FamilyTrafficLightItem[] = [];
 
-  // 1. Manos y Dedos (Praxia fina)
   if (bpm?.finePraxiaScore !== undefined) {
     const score = bpm.finePraxiaScore;
     items.push({
       areaName: 'Manos y Dedos',
-      parentExplanation: 'Praxia fina (fuerza y precisión en dedos para tomar lápices, tijeras y abotonar)',
+      parentExplanation: 'Praxia fina (fuerza y precisión en dedos para tomar objetos y manipular)',
       status: score >= 3 ? 'verde' : score >= 2 ? 'amarillo' : 'rojo',
       statusLabel: score >= 3 ? 'Muy buen control y precisión' : 'En práctica con juegos manuales',
       levelPercent: Math.min(100, Math.round((score / 4) * 100))
     });
   }
 
-  // 2. Coordinación de Brazos y Piernas (Praxia global)
   if (bpm?.globalPraxiaScore !== undefined) {
     const score = bpm.globalPraxiaScore;
     items.push({
       areaName: 'Coordinación General',
-      parentExplanation: 'Praxia global (mover brazos y piernas de forma sincronizada al correr o saltar)',
+      parentExplanation: 'Praxia global (mover brazos y piernas de forma sincronizada)',
       status: score >= 3 ? 'verde' : score >= 2 ? 'amarillo' : 'rojo',
       statusLabel: score >= 3 ? 'Movimientos fluidos y coordinados' : 'Desarrollando mayor ritmo y coordinación',
       levelPercent: Math.min(100, Math.round((score / 4) * 100))
     });
   }
 
-  // 3. Equilibrio y Estabilidad
   if (bpm?.equilibriumScore !== undefined) {
     const score = bpm.equilibriumScore;
     items.push({
       areaName: 'Equilibrio y Estabilidad',
-      parentExplanation: 'Control vestibular (seguridad para pararse en un pie, caminar sobre líneas y no tropezar)',
+      parentExplanation: 'Control vestibular (seguridad postural y estabilidad al moverse)',
       status: score >= 3 ? 'verde' : score >= 2 ? 'amarillo' : 'rojo',
       statusLabel: score >= 3 ? 'Estable y seguro/a' : 'Reforzando la seguridad al moverse',
       levelPercent: Math.min(100, Math.round((score / 4) * 100))
     });
   }
 
-  // 4. Conciencia del Cuerpo (Propiocepción / Noción Corporal)
   if (bpm?.bodyNotionScore !== undefined || spm?.bodyAwarenessScore !== undefined) {
     const spmBody = spm?.bodyAwarenessScore ?? 60;
     const bpmBody = bpm?.bodyNotionScore ?? 2.6;
-    
-    // SPM: higher than 60 means challenges with body force; BPM: < 3 means developing
     const isChallenging = spmBody >= 60 || bpmBody < 3;
     items.push({
       areaName: 'Conciencia del Cuerpo',
       parentExplanation: 'Propiocepción (saber ubicar las partes del cuerpo y regular cuánta fuerza aplicar)',
       status: isChallenging ? 'amarillo' : 'verde',
-      statusLabel: isChallenging ? 'Aprendiendo a regular la fuerza (no apretar de más el lápiz)' : 'Buena noción de su cuerpo',
+      statusLabel: isChallenging ? 'Aprendiendo a graduar la fuerza corporal' : 'Buena noción de su cuerpo',
       levelPercent: Math.min(100, Math.round((bpmBody / 4) * 100))
     });
   }
 
-  // 5. Espacio y Tiempo (Organización espacial)
   if (bpm?.spatialTemporalScore !== undefined) {
     const score = bpm.spatialTemporalScore;
     items.push({
       areaName: 'Organización en el Espacio',
-      parentExplanation: 'Estructuración espacio-temporal (orientarse en el papel, seguir renglones y ritmos)',
+      parentExplanation: 'Estructuración espacio-temporal (orientarse en el entorno y seguir ritmos)',
       status: score >= 3 ? 'verde' : score >= 2 ? 'amarillo' : 'rojo',
-      statusLabel: score >= 3 ? 'Buena ubicación y noción de espacio' : 'Trabajando la orientación en el papel',
+      statusLabel: score >= 3 ? 'Buena ubicación y noción de espacio' : 'Trabajando la orientación espacial',
       levelPercent: Math.min(100, Math.round((score / 4) * 100))
     });
   }
 
-  // 6. Preferencia Lateral
   if (bpm?.lateralityScore !== undefined) {
     const score = bpm.lateralityScore;
     items.push({
       areaName: 'Preferencia de Lado',
-      parentExplanation: 'Lateralidad (definición clara de mano, ojo y pie dominante diestro o zurdo)',
+      parentExplanation: 'Lateralidad (definición clara de mano, ojo y pie dominante)',
       status: score >= 3 ? 'verde' : score >= 2 ? 'amarillo' : 'rojo',
       statusLabel: score >= 3 ? 'Lado dominante bien definido y firme' : 'En proceso de definición',
       levelPercent: Math.min(100, Math.round((score / 4) * 100))
@@ -182,7 +184,6 @@ export function getFamilyComparativeItems(report: ComprehensiveReport): FamilyCo
   const bpm = report.evaluations?.daFonsecaBpm;
   if (!bpm) return [];
 
-  // Compare standard baseline vs current evaluation score
   const items: FamilyComparativeItem[] = [
     {
       areaName: 'Fuerza y Firmeza Muscular',
@@ -202,7 +203,7 @@ export function getFamilyComparativeItems(report: ComprehensiveReport): FamilyCo
     },
     {
       areaName: 'Precisión con Manos y Dedos',
-      parentExplanation: 'Motricidad fina (agilidad digital para colorear y abrochar)',
+      parentExplanation: 'Motricidad fina (agilidad digital y coordinación bimanual)',
       initialScore: 2.4,
       currentScore: bpm.finePraxiaScore ?? 3.2,
       maxScore: 4.0,
@@ -218,7 +219,7 @@ export function getFamilyComparativeItems(report: ComprehensiveReport): FamilyCo
     },
     {
       areaName: 'Organización en el Espacio',
-      parentExplanation: 'Noción espacial (seguir líneas en cuadernos y circuitos)',
+      parentExplanation: 'Noción espacial (orientación en circuitos y secuencias)',
       initialScore: 1.5,
       currentScore: bpm.spatialTemporalScore ?? 2.0,
       maxScore: 4.0,
@@ -235,21 +236,14 @@ export function getFamilyComparativeItems(report: ComprehensiveReport): FamilyCo
 export function getFamilyTimelinePoints(notes: ProgressNote[] = []): FamilyTimelinePoint[] {
   if (!notes || notes.length < 2) return [];
 
-  // Sort notes by date chronologically
   const sorted = [...notes].sort((a, b) => {
     return new Date(a.date).getTime() - new Date(b.date).getTime();
   });
 
   return sorted.map((n, idx) => {
-    // Generate progress curve from 40% at session 1 scaling up towards 90%+
     const progress = Math.min(95, Math.round(40 + (idx / Math.max(1, sorted.length - 1)) * 52));
-    const d = new Date(n.date);
-    const dateFormatted = !isNaN(d.getTime()) 
-      ? d.toLocaleDateString('es-CL', { day: 'numeric', month: 'short' })
-      : n.date;
-
     return {
-      dateLabel: dateFormatted,
+      dateLabel: formatDateDMY(n.date),
       sessionNumber: idx + 1,
       progressPercent: progress,
       noteExcerpt: n.notes.slice(0, 75) + (n.notes.length > 75 ? '...' : '')
@@ -264,23 +258,33 @@ export function getFamilyAchievements(report: ComprehensiveReport): string[] {
   const list: string[] = [];
   const evalData = report.evaluations;
   const bpm = evalData?.daFonsecaBpm;
+  const ageInfo = calculatePatientAge(report.patientBirthDate);
+  const isBaby = ageInfo.isUnderTwo || report.anamnesis?.ageCategory === 'bebe_hasta_18_meses';
+
+  if (isBaby) {
+    return [
+      'Adecuada respuesta visual y auditiva con interés activo por su entorno y cuidadores.',
+      'Progreso favorable en el control de cabeza, alineación axial en línea media y tolerancia al juego en prono.',
+      'Mejoría progresiva en la simetría de giros cervicales y activación de reacciones posturales de protección.',
+      'Vínculo afectivo seguro y participativo durante el juego sensoriomotor y psicomotriz.'
+    ];
+  }
 
   if (bpm?.lateralityScore && bpm.lateralityScore >= 3.5) {
-    list.push('Lateralidad muy bien definida (reconoce con claridad y seguridad su lado dominante diestro).');
+    list.push('Lateralidad muy bien definida (reconoce con claridad y seguridad su lado dominante).');
   }
   if (bpm?.finePraxiaScore && bpm.finePraxiaScore >= 3.0) {
-    list.push('Gran destreza en sus manos y dedos (buena precisión para escribir, colorear y manipular piezas pequeñas).');
+    list.push('Gran destreza en sus manos y dedos (buena precisión para manipular objetos pequeños).');
   }
   if (bpm?.tonicityScore && bpm.tonicityScore >= 3.0) {
-    list.push('Fuerza muscular adecuada (capacidad de relajación y buena postura en juegos de mesa y de suelo).');
+    list.push('Fuerza muscular adecuada (capacidad de relajación y buena postura en actividades de suelo y mesa).');
   }
   if (evalData?.spmSensoryMeasure?.hearingScore && evalData.spmSensoryMeasure.hearingScore < 60) {
-    list.push('Procesamiento sensorial adaptativo en visión, audición y tacto para participar en ambientes de juego.');
+    list.push('Respuesta adaptativa a estímulos visuales, auditivos y táctiles en ambientes de juego.');
   }
 
-  // Fallbacks if not enough
   if (list.length < 3) {
-    list.push('Excelente disposición y alegría para participar en las actividades lúdicas propuestas.');
+    list.push('Excelente disposición y alegría para participar en las actividades lúdicas de psicomotricidad.');
     list.push('Mayor confianza al explorar circuitos motores y desafíos de movimiento.');
   }
 
@@ -294,21 +298,36 @@ export function getFamilyNextSteps(report: ComprehensiveReport): string[] {
   const list: string[] = [];
   const evalData = report.evaluations;
   const bpm = evalData?.daFonsecaBpm;
+  const ageInfo = calculatePatientAge(report.patientBirthDate);
+  const isBaby = ageInfo.isUnderTwo || report.anamnesis?.ageCategory === 'bebe_hasta_18_meses';
+
+  if (isBaby) {
+    return [
+      'Consolidar el control cefálico y de tronco en sedente y prono con apoyo simétrico de extremidades superiores.',
+      'Favorecer los giros activos bilaterales (de boca arriba a boca abajo hacia derecha e izquierda).',
+      'Continuar el protocolo de reposicionamiento craneal y movilidad cervical simétrica en el hogar.',
+      'Acompañar a la familia con pautas prácticas de juego motor y estimulación temprana en casa.'
+    ];
+  }
 
   if (bpm?.equilibriumScore && bpm.equilibriumScore < 3.0) {
-    list.push('Continuar reforzando el equilibrio dinámico (saltar sobre obstáculos y pararse en un pie sin perder la estabilidad).');
+    list.push('Continuar reforzando el equilibrio dinámico (saltar sobre obstáculos y pararse en un pie con estabilidad).');
   }
   if (bpm?.bodyNotionScore && bpm.bodyNotionScore < 3.0) {
-    list.push('Profundizar en la noción del cuerpo y la regulación de la fuerza (aprender a modular cuánta fuerza aplica al escribir o jugar).');
+    list.push('Profundizar en la noción del cuerpo y la regulación de la fuerza corporal durante el juego.');
   }
   if (bpm?.spatialTemporalScore && bpm.spatialTemporalScore < 3.0) {
-    list.push('Afianzar la organización en el espacio y el tiempo (apoyo visual con renglones, laberintos y secuencias).');
+    list.push('Afianzar la organización en el espacio y el tiempo (laberintos motores y secuencias rítmicas).');
   }
   if (bpm?.globalPraxiaScore && bpm.globalPraxiaScore < 3.0) {
     list.push('Seguir practicando la coordinación motora global (circuitos con cambios de dirección, gateo y trepa).');
   }
 
-  list.push('Acompañar a la familia y a la escuela con estrategias sencillas de regulación en el aula.');
+  if (ageInfo.isOlderThanThree) {
+    list.push('Acompañar a la familia y al entorno educativo con estrategias sencillas de regulación psicomotriz.');
+  } else {
+    list.push('Acompañar a la familia con estrategias lúdicas de psicomotricidad en las rutinas del hogar.');
+  }
 
   return list.slice(0, 4);
 }
@@ -317,30 +336,63 @@ export function getFamilyNextSteps(report: ComprehensiveReport): string[] {
  * Extracts maximum 5 concrete, practical home recommendations
  */
 export function getFamilyHomeRecommendations(report: ComprehensiveReport): { title: string; desc: string; icon: string }[] {
+  const ageInfo = calculatePatientAge(report.patientBirthDate);
+  const isBaby = ageInfo.isUnderTwo || report.anamnesis?.ageCategory === 'bebe_hasta_18_meses';
+
+  if (isBaby) {
+    return [
+      {
+        title: 'Juego boca abajo (Tummy Time) diario y progresivo',
+        desc: 'Colocar al bebé boca abajo sobre colchoneta firme o sobre el pecho de los padres de 3 a 5 minutos varias veces al día después de cada muda, siempre despierto y supervisado.',
+        icon: 'activity'
+      },
+      {
+        title: 'Estimulación de giros hacia ambos lados',
+        desc: 'Mostrar juguetes sonoros o el rostro de mamá/papá hacia el lado menos frecuente para motivar el giro activo de la cabeza y el rolado simétrico.',
+        icon: 'hand'
+      },
+      {
+        title: 'Alternancia postural en cuna y brazos',
+        desc: 'Alternar la orientación en la cuna y el brazo con que se sostiene al alimentar, favoreciendo la descarga simétrica de la cabecita.',
+        icon: 'calendar'
+      },
+      {
+        title: 'Libertad de movimiento en colchoneta firme',
+        desc: 'Priorizar el juego libre en suelo sobre goma eva o colchoneta, evitando el uso prolongado de sillas nido, saltarines o andadores.',
+        icon: 'book'
+      },
+      {
+        title: 'Cero pantallas y contacto afectivo directo',
+        desc: 'Evitar pantallas en menores de 2 años, priorizando canciones, caricias, masajes suaves tras el baño y juego cara a cara.',
+        icon: 'smartphone'
+      }
+    ];
+  }
+
   return [
     {
-      title: 'Rutinas visuales claras',
-      desc: 'Usar un horario con dibujos o imágenes para las tareas del día (desayuno, colegio, tareas, juego y dormir). Le da tranquilidad y seguridad.',
+      title: 'Rutinas diarias claras y predecibles',
+      desc: `Usar horarios con dibujos o imágenes para las actividades del día (${ageInfo.isOlderThanThree ? 'desayuno, actividades escolares, juego y descanso' : 'alimentación, juego motor, baño y descanso'}). Le brinda tranquilidad y seguridad.`,
       icon: 'calendar'
     },
     {
-      title: 'Juegos para regular la fuerza',
-      desc: 'Amasar plasticina, rasgar papel, aplastar esponjas en agua o transportar bolsitas. Ayuda a que sus deditos no aprieten tanto el lápiz.',
+      title: 'Juegos para regular la fuerza manual y corporal',
+      desc: 'Amasar plastilina, rasgar papel, aplastar esponjas en agua o transportar objetos livianos para mejorar la propiocepción y destreza manual.',
       icon: 'hand'
     },
     {
-      title: 'Circuitos de juego en casa',
-      desc: 'Poner cojines o cintas en el piso para caminar haciendo equilibrio, saltar como ranitas o gatear por debajo de una mesa.',
+      title: 'Circuitos de psicomotricidad en casa',
+      desc: 'Colocar cojines o cintas en el piso para caminar haciendo equilibrio, saltar o desplazarse por debajo de una mesa.',
       icon: 'activity'
     },
     {
-      title: 'Lectura compartida y relajada',
-      desc: 'Dedicar 10 a 15 minutos diarios a leer juntos un cuento ilustrado. Lo importante es disfrutar la historia, sin presionar la velocidad.',
+      title: 'Cuentos y juego compartido',
+      desc: 'Dedicar 10 a 15 minutos diarios a compartir un cuento ilustrado o juego tranquilo en familia antes de dormir.',
       icon: 'book'
     },
     {
       title: 'Límites saludables de pantallas',
-      desc: 'Máximo 30 a 45 minutos al día de celular o televisión, siempre acompañados, priorizando el juego físico y al aire libre.',
+      desc: 'Reducir el uso de pantallas y priorizar el juego físico activo y la exploración al aire libre.',
       icon: 'smartphone'
     }
   ];
@@ -358,10 +410,10 @@ export function generateWhatsAppMessage(
 ): string {
   const patientName = report.patientName;
   const profName = report.professionalName;
-  const date = report.dateGenerated;
+  const date = formatDateDMY(report.dateGenerated);
 
   let text = `✨ *INFORME DE PROGRESO - CENTRO KINESFERA* ✨\n`;
-  text += `🧒 *Paciente:* ${patientName}\n`;
+  text += `🧒 *Usuario:* ${patientName}\n`;
   text += `📅 *Fecha:* ${date}\n`;
   text += `👨‍⚕️ *Profesional:* ${profName}\n\n`;
 
