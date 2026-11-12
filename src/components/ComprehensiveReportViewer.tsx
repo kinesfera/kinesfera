@@ -265,9 +265,11 @@ export const ComprehensiveReportViewer: React.FC<ComprehensiveReportViewerProps>
   const hasPerformedCommEval = !isBaby && (
     (commEval && commEval.items && commEval.items.length > 0) ||
     Boolean(evalData?.criticalCommunication && (
-      evalData.criticalCommunication.asksForNeeds ||
-      evalData.criticalCommunication.followsInstructions ||
-      evalData.criticalCommunication.communicatesCalmly
+      (evalData.criticalCommunication as any).asksForNeeds ||
+      (evalData.criticalCommunication as any).followsInstructions ||
+      (evalData.criticalCommunication as any).communicatesCalmly ||
+      evalData.criticalCommunication.reinforcersAppropriate ||
+      evalData.criticalCommunication.visualOrientToName
     ))
   );
 

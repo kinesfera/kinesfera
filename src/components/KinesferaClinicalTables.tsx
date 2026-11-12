@@ -8,6 +8,7 @@ interface KinesferaClinicalTablesProps {
   evaluations?: ClinicalEvaluations;
   patientName?: string;
   className?: string;
+  isBaby?: boolean;
 }
 
 export const KinesferaClinicalTables: React.FC<KinesferaClinicalTablesProps> = ({
@@ -15,7 +16,8 @@ export const KinesferaClinicalTables: React.FC<KinesferaClinicalTablesProps> = (
   anamnesis,
   evaluations,
   patientName = 'el niño/a',
-  className = ''
+  className = '',
+  isBaby = false
 }) => {
   // If no cranial measurements and no psychomotor data, omit cleanly
   if (!cranial && !evaluations) return null;
@@ -575,7 +577,7 @@ export const KinesferaClinicalTables: React.FC<KinesferaClinicalTablesProps> = (
                     <span className="text-[10px] text-slate-500">Firmeza muscular, alineación de tronco y control antigravitatorio</span>
                   </td>
                   <td className="py-2 px-2 text-rose-700 font-semibold">
-                    {evaluations?.daFonsecaBpm ? `${evaluations.daFonsecaBpm.tonicityScore.toFixed(1)} / 4 pts` : 'Inestable / Hipotonía axial'}
+                    {evaluations?.daFonsecaBpm?.tonicityScore != null ? `${evaluations.daFonsecaBpm.tonicityScore.toFixed(1)} / 4 pts` : 'Inestable / Hipotonía axial'}
                   </td>
                   <td className="py-2 px-2 text-amber-700">En activación progresiva</td>
                   <td className="py-2 px-2 font-bold text-emerald-700">Erguido, firme y alineado</td>
@@ -592,8 +594,8 @@ export const KinesferaClinicalTables: React.FC<KinesferaClinicalTablesProps> = (
                     <span className="text-[10px] text-slate-500">Reacciones de enderezamiento, paracaídas y seguridad gravitacional</span>
                   </td>
                   <td className="py-2 px-2 text-rose-700 font-semibold">
-                    {evaluations?.spmSensoryMeasure?.balanceAndMotionScore
-                      ? `${evaluations.spmSensoryMeasure.balanceAndMotionScore} T (Dificultad)`
+                    {evaluations?.spmSensoryMeasure?.balanceMotionScore
+                      ? `${evaluations.spmSensoryMeasure.balanceMotionScore} T (Dificultad)`
                       : 'Inseguridad / Asimetría'}
                   </td>
                   <td className="py-2 px-2 text-amber-700">Mayor ajuste en movimiento</td>
@@ -630,7 +632,7 @@ export const KinesferaClinicalTables: React.FC<KinesferaClinicalTablesProps> = (
                     <span className="text-[10px] text-slate-500">Coordinación dinámica general, ideación motriz, giros y desplazamientos</span>
                   </td>
                   <td className="py-2 px-2 text-rose-700 font-semibold">
-                    {evaluations?.daFonsecaBpm
+                    {evaluations?.daFonsecaBpm?.globalPraxiaScore != null
                       ? `${evaluations.daFonsecaBpm.globalPraxiaScore.toFixed(1)} / 4 pts`
                       : 'Disociación incompleta'}
                   </td>
@@ -649,7 +651,7 @@ export const KinesferaClinicalTables: React.FC<KinesferaClinicalTablesProps> = (
                     <span className="text-[10px] text-slate-500">Alcance dirigido, agarre voluntario, pinza digital y precisión manual</span>
                   </td>
                   <td className="py-2 px-2 text-amber-700 font-semibold">
-                    {evaluations?.daFonsecaBpm
+                    {evaluations?.daFonsecaBpm?.finePraxiaScore != null
                       ? `${evaluations.daFonsecaBpm.finePraxiaScore.toFixed(1)} / 4 pts`
                       : 'Agarre palmar / en maduración'}
                   </td>

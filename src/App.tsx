@@ -10,7 +10,11 @@ import {
   PatientAnamnesis,
   ClinicalEvaluations,
   ComprehensiveReport,
-  LeadProspect
+  LeadProspect,
+  PsychomotorWorkshopGroup,
+  PsychomotorParticipant,
+  PsychomotorParticipantEvaluation,
+  PsychomotorWorkshopSession
 } from './types';
 import { 
   INITIAL_EXERCISES, 
@@ -42,6 +46,7 @@ import {
   testFirestoreConnection
 } from './services/firebase';
 import { firebaseClinicalService, reportFirebaseErrorToUI } from './services/firebaseClinicalService';
+import { psychomotorWorkshopService } from './services/psychomotorWorkshopService';
 import { CheckCircle2, X as CloseIcon, Loader2, Cloud, AlertTriangle } from 'lucide-react';
 
 export default function App() {
@@ -67,6 +72,12 @@ export default function App() {
   const [evaluationsData, setEvaluationsData] = useState<Record<string, ClinicalEvaluations>>({});
   const [comprehensiveReports, setComprehensiveReports] = useState<ComprehensiveReport[]>([]);
   const [leads, setLeads] = useState<LeadProspect[]>(INITIAL_LEADS);
+
+  // Talleres de Psicomotricidad (Grupal, Evaluaciones 7 áreas, Sesiones y Pagos)
+  const [workshopGroups, setWorkshopGroups] = useState<PsychomotorWorkshopGroup[]>([]);
+  const [workshopParticipants, setWorkshopParticipants] = useState<PsychomotorParticipant[]>([]);
+  const [workshopEvaluations, setWorkshopEvaluations] = useState<PsychomotorParticipantEvaluation[]>([]);
+  const [workshopSessions, setWorkshopSessions] = useState<PsychomotorWorkshopSession[]>([]);
 
   // Active view & role
   const [currentRole, setCurrentRole] = useState<UserRole>('Profesionales Clínicos');
@@ -118,6 +129,10 @@ export default function App() {
         setAnamnesisData({});
         setEvaluationsData({});
         setComprehensiveReports([]);
+        setWorkshopGroups([]);
+        setWorkshopParticipants([]);
+        setWorkshopEvaluations([]);
+        setWorkshopSessions([]);
         setAuthLoading(false);
       }
     });
@@ -191,12 +206,33 @@ export default function App() {
       checkAllLoaded();
     });
 
+    // Subscripciones en tiempo real a Talleres de Psicomotricidad
+    const unsubGroups = psychomotorWorkshopService.subscribeGroups(uid, (remoteGroups) => {
+      setWorkshopGroups(remoteGroups);
+    });
+
+    const unsubParticipants = psychomotorWorkshopService.subscribeParticipants(uid, (remoteParticipants) => {
+      setWorkshopParticipants(remoteParticipants);
+    });
+
+    const unsubWorkshopEvals = psychomotorWorkshopService.subscribeEvaluations(uid, (remoteEvals) => {
+      setWorkshopEvaluations(remoteEvals);
+    });
+
+    const unsubSessions = psychomotorWorkshopService.subscribeSessions(uid, (remoteSessions) => {
+      setWorkshopSessions(remoteSessions);
+    });
+
     return () => {
       unsubPatients();
       unsubAnamnesis();
       unsubEvaluations();
       unsubNotes();
       unsubReports();
+      unsubGroups();
+      unsubParticipants();
+      unsubWorkshopEvals();
+      unsubSessions();
     };
   }, [firebaseUser?.uid]);
 
@@ -632,6 +668,10 @@ export default function App() {
             anamnesisData={anamnesisData}
             evaluationsData={evaluationsData}
             comprehensiveReports={comprehensiveReports}
+            workshopGroups={workshopGroups}
+            workshopParticipants={workshopParticipants}
+            workshopEvaluations={workshopEvaluations}
+            workshopSessions={workshopSessions}
             onAssignExercise={handleAssignExercise}
             onCreateReport={handleCreateReport}
             onAddProgressNote={handleAddProgressNote}
@@ -667,6 +707,10 @@ export default function App() {
                 anamnesisData={anamnesisData}
                 evaluationsData={evaluationsData}
                 comprehensiveReports={comprehensiveReports}
+                workshopGroups={workshopGroups}
+                workshopParticipants={workshopParticipants}
+                workshopEvaluations={workshopEvaluations}
+                workshopSessions={workshopSessions}
                 onAssignExercise={handleAssignExercise}
                 onCreateReport={handleCreateReport}
                 onAddProgressNote={handleAddProgressNote}

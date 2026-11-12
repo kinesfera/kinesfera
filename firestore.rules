@@ -89,6 +89,27 @@ service cloud.firestore {
         allow list: if isOwner(userId);
         allow get, write: if isOwner(userId) && isValidId(backupId);
       }
+
+      // Talleres de Psicomotricidad: Grupos, Participantes, Sesiones y Evaluaciones
+      match /psychomotorGroups/{groupId} {
+        allow list: if isOwner(userId);
+        allow get, write: if isOwner(userId) && isValidId(groupId);
+      }
+
+      match /psychomotorParticipants/{participantId} {
+        allow list: if isOwner(userId);
+        allow get, write: if isOwner(userId) && isValidId(participantId);
+      }
+
+      match /psychomotorSessions/{sessionId} {
+        allow list: if isOwner(userId);
+        allow get, write: if isOwner(userId) && isValidId(sessionId);
+      }
+
+      match /psychomotorEvals/{evalId} {
+        allow list: if isOwner(userId);
+        allow get, write: if isOwner(userId) && isValidId(evalId);
+      }
     }
   }
 }

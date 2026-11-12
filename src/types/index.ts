@@ -1076,3 +1076,133 @@ export interface PatientCommunicationEvaluation {
   hasInstructionFollowLimitation: boolean; // Flag para activar objetivo automático
   items: CommunicationChecklistItemEvaluation[];
 }
+
+// ============================================================================
+// TALLERES DE PSICOMOTRICIDAD
+// ============================================================================
+
+export type WorkshopGroupStatus = 'activo' | 'finalizado' | 'archivado';
+
+export interface PsychomotorWorkshopGroup {
+  id: string;
+  userId: string;
+  name: string;
+  minAgeMonths: number;
+  maxAgeMonths: number;
+  ageRangeLabel: string; // ej: "3 a 5 años"
+  dayAndTime: string;    // ej: "Miércoles y Viernes 16:30 - 17:30"
+  location: string;      // ej: "Sala Psicomotriz Kinesfera Copiapó"
+  leadProfessional: string; // ej: "Klgo. Aldo Olivares Araya"
+  maxCapacity: number;   // cupo máximo, ej: 8
+  startDate: string;     // YYYY-MM-DD
+  endDate: string;       // YYYY-MM-DD
+  status: WorkshopGroupStatus;
+  objectiveSummary?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type WorkshopPaymentStatus = 'Pagado' | 'Pendiente';
+export type WorkshopPaymentMethod = 'Particular' | 'Transferencia' | 'Efectivo' | 'Tarjeta / Débito' | 'Fonasa';
+
+export interface ParentalConsent {
+  granted: boolean;
+  grantedBy: string; // Nombre y parentesco de quien dio el consentimiento
+  consentDate: string; // Fecha en que se otorgó (DD-MM-YYYY o YYYY-MM-DD)
+  rutOrId?: string;
+  notes?: string;
+}
+
+export interface PsychomotorParticipant {
+  id: string;
+  userId: string;
+  groupId: string;
+  patientId?: string; // Vinculación con paciente existente para no duplicar datos
+  firstName: string;
+  lastName: string;
+  birthDate: string;  // YYYY-MM-DD o DD-MM-YYYY
+  caregiverName: string;
+  caregiverPhone: string;
+  caregiverEmail?: string;
+  enrollmentDate: string;
+  consent: ParentalConsent;
+  // Pagos del Taller
+  paymentStatus: WorkshopPaymentStatus;
+  paymentAmount: number; // Monto mensual o total
+  paymentMethod: WorkshopPaymentMethod;
+  paymentDate?: string;
+  paymentNotes?: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// 7 Áreas clínicas evaluadas en escala simple de 1 a 4
+export type PsychomotorAreaKey = 
+  | 'movimiento'
+  | 'posturaYTono'
+  | 'relacionConObjetos'
+  | 'espacioYTiempo'
+  | 'relacionConElOtro'
+  | 'lenguajeYComunicacion'
+  | 'seguimientoDeInstrucciones';
+
+export interface PsychomotorEvaluationAreaScore {
+  key: PsychomotorAreaKey;
+  label: string;
+  score: number; // 1 = Dificultad severa / No observado, 2 = Con apoyo constante / En proceso inicial, 3 = Mayormente autónomo / Emergente, 4 = Consolidado / Óptimo
+  notes?: string;
+}
+
+export interface PsychomotorParticipantEvaluation {
+  id: string;
+  userId: string;
+  groupId: string;
+  participantId: string;
+  type: 'inicial' | 'final';
+  evaluationDate: string;
+  chronologicalAgeText: string;
+  evaluatorName: string;
+  scores: Record<PsychomotorAreaKey, PsychomotorEvaluationAreaScore>;
+  generalObservations: string;
+  hasInstructionFollowLimitation: boolean; // Si seguimientoDeInstrucciones <= 2
+  recommendedGoals: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type AttendanceStatus = 'presente' | 'ausente' | 'justificado';
+
+export interface SessionParticipantRecord {
+  participantId: string;
+  attendance: AttendanceStatus;
+  observation?: string;
+  // Puntuación rápida por sesión si se evalúa
+  sessionScore?: number; // 1 a 4 opcional para ver evolución continua
+}
+
+export interface PsychomotorWorkshopSession {
+  id: string;
+  userId: string;
+  groupId: string;
+  sessionNumber: number;
+  date: string;
+  topicOrActivity: string; // tema o actividad planificada
+  generalNotes?: string;
+  participants: SessionParticipantRecord[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AggregatedWorkshopMarketingPayload {
+  groupId: string;
+  groupName: string;
+  averageAgeMonths: number;
+  averageAgeYearsText: string;
+  participantCount: number;
+  topProgressAreas: string[];
+  successfulActivities: string[];
+  averageAttendancePercent: number;
+  generatedDate: string;
+}
+

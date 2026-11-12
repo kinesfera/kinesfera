@@ -147,7 +147,7 @@ export const SPMEvaluationSection: React.FC<SPMEvaluationSectionProps> = ({
         setFormContext(existing.formContext as any);
         setEvaluatorName(existing.evaluatorName);
         setIncludeInReport(existing.includeInReport);
-        setItemResponses(existing.responses || {});
+        setItemResponses((existing.responses as Record<number, 1 | 2 | 3 | 4>) || {});
       } else {
         const rec = DEFAULT_SPM_EVALUATIONS[patient.id] || {
           id: `spm_eval_${patient.id}_${Date.now()}`,
@@ -177,7 +177,7 @@ export const SPMEvaluationSection: React.FC<SPMEvaluationSectionProps> = ({
         };
         setEvalRecord(rec);
         setActiveCategory(rec.ageCategory);
-        setItemResponses(rec.responses || {});
+        setItemResponses((rec.responses as Record<number, 1 | 2 | 3 | 4>) || {});
       }
     });
 
@@ -234,14 +234,14 @@ export const SPMEvaluationSection: React.FC<SPMEvaluationSectionProps> = ({
       return rawTotals[scaleId];
     };
 
-    const visRaw = getScaleRaw('VIS', evalRecord.scales.vis.raw);
-    const heaRaw = getScaleRaw('HEA', evalRecord.scales.hea.raw);
-    const touRaw = getScaleRaw('TOU', evalRecord.scales.tou.raw);
-    const tsRaw = getScaleRaw('TS', evalRecord.scales.ts.raw);
-    const bodRaw = getScaleRaw('BOD', evalRecord.scales.bod.raw);
-    const balRaw = getScaleRaw('BAL', evalRecord.scales.bal.raw);
-    const plnRaw = getScaleRaw('PLA', evalRecord.scales.pln.raw);
-    const socRaw = getScaleRaw('SOC', evalRecord.scales.soc.raw);
+    const visRaw = getScaleRaw('VIS', evalRecord.scales.vis?.raw ?? 14);
+    const heaRaw = getScaleRaw('HEA', evalRecord.scales.hea?.raw ?? 13);
+    const touRaw = getScaleRaw('TOU', evalRecord.scales.tou?.raw ?? 15);
+    const tsRaw = getScaleRaw('TS', evalRecord.scales.ts?.raw ?? 12);
+    const bodRaw = getScaleRaw('BOD', evalRecord.scales.bod?.raw ?? 16);
+    const balRaw = getScaleRaw('BAL', evalRecord.scales.bal?.raw ?? 15);
+    const plnRaw = getScaleRaw('PLA', evalRecord.scales.pln?.raw ?? 15);
+    const socRaw = getScaleRaw('SOC', evalRecord.scales.soc?.raw ?? 16);
     const stRaw = visRaw + heaRaw + touRaw + tsRaw + bodRaw + balRaw;
 
     setEvalRecord({
@@ -290,12 +290,12 @@ export const SPMEvaluationSection: React.FC<SPMEvaluationSectionProps> = ({
     };
     if (scaleKey !== 'st' && scaleKey !== 'pln' && scaleKey !== 'soc') {
       const newStRaw =
-        updatedScales.vis.raw +
-        updatedScales.hea.raw +
-        updatedScales.tou.raw +
-        updatedScales.ts.raw +
-        updatedScales.bod.raw +
-        updatedScales.bal.raw;
+        (updatedScales.vis?.raw ?? 0) +
+        (updatedScales.hea?.raw ?? 0) +
+        (updatedScales.tou?.raw ?? 0) +
+        (updatedScales.ts?.raw ?? 0) +
+        (updatedScales.bod?.raw ?? 0) +
+        (updatedScales.bal?.raw ?? 0);
       updatedScales.st = calculateSPMScaleScore(newStRaw, 240);
     }
     setEvalRecord({

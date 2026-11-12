@@ -16,6 +16,13 @@ import { MarketingBusinessHub } from './MarketingBusinessHub';
 import { NicheTrendsAndIntelligenceHub } from './NicheTrendsAndIntelligenceHub';
 import { LibraryManagementView } from './LibraryManagementView';
 import { SPMEvaluationSection } from './SPMEvaluationSection';
+import { PsychomotorWorkshopsView } from './PsychomotorWorkshopsView';
+import { 
+  PsychomotorWorkshopGroup, 
+  PsychomotorParticipant, 
+  PsychomotorParticipantEvaluation, 
+  PsychomotorWorkshopSession 
+} from '../types';
 import { clinicalStorage } from '../utils/clinicalStorage';
 import { formatDateDMY } from '../utils/ageHelper';
 import { auth } from '../services/firebase';
@@ -42,7 +49,8 @@ import {
   Database,
   BookOpen,
   ClipboardCheck,
-  Loader2
+  Loader2,
+  Activity
 } from 'lucide-react';
 
 interface ClinicalPortalViewProps {
@@ -55,6 +63,10 @@ interface ClinicalPortalViewProps {
   anamnesisData: Record<string, PatientAnamnesis>;
   evaluationsData: Record<string, ClinicalEvaluations>;
   comprehensiveReports: ComprehensiveReport[];
+  workshopGroups?: PsychomotorWorkshopGroup[];
+  workshopParticipants?: PsychomotorParticipant[];
+  workshopEvaluations?: PsychomotorParticipantEvaluation[];
+  workshopSessions?: PsychomotorWorkshopSession[];
   onAssignExercise: (patientId: string, exerciseId: 'squats' | 'kneeTouch' | 'armsUp') => void;
   onCreateReport: (newReport: Report) => void;
   onAddProgressNote: (note: Omit<ProgressNote, 'id'>) => void;
@@ -78,6 +90,10 @@ export const ClinicalPortalView: React.FC<ClinicalPortalViewProps> = ({
   anamnesisData,
   evaluationsData,
   comprehensiveReports,
+  workshopGroups = [],
+  workshopParticipants = [],
+  workshopEvaluations = [],
+  workshopSessions = [],
   onAssignExercise,
   onCreateReport,
   onAddProgressNote,
@@ -90,15 +106,16 @@ export const ClinicalPortalView: React.FC<ClinicalPortalViewProps> = ({
   onGenerateComprehensiveReport,
   onClearAllPatients
 }) => {
-  // 7 Primary Tabs:
+  // 8 Primary Tabs:
   // 1) add_patient_eval: Ingreso de paciente, anamnesis y pruebas aplicadas
-  // 2) comprehensive_report: Informe consolidado con descarga en PDF y Word
-  // 3) spm_eval: Evaluaciones SPM-2 por rango de edad
-  // 4) library: Biblioteca de documentos y listas de habilidades
-  // 5) progress_sheet: Plantilla de progreso (seguimiento diario)
-  // 6) niche_trends: Nutrición de datos de la cohorte & Tendencias del nicho
-  // 7) marketing_growth: Marketing, ventas éticas, metas mes 1, derivadores Copiapó y CRM
-  const [activeSubTab, setActiveSubTab] = useState<'add_patient_eval' | 'comprehensive_report' | 'spm_eval' | 'library' | 'progress_sheet' | 'niche_trends' | 'marketing_growth'>('add_patient_eval');
+  // 2) workshops: Talleres de Psicomotricidad (Grupos, Participantes, Evaluación 7 áreas, Sesiones, Pagos)
+  // 3) comprehensive_report: Informe consolidado con descarga en PDF y Word
+  // 4) spm_eval: Evaluaciones SPM-2 por rango de edad
+  // 5) library: Biblioteca de documentos y listas de habilidades
+  // 6) progress_sheet: Plantilla de progreso (seguimiento diario)
+  // 7) niche_trends: Nutrición de datos de la cohorte & Tendencias del nicho
+  // 8) marketing_growth: Marketing, ventas éticas, metas mes 1, derivadores Copiapó y CRM
+  const [activeSubTab, setActiveSubTab] = useState<'add_patient_eval' | 'workshops' | 'comprehensive_report' | 'spm_eval' | 'library' | 'progress_sheet' | 'niche_trends' | 'marketing_growth'>('add_patient_eval');
   
   // Clinician customizable profile in localStorage (Starts blank or customized by the clinician)
   const [profName, setProfName] = useState(() => {
@@ -490,7 +507,23 @@ export const ClinicalPortalView: React.FC<ClinicalPortalViewProps> = ({
             </span>
           </button>
 
-          {/* TAB 2: Informe Clínico Consolidado (Descarga en PDF y Word) */}
+          {/* TAB 2: Talleres de Psicomotricidad (NUEVO MÓDULO SOLICITADO) */}
+          <button
+            onClick={() => setActiveSubTab('workshops')}
+            className={`flex items-center gap-2 px-3.5 py-2.5 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+              activeSubTab === 'workshops'
+                ? 'bg-emerald-700 text-white shadow-xs ring-2 ring-emerald-400/50'
+                : 'text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200'
+            }`}
+          >
+            <Activity className="w-4 h-4 text-emerald-300" />
+            <span>2. Talleres de Psicomotricidad</span>
+            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-emerald-200 text-emerald-950 font-mono">
+              {workshopGroups.length} Grupos
+            </span>
+          </button>
+
+          {/* TAB 3: Informe Clínico Consolidado (Descarga en PDF y Word) */}
           <button
             onClick={() => setActiveSubTab('comprehensive_report')}
             className={`flex items-center gap-2 px-3.5 py-2.5 text-xs font-bold rounded-xl transition-all cursor-pointer ${
@@ -500,7 +533,7 @@ export const ClinicalPortalView: React.FC<ClinicalPortalViewProps> = ({
             }`}
           >
             <FileText className="w-4 h-4 text-blue-200" />
-            <span>2. Informe Consolidado</span>
+            <span>3. Informe Consolidado</span>
             <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-md bg-white/20 text-white">
               {comprehensiveReports.length}
             </span>
@@ -602,6 +635,21 @@ export const ClinicalPortalView: React.FC<ClinicalPortalViewProps> = ({
           clinicianSpecialty={profSpecialty}
           clinicianInstitution={profInstitution}
           clinicianRegistry={profRegistry}
+        />
+      )}
+
+      {/* ========================================================================= */}
+      {/* VISTA 2: Talleres de Psicomotricidad (Módulo Grupal Clínico)              */}
+      {/* ========================================================================= */}
+      {activeSubTab === 'workshops' && (
+        <PsychomotorWorkshopsView
+          currentUserId={auth.currentUser?.uid || clinician.id}
+          clinicianName={profName || 'Klgo. Aldo Olivares Araya'}
+          existingPatients={patients}
+          groups={workshopGroups}
+          participants={workshopParticipants}
+          evaluations={workshopEvaluations}
+          sessions={workshopSessions}
         />
       )}
 
